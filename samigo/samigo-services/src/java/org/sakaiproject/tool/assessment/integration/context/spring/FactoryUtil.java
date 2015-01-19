@@ -24,8 +24,6 @@ package org.sakaiproject.tool.assessment.integration.context.spring;
 
 import java.io.File;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.xml.XmlBeanFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -40,9 +38,7 @@ import org.sakaiproject.spring.SpringBeanLocator;
  */
 public class FactoryUtil
 {
-  private static Log log = LogFactory.getLog(FactoryUtil.class);
   private static boolean useLocator = false;
-//  private static boolean useLocator = true;
 
   private static final String FS = File.separator;
   private static final String CONFIGURATION =
@@ -53,20 +49,18 @@ public class FactoryUtil
     // the instance is provided by Spring-injection
     if (useLocator)
     {
-
-    SpringBeanLocator locator = SpringBeanLocator.getInstance();
-    return
-      (IntegrationContextFactory) locator.getBean("integrationContextFactory");
-    }
-    else // unit testing
-    {
-      Resource res = new ClassPathResource(CONFIGURATION);
-      BeanFactory factory = new XmlBeanFactory(res);
-      return
-        (IntegrationContextFactory) factory.getBean("integrationContextFactory");
+	    SpringBeanLocator locator = SpringBeanLocator.getInstance();
+	    if (locator != null) {
+	      return (IntegrationContextFactory) locator.getBean("integrationContextFactory");
+	    }
     }
 
+    // unit testing
+    Resource res = new ClassPathResource(CONFIGURATION);
+    BeanFactory factory = new XmlBeanFactory(res);
+    return (IntegrationContextFactory) factory.getBean("integrationContextFactory");
   }
+  
   public static boolean getUseLocator()
   {
     return useLocator;

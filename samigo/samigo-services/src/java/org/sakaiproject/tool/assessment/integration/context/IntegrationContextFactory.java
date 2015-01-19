@@ -41,7 +41,6 @@ import org.sakaiproject.tool.assessment.integration.helper.ifc.CalendarServiceHe
  */
 public abstract class IntegrationContextFactory
 {
-  private static Log log = LogFactory.getLog(IntegrationContextFactory.class);
   private static IntegrationContextFactory instance=null;
 
   /**
@@ -50,7 +49,9 @@ public abstract class IntegrationContextFactory
    */
   public static IntegrationContextFactory getInstance()
   {
-    log.debug("IntegrationContextFactory.getInstance()");
+	Log log = LogFactory.getLog(IntegrationContextFactory.class);
+    log.debug("IntegrationContextFactory.getInstance() is instance null=" + instance == null);
+
     if (instance==null)
     {
       try
@@ -60,7 +61,8 @@ public abstract class IntegrationContextFactory
       }
       catch (Exception ex)
       {
-        log.error("Unable to read integration context: " + ex);
+        log.fatal("getInstance(): Unable to read integration context", ex);
+        System.exit(1);
       }
     }
     log.debug("instance="+instance);
@@ -69,6 +71,7 @@ public abstract class IntegrationContextFactory
   
   public static IntegrationContextFactory getTestInstance()
   {
+	    Log log = LogFactory.getLog(IntegrationContextFactory.class);
 	    log.debug("IntegrationContextFactory.getTestInstance()");
 	    if (instance==null)
 	    {

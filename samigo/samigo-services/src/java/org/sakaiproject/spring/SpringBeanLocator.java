@@ -25,23 +25,13 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 public class SpringBeanLocator
 {
-
-  //private static Log log = LogFactory.getLog(SpringBeanLocator.class);
   private static WebApplicationContext waCtx = null;
   private static ConfigurableApplicationContext caCtx = null;
   private static boolean inWebContext = false;
-  private static SpringBeanLocator instance = null;
 
   public static SpringBeanLocator getInstance()
   {
-    //if (instance != null)
-    //{
-    //  return instance;
-    //}
-    //else
-    //{
       return new SpringBeanLocator();
-    //}
   }
 
   /**
@@ -59,8 +49,7 @@ public class SpringBeanLocator
    * such as FileSystemXmlApplicationContext
    * @param ca
    */
-  public static void setConfigurableApplicationContext(ConfigurableApplicationContext
-                                                ca)
+  public static void setConfigurableApplicationContext(ConfigurableApplicationContext ca)
   {
     SpringBeanLocator.caCtx = ca;
     SpringBeanLocator.inWebContext = false;
@@ -70,12 +59,10 @@ public class SpringBeanLocator
   {
     if (inWebContext)
     {
-      //log.info("** context in Locator " + waCtx);
       return waCtx.getBean(name);
     }
     else
     {
-      //log.info("** context in Locator " + caCtx);
       return caCtx.getBean(name);
     }
 
