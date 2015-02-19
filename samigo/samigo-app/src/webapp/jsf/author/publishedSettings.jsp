@@ -34,7 +34,6 @@
       <head><%= request.getAttribute("html.head") %>
       <title><h:outputText value="#{assessmentSettingsMessages.sakai_assessment_manager} #{assessmentSettingsMessages.dash} #{assessmentSettingsMessages.settings}" /></title>
       <samigo:script path="/jsf/widget/hideDivision/hideDivision.js"/>
-      <samigo:script path="/jsf/widget/datepicker/datepicker.js"/>
       <samigo:script path="/jsf/widget/colorpicker/colorpicker.js"/>
       <samigo:script path="/js/authoring.js"/>
 
@@ -205,12 +204,12 @@
   <h:panelGrid columns="1" columnClasses="samigoCell" border="0">
     <h:panelGroup>
       <h:outputLabel for="startDate" value="#{assessmentSettingsMessages.assessment_available}"/>
-      <samigo:datePicker value="#{publishedSettings.startDateString}" size="25" id="startDate" />
+      <h:inputText value="#{publishedSettings.startDateString}" size="25" id="startDate" />
 	  <h:outputText value="" />
 	  <h:outputText value="" />
 	  
       <h:outputLabel for="endDate" value="#{assessmentSettingsMessages.assessment_due}" />
-      <samigo:datePicker value="#{publishedSettings.dueDateString}" size="25" id="endDate"/>
+      <h:inputText value="#{publishedSettings.dueDateString}" size="25" id="endDate"/>
 	  <h:outputText value="" />
 	  <h:outputText value="" />
   
@@ -241,7 +240,7 @@
         <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.yes_late}"/>
       </h:selectOneRadio>
 
-	  <samigo:datePicker value="#{publishedSettings.retractDateString}" size="25" id="retractDate"/>
+	  <h:inputText value="#{publishedSettings.retractDateString}" size="25" id="retractDate"/>
 	  
 	  <h:commandButton type="submit" value="#{assessmentSettingsMessages.button_stop_accepting_now}" action="confirmAssessmentRetract"  styleClass="active" />
     </h:panelGrid>
@@ -374,9 +373,9 @@
           <f:selectItem itemValue="2" itemLabel="#{assessmentSettingsMessages.feedback_by_date}"/>
         </h:selectOneMenu>
 
-	     <samigo:datePicker value="#{publishedSettings.feedbackDateString}" size="25" id="feedbackDate" >
+	     <h:inputText value="#{publishedSettings.feedbackDateString}" size="25" id="feedbackDate" >
             <f:convertDateTime pattern="#{generalMessages.output_date_picker}" />
-          </samigo:datePicker>
+          </h:inputText>
        
   </h:panelGrid>
 

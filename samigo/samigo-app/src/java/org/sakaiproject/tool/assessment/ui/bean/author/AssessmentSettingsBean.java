@@ -24,6 +24,7 @@
 package org.sakaiproject.tool.assessment.ui.bean.author;
 
 import java.io.Serializable;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -208,6 +209,8 @@ public class AssessmentSettingsBean
   
   private String releaseToGroupsAsString;
   private String blockDivs;
+  
+  private final String ISO_8601_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
   
   /**
    *  we use the calendar widget which uses 'MM/dd/yyyy hh:mm:ss a'
@@ -1298,14 +1301,17 @@ public class AssessmentSettingsBean
    
   public void setStartDateString(String startDateString)
   {
-	this.isValidStartDate = true;  
-	Date tempDate = getDateFromDisplayFormat(startDateString);
-	if (!this.isValidDate) {
+	String hiddenStartDate = ContextUtil.lookupParam("startDateISO8601");
+	SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_DATE_FORMAT);
+
+	try {
+		Date tempDate = sdf.parse(hiddenStartDate);
+		this.isValidStartDate = true;
+		this.startDate = tempDate;
+	} catch (ParseException e) {
+		log.error("setStartDateString could not parse hidden start date: " + hiddenStartDate);
 		this.isValidStartDate = false;
 		this.originalStartDateString = startDateString;
-	}
-	else {
-		this.startDate= tempDate;
 	}
   }
 
@@ -1320,16 +1326,20 @@ public class AssessmentSettingsBean
   }
   public void setDueDateString(String dueDateString)
   {
-	this.isValidDueDate = true;
-	Date tempDate = getDateFromDisplayFormat(dueDateString);
-	if (!this.isValidDate) {
+	String hiddenDueDate = ContextUtil.lookupParam("dueDateISO8601");
+	SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_DATE_FORMAT);
+	
+	try {
+		Date tempDate = sdf.parse(hiddenDueDate);
+		this.isValidDueDate = true;
+		this.dueDate = tempDate;
+	} catch (ParseException e) {
+		log.error("setDueDateString could parse hidden date field: " + hiddenDueDate);
 		this.isValidDueDate = false;
 		this.originalDueDateString = dueDateString;
 	}
-	else {
-		this.dueDate= tempDate;
-	}
   }
+
   public String getRetractDateString()
   {
     if (!this.isValidRetractDate) {
@@ -1339,18 +1349,23 @@ public class AssessmentSettingsBean
 		return getDisplayFormatFromDate(retractDate);
 	}	  	  
   }
+
   public void setRetractDateString(String retractDateString)
   {
-	this.isValidRetractDate = true;
-	Date tempDate = getDateFromDisplayFormat(retractDateString);
-	if (!this.isValidDate) {
+	String hiddenRetractDate = ContextUtil.lookupParam("retractDateISO8601");
+	SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_DATE_FORMAT);
+
+	try {
+		Date tempDate = sdf.parse(hiddenRetractDate);
+		this.isValidRetractDate = true;
+		this.retractDate = tempDate;
+	} catch (ParseException e) {
+		log.error("setRetractDateString could not parse hidden date field: " + hiddenRetractDate);
 		this.isValidRetractDate = false;
 		this.originalRetractDateString = retractDateString;
 	}
-	else {
-		this.retractDate= tempDate;
-	}
   }
+
   public String getFeedbackDateString()
   {
     if (!this.isValidFeedbackDate) {
@@ -1360,16 +1375,21 @@ public class AssessmentSettingsBean
 		return getDisplayFormatFromDate(feedbackDate);
 	}	  	  	  
   }
+
   public void setFeedbackDateString(String feedbackDateString)
   {
-	this.isValidFeedbackDate = true;
-	Date tempDate = getDateFromDisplayFormat(feedbackDateString);
-	if (!this.isValidDate) {
+	String hiddenFeedbackDate = ContextUtil.lookupParam("feedbackDateISO8601");
+	SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_DATE_FORMAT);
+	
+	try {
+		Date tempDate = sdf.parse(hiddenFeedbackDate);
+		this.isValidFeedbackDate = true;
+		this.feedbackDate = tempDate;
+	}
+	catch (ParseException e) {
+		log.error("setFeedbackDateString could not parse hidden date field: " + hiddenFeedbackDate);
 		this.isValidFeedbackDate = false;
 		this.originalFeedbackDateString = feedbackDateString;
-	}
-	else {
-		this.feedbackDate= tempDate;
 	}	  
   }
 
