@@ -200,10 +200,13 @@
         <property name="defaultIDP" value="http://idp.ssocircle.com"/>
     </bean>
 
+    <!-- Allow custom Sakai filter to extract username from SAML attributes -->
+    <!-- bean id="sakaiUserDetailsService" class="org.sakaiproject.login.filter.SakaiSamlUserDetails" /-->
+
     <!-- SAML Authentication Provider responsible for validating of received SAML messages -->
     <bean id="samlAuthenticationProvider" class="org.springframework.security.saml.SAMLAuthenticationProvider">
         <!-- OPTIONAL property: can be used to store/load user data after login -->
-        <!-- <property name="userDetails" ref="" /> -->
+        <!-- <property name="userDetails" ref="sakaiUserDetailsService" /> -->
     </bean>
 
     <!-- Provider of default SAML Context -->
