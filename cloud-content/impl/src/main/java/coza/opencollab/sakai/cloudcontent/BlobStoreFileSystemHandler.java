@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -11,7 +12,6 @@ import com.google.common.io.Closeables;
 import com.google.inject.Module;
 
 import org.apache.commons.codec.binary.Base64;
-
 import org.jclouds.ContextBuilder;
 import org.jclouds.apis.ApiMetadata;
 import org.jclouds.blobstore.BlobStore;
@@ -19,15 +19,14 @@ import org.jclouds.blobstore.BlobStoreContext;
 import org.jclouds.blobstore.domain.Blob;
 import org.jclouds.blobstore.domain.StorageMetadata;
 import org.jclouds.blobstore.options.PutOptions;
+import org.jclouds.http.HttpRequest;
 import org.jclouds.io.Payload;
 import org.jclouds.io.Payloads;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
-
 import org.jclouds.aws.s3.AWSS3ProviderMetadata;
 import org.jclouds.openstack.swift.v1.SwiftApiMetadata;
 import org.jclouds.osgi.ApiRegistry;
 import org.jclouds.osgi.ProviderRegistry;
-
 import org.sakaiproject.content.api.FileSystemHandler;
 import org.springframework.util.FileCopyUtils;
 
@@ -84,6 +83,11 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
      * set here, meaning that the buffer should be bounded on it instead.
      */
     private static final int MAX_UPLOAD_BYTES = 1024 * 1024 * 1024;
+    
+    /**
+     * This is how long we want the signed URL to be valid for.
+     */
+    private static final int SIGNED_URL_VALIDITY_SECONDS = 10 * 60;
 
     /**
      * Default constructor.
@@ -178,6 +182,20 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
         Closeables.close(context, false);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+	@Override
+	public URI getAssetDirectLink(String id, String root, String filePath) throws IOException {
+        ContainerAndName can = getContainerAndName(id, root, filePath);
+        HttpRequest hr = context.getSigner().signGetBlob(can.container, can.name, SIGNED_URL_VALIDITY_SECONDS);
+        if (hr == null){
+            throw new IOException("No object found to creat signed url " + id);
+        }
+        
+        return hr.getEndpoint();
+	}
+    
     /**
      * {@inheritDoc}
      */
