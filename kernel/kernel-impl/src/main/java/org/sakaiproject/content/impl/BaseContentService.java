@@ -7033,7 +7033,7 @@ SiteContentAdvisorProvider, SiteContentAdvisorTypeRegistry, EntityTransferrerRef
 
 					// Bypass loading the asset and just send the user a link to it.
 					if (directLinkUri != null) {
-						res.addHeader("Location", directLinkUri.toString());
+						res.sendRedirect(directLinkUri.toString());
 						return;
 					}
 
