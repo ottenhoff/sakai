@@ -2,9 +2,14 @@ package coza.opencollab.sakai.cloudcontent;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.Date;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -12,6 +17,7 @@ import com.google.common.io.Closeables;
 import com.google.inject.Module;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.jclouds.ContextBuilder;
 import org.jclouds.apis.ApiMetadata;
 import org.jclouds.blobstore.BlobStore;
@@ -206,9 +212,52 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
         if (blob == null){
             throw new IOException("No object found for " + id);
         }
-        //we copy this to a byte array first since Sakai does some funny stuff 
-        //and with the stream and then swift and sakai don't play nice.
-        return new ByteArrayInputStream(FileCopyUtils.copyToByteArray(blob.getPayload().openStream()));
+
+        // There are some oddities with streaming larger files to the user,
+        // so download to a temp file first. For now, call 100MB the threshold.
+        long maxStreamSize = 1024 * 1024 * 100;
+
+        StorageMetadata metadata = blob.getMetadata();
+        Long size = metadata.getSize();
+
+        if (size != null && size.longValue() > maxStreamSize) {
+            return streamFromTempFile(blob);
+        } else {
+            return blob.getPayload().openStream();
+        }
+    }
+
+    // Hacky implementation of downloading Blobs to temp files...
+    // This should probably happen in a specified location and use
+    // hashing to be sure of contents before reusing.
+    private InputStream streamFromTempFile(Blob blob) {
+        StorageMetadata metadata = blob.getMetadata();
+        String name = metadata.getName();
+        Date modified = metadata.getLastModified();
+        String filename = name + "-" + modified.getTime();
+        filename = DigestUtils.md5Hex(filename);
+
+        File check = new File(filename + ".tmp");
+        FileInputStream stream = null;
+
+        if (check.exists()) {
+            try {
+                stream = new FileInputStream(check);
+            } catch (FileNotFoundException e) {
+                stream = null;
+            }
+        } else {
+            try {
+                File tmp = File.createTempFile(filename, ".tmp");
+                FileOutputStream fos = new FileOutputStream(tmp);
+                FileCopyUtils.copy(blob.getPayload().openStream(), fos);
+                stream = new FileInputStream(tmp);
+            } catch (IOException e) {
+                stream = null;
+            }
+        }
+
+        return stream;
     }
 
     /**
