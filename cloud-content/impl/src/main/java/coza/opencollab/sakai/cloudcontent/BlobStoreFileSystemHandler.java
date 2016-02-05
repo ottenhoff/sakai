@@ -211,7 +211,7 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
             if (!baseDir.exists()) {
                 try {
                     // Can't write into the preferred temp dir
-                    if (!baseDir.mkdir()) {
+                    if (!baseDir.mkdirs()) {
                         temporaryBlobDirectory = null;
                     }
                 }
@@ -259,7 +259,7 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
         Long size = metadata.getSize();
 
         if (size != null && size.longValue() > maxBlobStreamSize) {
-            return streamFromTempFile(blob);
+            return streamFromTempFile(blob, size);
         } else {
             return blob.getPayload().openStream();
         }
@@ -268,21 +268,20 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
     // Hacky implementation of downloading Blobs to temp files...
     // This should probably happen in a specified location and use
     // hashing to be sure of contents before reusing.
-    private InputStream streamFromTempFile(Blob blob) {
+    private InputStream streamFromTempFile(Blob blob, Long filesize) {
         StorageMetadata metadata = blob.getMetadata();
         String name = metadata.getName();
-        Date modified = metadata.getLastModified();
-        String filename = name + "-" + modified.getTime();
+        String filename = name + "-" + filesize;
         filename = DigestUtils.md5Hex(filename);
         FileInputStream stream = null;
 
         // See if the temp file already exists
         File check;
         if (temporaryBlobDirectory != null) {
-            check = new File(temporaryBlobDirectory, filename + ".tmp");
+            check = new File(temporaryBlobDirectory, filename);
         }
         else {
-            check = new File(filename + ".tmp");
+            check = new File(System.getProperty("java.io.tmpdir"), filename);
         }
 
         if (check.exists()) {
@@ -293,16 +292,9 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
             }
         } else {
             try {
-                File tmp;
-                if (temporaryBlobDirectory != null) {
-                    tmp = File.createTempFile(filename, ".tmp", new File(temporaryBlobDirectory));
-                }
-                else {
-                    tmp = File.createTempFile(filename, ".tmp");
-                }
-                FileOutputStream fos = new FileOutputStream(tmp);
+                FileOutputStream fos = new FileOutputStream(check);
                 FileCopyUtils.copy(blob.getPayload().openStream(), fos);
-                stream = new FileInputStream(tmp);
+                stream = new FileInputStream(check);
             } catch (IOException e) {
                 stream = null;
             }
