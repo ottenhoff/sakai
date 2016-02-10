@@ -7035,7 +7035,7 @@ SiteContentAdvisorProvider, SiteContentAdvisorTypeRegistry, EntityTransferrerRef
 					if (directLinkUri != null) {
 						if (m_serverConfigurationService.getBoolean("cloud.content.sendfile", false)) {
 							int hostLength = new String(directLinkUri.getScheme() + "://" + directLinkUri.getHost()).length();
-							String linkPath = directLinkUri.toString().substring(hostLength);
+							String linkPath = "/sendfile" + directLinkUri.toString().substring(hostLength);
 							if (M_log.isDebugEnabled()) {
 								M_log.debug("X-Sendfile: " + linkPath);
 							}

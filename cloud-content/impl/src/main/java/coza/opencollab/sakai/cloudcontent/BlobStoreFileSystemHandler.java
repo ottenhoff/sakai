@@ -261,7 +261,9 @@ public class BlobStoreFileSystemHandler implements FileSystemHandler {
         if (size != null && size.longValue() > maxBlobStreamSize) {
             return streamFromTempFile(blob, size);
         } else {
-            return blob.getPayload().openStream();
+            // SAK-30325: why can't we just send the stream straight back: blob.getPayload().openStream() ?
+            // Good question, but it doesn't work properly unless the stream is fully copied and re-streamed....
+            return new ByteArrayInputStream(FileCopyUtils.copyToByteArray(blob.getPayload().openStream()));
         }
     }
 
