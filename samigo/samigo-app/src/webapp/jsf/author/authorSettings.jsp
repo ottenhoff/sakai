@@ -138,18 +138,19 @@
      <h:outputText value="#{assessmentSettingsMessages.settings} #{assessmentSettingsMessages.dash} #{assessmentSettings.title}"/>
   </h1>
 
-        <div class="pull-right">
-		<a href="javascript:void(0)" id="expandLink" onclick="expandAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
-				<h:outputText value="#{assessmentSettingsMessages.expandAll}"/>
-		</a>
-		<a href="javascript:void(0)" id="collapseLink" style="display:none" onclick="collapseAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
-				<h:outputText value="#{assessmentSettingsMessages.collapseAll}"/>
-		</a>
-	</div>
-	<br/>
-<p>
-  <h:messages styleClass="messageSamigo" rendered="#{! empty facesContext.maximumSeverity}" layout="table"/>
-</p>
+  <div class="pull-right">
+      <a href="javascript:void(0)" id="expandLink" onclick="expandAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
+          <h:outputText value="#{assessmentSettingsMessages.expandAll}"/>
+      </a>
+      <a href="javascript:void(0)" id="collapseLink" style="display:none" onclick="collapseAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
+          <h:outputText value="#{assessmentSettingsMessages.collapseAll}"/>
+      </a>
+  </div>
+  <br/>
+  
+  <p>
+    <h:messages styleClass="messageSamigo" rendered="#{! empty facesContext.maximumSeverity}" layout="table"/>
+  </p>
 
 <div class="tier1" id="jqueryui-accordion">
 
@@ -158,71 +159,68 @@
 <!-- *** ASSESSMENT INTRODUCTION *** -->
   <div class="tier2" id="assessment-intro">
       
-      <!-- *** GENERAL TEMPLATE INFORMATION *** -->
-      <h:panelGroup rendered="#{assessmentSettings.valueMap.templateInfo_isInstructorEditable==true and !assessmentSettings.noTemplate and template.showAssessmentTypes}" >
-      <div class="row">
-          <label class="col-md-2">
-              <h:outputLabel value="#{assessmentSettingsMessages.heading_template_information}"/>
-          </label>
-          <div class="col-md-10">
-              <h:outputText escape="false" rendered="#{assessmentSettings.templateDescription!=null}" value="#{assessmentSettings.templateDescription}" />
-          </div>
-      </div>
-      </h:panelGroup>
-
-    <div class="row">
-        <h:outputLabel styleClass="col-md-2" for="assessment_title" value="#{assessmentSettingsMessages.assessment_title}"/>
-        <div col="col-md-10">
-            <h:inputText id="assessment_title" size="80" maxlength="255" value="#{assessmentSettings.title}" />
+    <!-- *** GENERAL TEMPLATE INFORMATION *** -->
+    <h:panelGroup styleClass="form-group row" layout="block" rendered="#{assessmentSettings.valueMap.templateInfo_isInstructorEditable==true and !assessmentSettings.noTemplate and template.showAssessmentTypes}" >
+        <h:outputLabel styleClass="col-md-2" value="#{assessmentSettingsMessages.heading_template_information}"/>
+        <div class="col-md-10">
+          <h:outputText escape="false" rendered="#{assessmentSettings.templateDescription!=null}" value="#{assessmentSettings.templateDescription}" />
         </div>
-    </div>
+    </h:panelGroup>
 
     <div class="form-group row">
         <h:outputLabel styleClass="col-md-2" for="creator" value="#{assessmentSettingsMessages.assessment_creator}" rendered="#{assessmentSettings.valueMap.assessmentAuthor_isInstructorEditable==true}"/>
-        <div col="col-md-10">
+        <div class="col-md-10">
             <h:outputText id="creator" value="#{assessmentSettings.creator}" rendered="#{assessmentSettings.valueMap.assessmentAuthor_isInstructorEditable==true}"/>
         </div>
     </div>
 
     <div class="form-group row">
+        <h:outputLabel styleClass="col-md-2" for="assessment_title" value="#{assessmentSettingsMessages.assessment_title}"/>
+        <div class="col-md-10">
+            <h:inputText styleClass="form-control" id="assessment_title" size="80" maxlength="255" value="#{assessmentSettings.title}" />
+        </div>
+    </div>
+
+    <div class="form-group row hidden">
         <h:outputLabel styleClass="col-md-2" for="assessment_author" rendered="#{assessmentSettings.valueMap.assessmentAuthor_isInstructorEditable==true}" value="#{assessmentSettingsMessages.assessment_authors}"/>
-        <div col="col-md-10">
-            <h:inputText id="assessment_author" value="#{assessmentSettings.authors}" rendered="#{assessmentSettings.valueMap.assessmentAuthor_isInstructorEditable==true}"/>
+        <div class="col-md-10">
+            <h:inputText styleClass="form-control" id="assessment_author" value="#{assessmentSettings.authors}" rendered="#{assessmentSettings.valueMap.assessmentAuthor_isInstructorEditable==true}"/>
         </div>
     </div>
 
     <div class="form-group row">
         <h:outputLabel styleClass="col-md-2" value="#{assessmentSettingsMessages.assessment_description}" rendered="#{assessmentSettings.valueMap.description_isInstructorEditable==true}"/>
 
-        <div col="col-md-10">
+        <div class="col-md-10">
           <samigo:wysiwyg rows="100" columns="400" value="#{assessmentSettings.description}" hasToggle="yes" mode="author">
            <f:validateLength maximum="4000"/>
            </samigo:wysiwyg>
         </div>
     </div>
 
-       <!-- ASSESSMENT ATTACHMENTS -->
-    <div class="row">
-           <%@ include file="/jsf/author/authorSettings_attachment.jsp" %>
-    </div>
-       
-       
     <!-- Honor Pledge -->
-    <div class="checkbox">
-        <h:outputLabel for="honor_pledge">
+    <div class="form-group row">
+        <h:outputLabel styleClass="col-md-2" for="honor_pledge" value="#{assessmentSettingsMessages.honor_pledge}" />
+        <div class="col-md-10">
             <h:selectBooleanCheckbox id="honor_pledge" value="#{assessmentSettings.valueMap.honorpledge_isInstructorEditable}"/>
+            <h:outputText value="&#160;" escape="false" />
             <h:outputText  value="#{assessmentSettingsMessages.honor_pledge_add}" />
-        </h:outputLabel>
+        </div>
+    </div>
+
+    <!-- ASSESSMENT ATTACHMENTS -->
+    <div class="form-group row">
+         <%@ include file="/jsf/author/authorSettings_attachment.jsp" %>
     </div>
 
   </div>
 
 <div id="jqueryui-accordion-metadata"><!-- This is sub-accordion for metadata -->
 
-  <!-- *** META *** -->
-<h:panelGroup rendered="#{assessmentSettings.valueMap.metadataAssess_isInstructorEditable==true}">
-  <h:outputText escape="false" value="<h3> <a class=\"jqueryui-hideDivision\" href=\"#\"> #{assessmentSettingsMessages.heading_metadata} </a> </h3>" /> 
-    <div class="tier2">
+    <!-- *** META *** -->
+    <h:panelGroup rendered="#{assessmentSettings.valueMap.metadataAssess_isInstructorEditable==true}">
+      <h:outputText escape="false" value="<h3> <a class=\"jqueryui-hideDivision\" href=\"#\"> #{assessmentSettingsMessages.heading_metadata} </a> </h3>" /> 
+      <div class="tier2">
         <div class="samigo-subheading">
             <h:outputLabel value="#{assessmentSettingsMessages.assessment_metadata}" /> 
         </div>
@@ -241,14 +239,14 @@
         <div class="samigo-subheading">
             <h:outputLabel value="#{assessmentSettingsMessages.record_metadata}" />
         </div>
-    <div class="tier3">
-     <h:selectBooleanCheckbox rendered="#{assessmentSettings.valueMap.metadataQuestions_isInstructorEditable==true}"
-       value="#{assessmentSettings.valueMap.hasMetaDataForQuestions}"/>
-     <h:outputText value="#{assessmentSettingsMessages.metadata_questions}" rendered="#{assessmentSettings.valueMap.metadataQuestions_isInstructorEditable==true}" />
-    </div>
-  </div>
- </h:panelGroup>
-</div><!-- This is the end of the sub-accordion -->
+         <div class="tier3">
+         <h:selectBooleanCheckbox rendered="#{assessmentSettings.valueMap.metadataQuestions_isInstructorEditable==true}"
+            value="#{assessmentSettings.valueMap.hasMetaDataForQuestions}"/>
+         <h:outputText value="#{assessmentSettingsMessages.metadata_questions}" rendered="#{assessmentSettings.valueMap.metadataQuestions_isInstructorEditable==true}" />
+       </div>
+      </div>
+    </h:panelGroup>
+  </div><!-- This is the end of the sub-accordion -->
 
 </samigo:hideDivision><!-- End the About this Assessment category -->
 
@@ -264,16 +262,16 @@
   </div>
 
   <div id="groupDiv" class="groupTable">
-  <h:selectBooleanCheckbox id="checkUncheckAllReleaseGroups" onclick="checkUncheckAllReleaseGroups();"/>
-  <h:outputText value="#{assessmentSettingsMessages.select_all_groups}" />
-  <h:selectManyCheckbox id="groupsForSite" layout="pagedirection" value="#{assessmentSettings.groupsAuthorized}">
-    <f:selectItems value="#{assessmentSettings.groupsForSite}" />
-  </h:selectManyCheckbox>
+    <h:selectBooleanCheckbox id="checkUncheckAllReleaseGroups" onclick="checkUncheckAllReleaseGroups();"/>
+    <h:outputText value="#{assessmentSettingsMessages.select_all_groups}" />
+    <h:selectManyCheckbox id="groupsForSite" layout="pagedirection" value="#{assessmentSettings.groupsAuthorized}">
+      <f:selectItems value="#{assessmentSettings.groupsForSite}" />
+    </h:selectManyCheckbox>
   </div>
   
-	<!-- Extended Time -->
-	<%@ include file="inc/extendedTime.jspf"%>
-	
+  <!-- Extended Time -->
+  <%@ include file="inc/extendedTime.jspf"%>
+
     
   <!-- NUMBER OF SUBMISSIONS -->
   <h:panelGroup styleClass="row" layout="block" rendered="#{assessmentSettings.valueMap.submissionModel_isInstructorEditable==true}">
