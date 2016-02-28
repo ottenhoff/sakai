@@ -586,87 +586,89 @@
 
     </h:panelGroup>
   </h:panelGroup>
-
  </samigo:hideDivision>
 
 <samigo:hideDivision title="#{assessmentSettingsMessages.heading_layout}" >
 
   <!-- *** ASSESSMENT ORGANIZATION *** -->
   <h:panelGroup rendered="#{assessmentSettings.valueMap.itemAccessType_isInstructorEditable==true or assessmentSettings.valueMap.displayChunking_isInstructorEditable==true or assessmentSettings.valueMap.displayNumbering_isInstructorEditable==true }" >
-  <f:verbatim> <div class="tier2"></f:verbatim>
+
     <!-- NAVIGATION -->
-    <h:panelGroup rendered="#{assessmentSettings.valueMap.itemAccessType_isInstructorEditable==true}">
-  <f:verbatim> <h4 class="samigo-category-subhead"></f:verbatim> <h:outputLabel for="itemNavigation" value="#{assessmentSettingsMessages.navigation}" /><f:verbatim></h4><div class="tier3"></f:verbatim>
-      <h:panelGrid columns="1">
-        <h:selectOneRadio id="itemNavigation" value="#{assessmentSettings.itemNavigation}"  layout="pageDirection" onclick="setBlockDivs();updateItemNavigation(true);lockdownQuestionLayout(this.value);lockdownMarkForReview(this.value);">
+    <h:panelGroup styleClass="form-group row" layout="block" rendered="#{assessmentSettings.valueMap.itemAccessType_isInstructorEditable==true}">
+      <h:outputLabel styleClass="col-md-2" for="itemNavigation" value="#{assessmentSettingsMessages.navigation}" />
+      <div class="col-md-10">
+        <t:selectOneRadio id="itemNavigation" value="#{assessmentSettings.itemNavigation}" layout="spread" onclick="setBlockDivs();updateItemNavigation(true);lockdownQuestionLayout(this.value);lockdownMarkForReview(this.value);">
           <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.linear_access}"/>
           <f:selectItem itemValue="2" itemLabel="#{assessmentSettingsMessages.random_access}"/>
-        </h:selectOneRadio>
-        <h:panelGroup>
-        <f:verbatim> <div class="samigo-linear-access-warning"></f:verbatim>
-        <h:outputText value="#{assessmentSettingsMessages.linear_access_warning} "/>
-        <f:verbatim> </div></f:verbatim>
-        </h:panelGroup>
-      </h:panelGrid>
-<f:verbatim></div></f:verbatim>
+        </t:selectOneRadio>
+        <ul class="layout-navigation">
+          <li><t:radio for="itemNavigation" index="0" /></li>
+          <li><t:radio for="itemNavigation" index="1" /></li>
+        </ul>
+        <div class="info-text help-block small">
+          <h:outputText value="#{assessmentSettingsMessages.linear_access_warning} "/>
+        </div>
+      </div>
     </h:panelGroup>
 
     <!-- QUESTION LAYOUT -->
-    <h:panelGroup rendered="#{assessmentSettings.valueMap.displayChunking_isInstructorEditable==true}">
-    <f:verbatim><h4 class="samigo-category-subhead"></f:verbatim><h:outputLabel for="assessmentFormat" value="#{assessmentSettingsMessages.question_layout}" /><f:verbatim></h4><div class="tier3"></f:verbatim>
-      <h:panelGrid columns="2"  >
-        <h:selectOneRadio id="assessmentFormat" value="#{assessmentSettings.assessmentFormat}"  layout="pageDirection">
+    <h:panelGroup styleClass="form-group row" layout="block" rendered="#{assessmentSettings.valueMap.displayChunking_isInstructorEditable==true}">
+      <h:outputLabel styleClass="col-md-2" for="assessmentFormat" value="#{assessmentSettingsMessages.question_layout}" />
+      <div class="col-md-10">
+        <t:selectOneRadio id="assessmentFormat" value="#{assessmentSettings.assessmentFormat}" layout="spread">
           <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.layout_by_question}"/>
           <f:selectItem itemValue="2" itemLabel="#{assessmentSettingsMessages.layout_by_part}"/>
           <f:selectItem itemValue="3" itemLabel="#{assessmentSettingsMessages.layout_by_assessment}"/>
-        </h:selectOneRadio>
-	 </h:panelGrid>
-	<f:verbatim></div></f:verbatim>
+        </t:selectOneRadio>
+        <ul class="layout-format">
+          <li><t:radio for="assessmentFormat" index="0" /></li>
+          <li><t:radio for="assessmentFormat" index="1" /></li>
+          <li><t:radio for="assessmentFormat" index="2" /></li>
+        </ul>
+      </div>
     </h:panelGroup>
 
     <!-- NUMBERING -->
-    <h:panelGroup rendered="#{assessmentSettings.valueMap.displayNumbering_isInstructorEditable==true}">
-     <f:verbatim><h4 class="samigo-category-subhead"></f:verbatim> <h:outputLabel for="itemNumbering" value="#{assessmentSettingsMessages.numbering}" /> <f:verbatim> </h4><div class="tier3"> </f:verbatim>
-       <h:panelGrid columns="2"  >
-         <h:selectOneRadio id="itemNumbering" value="#{assessmentSettings.itemNumbering}"  layout="pageDirection">
+    <h:panelGroup styleClass="form-group row" layout="block" rendered="#{assessmentSettings.valueMap.displayNumbering_isInstructorEditable==true}">
+      <h:outputLabel styleClass="col-md-2" for="itemNumbering" value="#{assessmentSettingsMessages.numbering}" />
+      <div class="col-md-10">
+         <t:selectOneRadio id="itemNumbering" value="#{assessmentSettings.itemNumbering}" layout="spread">
            <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.continous_numbering}"/>
            <f:selectItem itemValue="2" itemLabel="#{assessmentSettingsMessages.part_numbering}"/>
-         </h:selectOneRadio>
-      </h:panelGrid>
- <f:verbatim></div></f:verbatim>
+         </t:selectOneRadio>
+         <ul class="layout-numbering">
+           <li><t:radio for="itemNumbering" index="0" /></li>
+           <li><t:radio for="itemNumbering" index="1" /></li>
+         </ul>
+      </div>
     </h:panelGroup>
- <f:verbatim></div></f:verbatim>
-</h:panelGroup>
 
-<!-- *** MARK FOR REVIEW *** -->
-<!-- *** (disabled for linear assessment) *** -->
-<h:panelGroup rendered="#{assessmentSettings.valueMap.markForReview_isInstructorEditable==true}">
-    <f:verbatim><div class="tier2"></f:verbatim>
-    <h:panelGrid columns="1">
-      <h:panelGroup>
-        <h:selectBooleanCheckbox id="markForReview1" value="#{assessmentSettings.isMarkForReview}"/>
-        <h:outputLabel value="#{assessmentSettingsMessages.mark_for_review_label}"/>
-      </h:panelGroup>
-    </h:panelGrid>
-	 <f:verbatim></div></f:verbatim>
-</h:panelGroup>
+  </h:panelGroup>
+
+  <!-- *** MARK FOR REVIEW *** -->
+  <!-- *** (disabled for linear assessment) *** -->
+  <h:panelGroup styleClass="form-group row" layout="block" rendered="#{assessmentSettings.valueMap.markForReview_isInstructorEditable==true}">
+    <h:outputLabel styleClass="col-md-2" value="#{assessmentSettingsMessages.mark_for_review}" />
+    <div class="col-md-10">
+      <h:selectBooleanCheckbox id="markForReview1" value="#{assessmentSettings.isMarkForReview}"/>
+      <h:outputText value="&#160;" escape="false" />
+      <h:outputText value="#{assessmentSettingsMessages.mark_for_review_label}"/>
+    </div>
+  </h:panelGroup>
  
   <!-- *** COLORS AND GRAPHICS	*** -->
-<h:panelGroup rendered="#{assessmentSettings.valueMap.bgColor_isInstructorEditable==true}" >
-  <h:outputLabel value="<h4 class=\"samigo-category-subhead\"> #{assessmentSettingsMessages.heading_background} </h4>" escape="false"/>
-    <f:verbatim><div class="tier2"></f:verbatim>
- 
-        <h:selectOneRadio onclick="uncheckOther(this)" id="background_color" value="#{assessmentSettings.bgColorSelect}">
-          <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.background_color}"/>
-       </h:selectOneRadio>
-
+  <h:panelGroup styleClass="form-group row" layout="block" rendered="#{assessmentSettings.valueMap.bgColor_isInstructorEditable==true}" >
+    <h:outputLabel styleClass="col-md-2" value="#{assessmentSettingsMessages.background_label}" />
+    <div class="col-md-10">
+      <h:selectOneRadio onclick="uncheckOther(this)" id="background_color" value="#{assessmentSettings.bgColorSelect}">
+        <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.background_color}"/>
+      </h:selectOneRadio>
       <samigo:colorPicker value="#{assessmentSettings.bgColor}" size="10" id="pickColor"/>
        <h:selectOneRadio onclick="uncheckOther(this)" id="background_image" value="#{assessmentSettings.bgImageSelect}"  >
           <f:selectItem itemValue="1" itemLabel="#{assessmentSettingsMessages.background_image}"/>
        </h:selectOneRadio>  
-   
         <h:inputText size="80" value="#{assessmentSettings.bgImage}"/>
-    <f:verbatim></div></f:verbatim>
+    </div>
   </h:panelGroup>
 
 </samigo:hideDivision><!-- END Layout and Appearance Category -->
