@@ -134,23 +134,19 @@ $(document).ready(function() {
 </script>
 
 <!-- content... -->
+<h1>
+  <h:outputText value="#{authorFrontDoorMessages.assessments}"/>
+</h1>
 
 <h:form id="authorIndexForm">
   <!-- HEADINGS -->
    <%@ include file="/jsf/author/assessmentHeadings.jsp" %>
 
-  <h3>
-    <h:outputText value="#{authorFrontDoorMessages.assessments}"/>
-  </h3>
 <p>
   <h:messages styleClass="messageSamigo" rendered="#{! empty facesContext.maximumSeverity}" layout="table"/>
 </p>
 
 <div class="tier1">
-  <h:outputText escape="false" rendered="#{authorization.createAssessment}" value="<h4>"/>
-    <h:outputText value="#{authorFrontDoorMessages.assessment_new}" rendered="#{authorization.createAssessment}" />
-  <h:outputText escape="false" rendered="#{authorization.createAssessment}" value="</h4><br/>"/>
-
   <div id="samigo-create-container">
  	<div id="samigo-create-new">
 		<div>
