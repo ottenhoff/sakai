@@ -1,7 +1,6 @@
 <%@ taglib uri="http://java.sun.com/jsf/html" prefix="h" %>
 <%@ taglib uri="http://java.sun.com/jsf/core" prefix="f" %>
 <%@ taglib uri="http://www.sakaiproject.org/samigo" prefix="samigo" %>
-
 <!-- $Id$
 <%--
 ***********************************************************************************
@@ -76,20 +75,20 @@ function disableLinks(clickedLink){
 }
 </script>
 
-
-  <!-- content... -->
-<div class="portletBody">
-  <h:form id="selectIndexForm">
-  <h3>
+<!-- content... -->
+<div class="portletBody container-fluid">
+  <h1>
     <h:outputText value="#{selectIndexMessages.page_heading}"/>
-  </h3>
-  <!-- SELECT -->
- <div class="tier1">
-  <h4><h:outputText value="#{selectIndexMessages.take_assessment}" /></h4>
-  <p class="tier2">
-    <h:outputText rendered="#{select.isThereAssessmentToTake eq 'true'}" value="#{selectIndexMessages.take_assessment_notes}" />
-<h:outputText rendered="#{select.isThereAssessmentToTake eq 'false'}" value="#{selectIndexMessages.take_assessment_notAvailable}" />
-  </p>
+  </h1>
+
+  <h:form id="selectIndexForm">
+    <!-- SELECT -->
+    <div class="tier1">
+      <h2><h:outputText value="#{selectIndexMessages.take_assessment}" /></h2>
+      <p class="lead">
+        <h:outputText rendered="#{select.isThereAssessmentToTake eq 'true'}" value="#{selectIndexMessages.take_assessment_notes}" />
+        <h:outputText rendered="#{select.isThereAssessmentToTake eq 'false'}" value="#{selectIndexMessages.take_assessment_notAvailable}" />
+      </p>
 <%-- pager controls NOT required by mockups, not implemented
   <span class="rightNav">
     <samigo:pagerButtons  formId="editTotalResults" dataTableId="myData"
@@ -155,15 +154,13 @@ sorting actions for table:
     </h:column>
   </h:dataTable>
   </div></div>
-  <!-- SUBMITTED ASSESMENTS -->
+  
+<!-- SUBMITTED ASSESMENTS -->
 <div class="tier1">
-
-<h4> <h:outputText value="#{selectIndexMessages.submitted_assessments}" /></h4>
-  <p class="tier2">
-   
+  <h2> <h:outputText value="#{selectIndexMessages.submitted_assessments}" /></h2>
+  <p class="info-text">
 	<h:outputText rendered="#{select.isThereAssessmentToReview eq 'true'}" value="#{selectIndexMessages.review_assessment_notes}" />
-		
-	  </p>
+  </p>
 	  
 	  <p class="tier2">
 	   	<h:commandLink
@@ -174,7 +171,7 @@ sorting actions for table:
 		</h:commandLink>
 		<h:outputText value="#{selectIndexMessages.review_assessment_all}" rendered="#{select.displayAllAssessments == 2}" />
 		
-		<h:outputText value="|"  />
+		<h:outputText value="&#160; | &#160;" escape="false" />
 		
 		<h:commandLink 
 			id="some"
@@ -213,8 +210,8 @@ sorting actions for table:
 * Sort by: Time
 * Sort by: Title
 --%>
-  <div class="tier2">
-  <h:dataTable cellpadding="0" cellspacing="0" styleClass="listHier" id="reviewTable" value="#{select.reviewableAssessments}"
+  <div class="table-responsive">
+  <h:dataTable styleClass="table table-striped" id="reviewTable" value="#{select.reviewableAssessments}"
        var="reviewable" summary="#{selectIndexMessages.sum_submittedAssessment}">
 
 <%-- TITLE --%>
@@ -337,7 +334,7 @@ sorting actions for table:
 	    
   </h:dataTable>
 
-  <f:verbatim><br/></f:verbatim>
+  <br/>
   
   <h:panelGrid>
   <h:outputText value="#{selectIndexMessages.asterisk} #{selectIndexMessages.has_been_modified}" rendered="#{select.hasAnyAssessmentBeenModified}" styleClass="validate"/> 

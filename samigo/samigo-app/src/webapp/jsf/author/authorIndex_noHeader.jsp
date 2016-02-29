@@ -144,7 +144,7 @@ $(document).ready(function() {
     </h1>
 
     <div class="row">
-        <div id="samigo-create-new-box" class="col-md-5">
+        <div id="samigo-create-new-box" class="col-md-7">
             <div class="lead">
                 <h:outputText value="#{authorFrontDoorMessages.assessment_scratch}" />
             </div>
@@ -181,11 +181,11 @@ $(document).ready(function() {
             </div>
         </div>
 
-        <div id="samigo-create-or-box" class="col-md-2">
+        <div id="samigo-create-or-box" class="col-md-1">
             <h:outputText value="#{authorFrontDoorMessages.label_or}"/>
         </div>
 
-        <div id="samigo-create-import-box" class="col-md-5">
+        <div id="samigo-create-import-box" class="col-md-4">
             <div>
                 <h4>
                     <h:outputText value="#{authorFrontDoorMessages.assessment_import}" />

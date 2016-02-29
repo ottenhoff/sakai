@@ -41,35 +41,35 @@
       <body onload="<%= request.getAttribute("html.body.onload") %>;">
  
 <!--div class="portletBody"-->
-<div class="portletBody">
+<div class="portletBody container-fluid">
  <h:outputText value="<div style='#{delivery.settings.divBgcolor};#{delivery.settings.divBackground}'>" escape="false"/>
 
  <!-- content... -->
 <h:form id="takeAssessmentForm">
-<h:inputHidden id="timerId" value="#{delivery.timerId}" rendered="#{delivery.timerId!=null}" />
+  <h:inputHidden id="timerId" value="#{delivery.timerId}" rendered="#{delivery.timerId!=null}" />
 
 <!-- DONE BUTTON FOR PREVIEW -->
 <h:panelGroup rendered="#{delivery.actionString=='previewAssessment'}">
- <f:verbatim><div class="previewMessage"></f:verbatim>
+  <div class="previewMessage">
      <h:outputText value="#{deliveryMessages.ass_preview}" />
      <h:commandButton value="#{deliveryMessages.done}" action="#{person.cleanResourceIdListInPreview}" type="submit"/>
- <f:verbatim></div></f:verbatim>
+  </div>
 </h:panelGroup>
 
-<f:verbatim><h3></f:verbatim>
-	<h:outputText value="#{deliveryMessages.begin_assessment_}" rendered="#{delivery.firstTimeTaking}"/>
-	<h:outputText value="#{deliveryMessages.continue_assessment_}" rendered="#{!delivery.firstTimeTaking}"/>
-<f:verbatim></h3></f:verbatim>
+  <h1>
+    <h:outputText value="#{deliveryMessages.begin_assessment_}" rendered="#{delivery.firstTimeTaking}"/>
+    <h:outputText value="#{deliveryMessages.continue_assessment_}" rendered="#{!delivery.firstTimeTaking}"/>
+  </h1>
 
-<div class="tier1">
- <h4> <h:outputText value="\"#{delivery.assessmentTitle}\" #{deliveryMessages.t_for} #{delivery.courseName} " escape="false"/></h4>
-<div class="tier2">
-</div>
+  <div class="lead">
+    <h:outputText value="\"#{delivery.assessmentTitle}\" #{deliveryMessages.t_for} #{delivery.courseName} " escape="false"/>
+  </div>
 
-<h:messages styleClass="messageSamigo" rendered="#{! empty facesContext.maximumSeverity}" layout="table"/>
- 
-<!-- ASSESSMENT INTRODUCTION -->
-<h:outputText value="<br/>#{delivery.instructorMessage}<br/>" escape="false" rendered="#{delivery.instructorMessage != null && delivery.instructorMessage != ''}"/>
+  <h:messages styleClass="messageSamigo" rendered="#{! empty facesContext.maximumSeverity}" layout="table"/>
+  
+  <div class="bs-callout-primary">
+    <!-- ASSESSMENT INTRODUCTION -->
+    <h:outputText value="<br/>#{delivery.instructorMessage}<br/>" escape="false" rendered="#{delivery.instructorMessage != null && delivery.instructorMessage != ''}"/>
 
   <!-- ASSESSMENT ATTACHMENTS -->
   <%@ include file="/jsf/delivery/assessment_attachment.jsp" %>
@@ -268,4 +268,3 @@
       </body>
     </html>
   </f:view>
-
