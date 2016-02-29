@@ -40,7 +40,6 @@
       </head>
       <body onload="<%= request.getAttribute("html.body.onload") %>;">
  
-<!--div class="portletBody"-->
 <div class="portletBody container-fluid">
  <h:outputText value="<div style='#{delivery.settings.divBgcolor};#{delivery.settings.divBackground}'>" escape="false"/>
 
