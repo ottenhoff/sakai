@@ -79,16 +79,16 @@ function disableLinks(clickedLink){
 <div class="portletBody container-fluid">
   <h1>
     <h:outputText value="#{selectIndexMessages.page_heading}"/>
+    <small><h:outputText value="#{selectIndexMessages.take_assessment}" /></small>
   </h1>
 
   <h:form id="selectIndexForm">
     <!-- SELECT -->
-    <div class="tier1">
-      <h2><h:outputText value="#{selectIndexMessages.take_assessment}" /></h2>
-      <p class="lead">
+    <div class="submission-container">
+      <div class="lead">
         <h:outputText rendered="#{select.isThereAssessmentToTake eq 'true'}" value="#{selectIndexMessages.take_assessment_notes}" />
         <h:outputText rendered="#{select.isThereAssessmentToTake eq 'false'}" value="#{selectIndexMessages.take_assessment_notAvailable}" />
-      </p>
+      </div>
 <%-- pager controls NOT required by mockups, not implemented
   <span class="rightNav">
     <samigo:pagerButtons  formId="editTotalResults" dataTableId="myData"
@@ -112,8 +112,7 @@ sorting actions for table:
 --%>
   <!-- SELECT TABLE -->
   <div class="tier2">
-  <h:dataTable cellpadding="0" cellspacing="0" id="selectTable" value="#{select.takeableAssessments}"
-    var="takeable" styleClass="listHier" summary="#{selectIndexMessages.sum_availableAssessment}">
+  <h:dataTable id="selectTable" value="#{select.takeableAssessments}" var="takeable" styleClass="table table-striped" summary="#{selectIndexMessages.sum_availableAssessment}">
     <h:column headerClass="assessmentTitleHeader">
       <f:facet name="header">
           <h:outputText  value="#{selectIndexMessages.title} " />

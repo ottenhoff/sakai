@@ -16,7 +16,14 @@
 
 	#samigo-create-new-box, #samigo-create-import-box {
 		@extend .bs-callout-primary;
-		border-left-width: 0;
+		border-left-width: 1px;
 		margin-top: 0;
+	}
+
+	.samigo-question-callout {
+			@include bs-callout($toolBorderColor, $background-color);
+			input[type="checkbox"], input[type="radio"] {
+				margin-right: 0.25em;
+			}
 	}
 }
