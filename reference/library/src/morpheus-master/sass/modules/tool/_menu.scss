@@ -66,6 +66,13 @@
 .listNav{
 	margin: 1em 0;
 	.inlineForm{
+		@extend .panel;
+		@extend .panel-default;
+		.pager-instruction{
+			@extend .panel-heading;
+			@extend .small;
+			text-align: center;
+		}
 		display: inline-block;
 		@media #{$phone}{
 			display: table-cell;
@@ -82,6 +89,9 @@
 					display: none;
 				}
 			}
+		}
+		fieldset{
+			display: inline-block;
 		}
 		legend{
 			display: none;
