@@ -167,7 +167,7 @@ $(document).ready(function() {
             </div>
 
             <div class="form-group">
-		<label><h:outputText value="#{authorFrontDoorMessages.assessment_choose} " rendered="#{author.showTemplateList}" /></label>
+		        <h:outputLabel value="#{authorFrontDoorMessages.assessment_choose} " rendered="#{author.showTemplateList}" />
                 <h:selectOneMenu id="assessmentTemplate" value="#{author.assessmentTemplateId}" rendered="#{author.showTemplateList}">
                     <f:selectItem itemValue="" itemLabel="#{generalMessages.select_menu}"/>
                     <f:selectItems value="#{author.assessmentTemplateList}" />
@@ -181,7 +181,7 @@ $(document).ready(function() {
             </div>
         </div>
 
-        <div id="samigo-create-or-box" class="col-md-1">
+        <div id="samigo-create-or-box" class="col-md-1" style="text-align:center">
             <h:outputText value="#{authorFrontDoorMessages.label_or}"/>
         </div>
 
