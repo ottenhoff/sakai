@@ -150,7 +150,8 @@ $(document).ready(function() {
             </div>
 
             <div class="form-group form-inline">
-                <label class="new_assessment"> <h:outputText value="#{authorFrontDoorMessages.assessment_create}"/> </label>
+                <h:outputLabel value="#{authorFrontDoorMessages.assessment_create}"/>
+                <h:outputText value="&#160;" escape="false" />
                 <h:inputText id="title" maxlength="255" value="#{author.assessTitle}" styleClass="form-control" />
             </div>
 
