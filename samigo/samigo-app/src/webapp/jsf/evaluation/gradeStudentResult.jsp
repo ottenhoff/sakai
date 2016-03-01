@@ -198,18 +198,21 @@ function toPoint(id)
       </h:panelGroup>
 
       <t:dataList value="#{part.itemContents}" var="question" itemStyleClass="page-header question-box" styleClass="question-wrapper" layout="unorderedList">
-          <h:outputText value="<a name=\"" escape="false" />
-          <h:outputText value="#{part.number}_#{question.number}\"></a>" escape="false" />
-            <h:outputText value="#{deliveryMessages.q} #{question.number} #{deliveryMessages.of} " />
-            <h:outputText value="#{part.questions}#{deliveryMessages.column}  " />
-            <h:inputText id="adjustedScore" value="#{question.pointsForEdit}" onchange="toPoint(this.id);" >
-<f:validateDoubleRange/>
-<%--SAK-3776    <f:convertNumber maxFractionDigits="2"/> --%>
+        <h:outputText value="<a name=\"#{part.number}_#{question.number}\"></a>" escape="false" />
+        <h:panelGroup layout="block" styleClass="input-group col-sm-6">
+            <span class="input-group-addon">
+              <h:outputText value="#{deliveryMessages.q} #{question.number} #{deliveryMessages.of} " />
+              <h:outputText value="#{part.questions}#{deliveryMessages.column}  " />
+            </span>
+            <h:inputText styleClass="form-control" id="adjustedScore" value="#{question.pointsForEdit}" onchange="toPoint(this.id);" >
+              <f:validateDoubleRange/>
             </h:inputText>
+            <span class="input-group-addon">
             <h:outputText value=" #{deliveryMessages.splash} #{question.roundedMaxPoints} " />
             <h:outputText value="#{deliveryMessages.pt}"/>
-          <f:verbatim><br/></f:verbatim>
-<h:message for="adjustedScore" style="color:red"/>
+            </span>
+            <h:message for="adjustedScore" style="color:red"/>
+        </h:panelGroup>
 
           <div class="samigo-question-callout">
             <h:panelGroup rendered="#{question.itemData.typeId == 7}">
