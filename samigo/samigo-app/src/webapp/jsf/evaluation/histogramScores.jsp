@@ -36,29 +36,26 @@ $Id$
 --%>
 -->
 <!-- content... -->
- <div class="portletBody">
+ <div class="portletBody container-fluid">
  
 <!-- IF A SECURE DELIVERY MODULE HAS BEEN SELECTED, INJECT ITS HTML FRAGMENT (IF ANY) HERE -->
 <h:outputText  value="#{delivery.secureDeliveryHTMLFragment}" escape="false"  />
  
 <h:form id="histogram">
-
   <h:inputHidden id="publishedId" value="#{histogramScores.publishedId}" />
   <h:inputHidden id="itemId" value="#{histogramScores.itemId}" />
 
   <!-- HEADINGS -->
   <%@ include file="/jsf/evaluation/evaluationHeadings.jsp" %>
 
-  <h:panelGrid columns="1">
-  <h:panelGroup>
-  <f:verbatim><h3></f:verbatim>
-  	<h:outputText value="#{evaluationMessages.stat_view}#{evaluationMessages.column} " escape="false"/>
-  <f:verbatim><span style="font-weight:normal !important;"></f:verbatim>
-  	<h:outputText value="#{histogramScores.assessmentName} " escape="false"/>
-  <f:verbatim></span></f:verbatim>
-  <f:verbatim></h3></f:verbatim>
-  </h:panelGroup>
-  </h:panelGrid>
+  <div class="page-header">
+    <h1>
+      <h:outputText value="#{evaluationMessages.stat_view}#{evaluationMessages.column} " escape="false"/>
+      <small>
+        <h:outputText value="#{histogramScores.assessmentName} " escape="false"/>
+      </small>
+    </h1>
+  </div>
   
   <!-- Per UX, for formatting -->
   <div class="textBelowHeader">
@@ -127,7 +124,6 @@ $Id$
    
 <div class="tier1">
 
-
   <!-- LAST/ALL SUBMISSIONS; PAGER; ALPHA INDEX  -->
     <h:panelGroup rendered="#{histogramScores.hasNav==null || histogramScores.hasNav=='true'}">
      <h:outputText value="#{evaluationMessages.view} " />
@@ -154,72 +150,68 @@ $Id$
          type="org.sakaiproject.tool.assessment.ui.listener.evaluation.HistogramListener" />
      </h:selectOneMenu>
     </h:panelGroup>
-       
-    <h:panelGroup>
- <f:verbatim><h4></f:verbatim>
-  <h:outputText value="#{evaluationMessages.tot}" />
-   <f:verbatim></h4><div class="tier2"></f:verbatim>
 
- <h:dataTable value="#{histogramScores.histogramBars}" var="bar" headerClass="navView">
-
-    <h:column>
-        <f:facet name="header">
-        <h:outputText escape="false" value="<U>#{evaluationMessages.num_points}</U>" /> 
-      </f:facet>
-        <h:outputText value=" #{bar.rangeInfo}" />
-    </h:column>
-     <h:column>
-<f:facet name="header">
-         <h:outputText escape="false" value="<U>#{evaluationMessages.num_students}</U>" />
-      </f:facet>
-<h:panelGroup>
-        <h:graphicImage url="/images/reddot.gif" height="12" width="#{bar.columnHeight}"/>
-        <h:outputText value=" #{bar.numStudents}" />
-</h:panelGroup>
-
-</h:column>
-
-      
-  </h:dataTable>
-<f:verbatim></div></f:verbatim>
+    <br/><br/>
+    <h:panelGroup layout="block" styleClass="panel panel-default">
+      <div class="panel-heading">
+        <strong><h:outputText value="#{evaluationMessages.tot}" /></strong>
+      </div>
+      <div class="table-reponsive">
+        <h:dataTable styleClass="table" value="#{histogramScores.histogramBars}" var="bar" headerClass="navView">
+          <h:column>
+            <f:facet name="header">
+              <h:outputText escape="false" value="#{evaluationMessages.num_points}" /> 
+            </f:facet>
+            <h:outputText value=" #{bar.rangeInfo}" />
+          </h:column>
+          <h:column>
+            <f:facet name="header">
+              <h:outputText escape="false" value="#{evaluationMessages.num_students}" />
+            </f:facet>
+            <h:panelGroup>
+              <div class="progress">
+                <h:outputText value="<div class=\"progress-bar\" role=\"progressbar\" aria-valuenow=\"#{bar.columnHeight}\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width: #{bar.columnHeight}%;\">" escape="false" />
+                  <h:outputText value="#{bar.numStudents}" />
+                </div>
+              </div>
+            </h:panelGroup>
+          </h:column>
+        </h:dataTable>
+      </div>
     </h:panelGroup>
 
-<p class="tier2">
-<h:panelGrid columns="2">
+    <h:panelGrid columns="2" styleClass="table table-striped">
+      <h:outputLabel value="#{evaluationMessages.sub_view}"/>
+      <h:outputLabel value="#{histogramScores.numResponses}" />
 
-<h:outputLabel value="#{evaluationMessages.sub_view}"/>
-<h:outputLabel value="#{histogramScores.numResponses}" />
+      <h:outputLabel value="#{evaluationMessages.tot_score_possible} " />
+      <h:outputText value="#{histogramScores.roundedTotalPossibleScore}"/>
 
-<h:outputLabel value="#{evaluationMessages.tot_score_possible} " />
-<h:outputText value="#{histogramScores.roundedTotalPossibleScore}"/>
+      <h:outputLabel value="#{evaluationMessages.mean_eq}" />
+      <h:outputText value="#{histogramScores.mean}"/>
 
-<h:outputLabel value="#{evaluationMessages.mean_eq}" />
-<h:outputText value="#{histogramScores.mean}"/>
+      <h:outputLabel value="#{evaluationMessages.median}" />
+      <h:outputText value="#{histogramScores.median}"/>
 
-<h:outputLabel value="#{evaluationMessages.median}" />
-<h:outputText value="#{histogramScores.median}"/>
+      <h:outputLabel value="#{evaluationMessages.mode}" />
+      <h:outputText value="#{histogramScores.mode}"/>
 
-<h:outputLabel value="#{evaluationMessages.mode}" />
-<h:outputText value="#{histogramScores.mode}"/>
+      <h:outputLabel value="#{evaluationMessages.range_eq}" />
+      <h:outputText value="#{histogramScores.range}"/>
 
-<h:outputLabel value="#{evaluationMessages.range_eq}" />
-<h:outputText value="#{histogramScores.range}"/>
+      <h:outputLabel value="#{evaluationMessages.qtile_1_eq}" />
+      <h:outputText value="#{histogramScores.q1}"/>
 
-<h:outputLabel value="#{evaluationMessages.qtile_1_eq}" />
-<h:outputText value="#{histogramScores.q1}"/>
+      <h:outputLabel value="#{evaluationMessages.qtile_3_eq}" />
+      <h:outputText value="#{histogramScores.q3}"/>
 
-<h:outputLabel value="#{evaluationMessages.qtile_3_eq}" />
-<h:outputText value="#{histogramScores.q3}"/>
-
-<h:outputLabel value="#{evaluationMessages.std_dev}" />
-<h:outputText value="#{histogramScores.standDev}"/>
-</h:panelGrid>
-</p>
+      <h:outputLabel value="#{evaluationMessages.std_dev}" />
+      <h:outputText value="#{histogramScores.standDev}"/>
+    </h:panelGrid>
 
 <h:panelGroup rendered="#{histogramScores.showObjectivesColumn=='true'}">
-<div class="objectives" >
-
-<h:dataTable value="#{histogramScores.objectives}" var="obj" >
+  <div class="objectives" >
+    <h:dataTable styleClass="table" value="#{histogramScores.objectives}" var="obj" >
        <h:column>
                <f:facet name="header">
                        <h:outputText escape="false" value="#{evaluationMessages.obj}" /> 
@@ -232,15 +224,13 @@ $Id$
                 </f:facet>
                 <h:outputText value="#{obj.value}%" escape="false" />
        </h:column>
-</h:dataTable>
-
-</div>
+    </h:dataTable>
+  </div>
 </h:panelGroup>
 
 <h:panelGroup rendered="#{histogramScores.showObjectivesColumn=='true'}">
-<div class="keywords" >
-
-<h:dataTable value="#{histogramScores.keywords}" var="keyword_s">
+  <div class="keywords" >
+    <h:dataTable styleClass="table" value="#{histogramScores.keywords}" var="keyword_s">
        <h:column>
                <f:facet name="header">
                        <h:outputText escape="false" value="#{evaluationMessages.keywords}" /> 
@@ -253,16 +243,15 @@ $Id$
                 </f:facet>
                 <h:outputText value="#{keyword_s.value}%" escape="false" />
        </h:column>
-</h:dataTable>
-
-</div>
+    </h:dataTable>
+  </div>
 </h:panelGroup>
 
-<h:panelGroup>
-    <f:verbatim><h4></f:verbatim>
+<div class="page-header">
+  <h2>
     <h:outputText value="#{evaluationMessages.q_view}" />
-    <f:verbatim></h4></f:verbatim>
-</h:panelGroup>
+  </h2>
+</div>
 
 <!-- The parts drop down. -->
 <h:panelGroup rendered="#{histogramScores.assesmentPartCount > 1}">
@@ -277,19 +266,18 @@ $Id$
     </h:selectOneMenu>
 </h:panelGroup>
 
-  <h:dataTable value="#{histogramScores.partInfo}" var="item">
-
+  <h:dataTable styleClass="table table-striped" value="#{histogramScores.partInfo}" var="item">
     <h:column>
       <h:panelGroup>
-        <f:verbatim><h4></f:verbatim>
+        <h3>
           <h:outputText value="#{item.title}" escape="false" />
-        <f:verbatim></h4></f:verbatim>
-<f:verbatim><div class="tier2"/></f:verbatim>
+        </h3>
+        <div class="table-responsive"/>
         <h:outputText value="#{item.questionText}" escape="false" />
 
-        <h:dataTable value="#{item.histogramBars}" var="bar">
+        <h:dataTable styleClass="table table-striped" value="#{item.histogramBars}" var="bar">
           <h:column>
-            <h:panelGrid columns="1">
+            <h:panelGrid styleClass="table table-striped" columns="1">
               <h:panelGroup rendered="#{item.questionType !='13'}">
 				<h:graphicImage id="image8" rendered="#{bar.isCorrect}" width="12" height="12"
         			alt="#{evaluationMessages.alt_correct}" url="/images/delivery/checkmark.gif" >
@@ -298,9 +286,9 @@ $Id$
         			alt="#{evaluationMessages.alt_incorrect}" url="/images/delivery/spacer.gif" >
        			</h:graphicImage>
 
-        <f:verbatim><h4></f:verbatim>
+        <h4>
           <h:outputText value="#{bar.title}" escape="false" rendered="#{bar.title ne ''}"/>
-        <f:verbatim></h4></f:verbatim>
+        </h4>
 
        <h:graphicImage id="image8_b" rendered="#{bar.isCorrect}" width="12" height="12"
         alt="#{evaluationMessages.alt_correct}" url="/images/delivery/checkmark.gif" >
@@ -310,21 +298,26 @@ $Id$
         alt="#{evaluationMessages.alt_incorrect}" url="/images/delivery/spacer.gif" >
        </h:graphicImage>
 
-       <h:graphicImage url="/images/reddot.gif" height="12" width="#{bar.columnHeight}"/>
-                <h:outputText value=" #{bar.numStudentsText}" />
-              </h:panelGroup>
-              <h:panelGroup>
-              	<h:graphicImage width="12" height="12" url="/images/delivery/spacer.gif" />
-              	<h:outputText value="#{bar.label}" escape="false" >
-              		<f:converter converterId="org.sakaiproject.tool.assessment.jsf.convert.AnswerSurveyConverter" />
-             	</h:outputText>
-			  </h:panelGroup>
+         <div class="progress">
+           <h:outputText value="<div class=\"progress-bar\" role=\"progressbar\" aria-valuenow=\"#{bar.columnHeight}\" aria-valuemin=\"0\" aria-valuemax=\"100\" style=\"width: #{bar.columnHeight}%;\">" escape="false" />
+             <h:outputText value="#{bar.numStudentsText}" />
+           </div>
+         </div>
+
+         <h:outputText value=" #{bar.numStudentsText}" />
+       </h:panelGroup>
+     <h:panelGroup>
+     <h:graphicImage width="12" height="12" url="/images/delivery/spacer.gif" />
+     <h:outputText value="#{bar.label}" escape="false" >
+       <f:converter converterId="org.sakaiproject.tool.assessment.jsf.convert.AnswerSurveyConverter" />
+     </h:outputText>
+		</h:panelGroup>
 			  
-			  <h:panelGroup rendered="#{item.questionType == '13' }">
-			    <f:verbatim><div class="tier3"></f:verbatim>
-				<h:dataTable value="#{bar.itemBars}" var="itemBar" >
+		<h:panelGroup rendered="#{item.questionType == '13' }">
+			  <div class="table-responsive">
+				<h:dataTable styleClass="table" value="#{bar.itemBars}" var="itemBar" >
 					<h:column>
-					<h:panelGrid columns="3">
+					<h:panelGrid styleClass="table table-striped" columns="3">
 					<h:panelGroup>
 						<h:outputText value="#{itemBar.itemText}  "/>
 						<h:graphicImage url="/images/reddot.gif" height="12" width="#{itemBar.columnHeight}"/>
@@ -333,7 +326,7 @@ $Id$
 					</h:panelGrid>
 					</h:column>
 				</h:dataTable>
-				<f:verbatim></div></f:verbatim>
+				</div>
 			  </h:panelGroup>
             </h:panelGrid>
           </h:column>
@@ -341,7 +334,7 @@ $Id$
 
         <!-- 1-2=mcmc 3=mcsc 4=tf 5=essay 6=file 7=audio 8=FIB 9=matching 14=emi -->
 
-        <h:panelGrid columns="2" rendered="#{item.questionType == '5' or item.questionType == '6' or item.questionType == '7'}">
+        <h:panelGrid styleClass="table table-striped" columns="2" rendered="#{item.questionType == '5' or item.questionType == '6' or item.questionType == '7'}">
 
           <h:outputLabel value="#{evaluationMessages.responses}" />
           <h:outputText id="responses" value="#{item.numResponses}" />
@@ -365,13 +358,10 @@ $Id$
           <h:outputText id="percentCorrect" value="#{item.percentCorrect}" />
         </h:panelGrid>
 
-
       </h:panelGroup>
-<f:verbatim></div></f:verbatim> 
+      </div>
     </h:column>
   </h:dataTable>
-
-
 
 
 <h:commandButton value="#{evaluationMessages.return_s}" action="select" type="submit" rendered="#{histogramScores.hasNav=='false'}"/>
