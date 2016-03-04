@@ -77,10 +77,11 @@ function disableLinks(clickedLink){
 
 <!-- content... -->
 <div class="portletBody container-fluid">
-  <h1>
-    <h:outputText value="#{selectIndexMessages.page_heading}"/>
-    <small><h:outputText value="#{selectIndexMessages.take_assessment}" /></small>
-  </h1>
+  <div class="page-header">
+    <h1>
+      <h:outputText value="#{selectIndexMessages.page_heading}"/>
+    </h1>
+  </div>
 
   <h:form id="selectIndexForm">
     <!-- SELECT -->
@@ -89,19 +90,6 @@ function disableLinks(clickedLink){
         <h:outputText rendered="#{select.isThereAssessmentToTake eq 'true'}" value="#{selectIndexMessages.take_assessment_notes}" />
         <h:outputText rendered="#{select.isThereAssessmentToTake eq 'false'}" value="#{selectIndexMessages.take_assessment_notAvailable}" />
       </div>
-<%-- pager controls NOT required by mockups, not implemented
-  <span class="rightNav">
-    <samigo:pagerButtons  formId="editTotalResults" dataTableId="myData"
-      prevText="Previous" nextText="Next"
-      firstItem="#{select.takePager.firstItem}"
-      lastItem="#{select.takePager.lastItem}"
-      totalItems="#{select.takePager.totalItems}"
-      numItems="#{select.takePager.numItems}" />
-  </span>
-  <br />
-  <br />
-  <br />
---%>
 
 
 <%--
@@ -155,13 +143,15 @@ sorting actions for table:
   </div></div>
   
 <!-- SUBMITTED ASSESMENTS -->
-<div class="tier1">
-  <h2> <h:outputText value="#{selectIndexMessages.submitted_assessments}" /></h2>
-  <p class="info-text">
+  <h2>
+    <h:outputText value="#{selectIndexMessages.submitted_assessments}" />
+  </h2>
+  <div class="info-text">
 	<h:outputText rendered="#{select.isThereAssessmentToReview eq 'true'}" value="#{selectIndexMessages.review_assessment_notes}" />
-  </p>
+  </div>
 	  
-	  <p class="tier2">
+<div class="panel panel-default">
+  <div class="panel-heading">
 	   	<h:commandLink
 			id="all"
 			value="#{selectIndexMessages.review_assessment_all}" rendered="#{select.isThereAssessmentToReview eq 'true' && select.displayAllAssessments == 1}" onmouseup="disableLinks(this);submit();">
@@ -170,7 +160,7 @@ sorting actions for table:
 		</h:commandLink>
 		<h:outputText value="#{selectIndexMessages.review_assessment_all}" rendered="#{select.displayAllAssessments == 2}" />
 		
-		<h:outputText value="&#160; | &#160;" escape="false" />
+    <h:outputText value="&#160; | &#160;" escape="false" />
 		
 		<h:commandLink 
 			id="some"
@@ -181,22 +171,7 @@ sorting actions for table:
 			<f:actionListener type="org.sakaiproject.tool.assessment.ui.listener.select.SelectActionListener" />
 		</h:commandLink>
 		<h:outputText value="#{selectIndexMessages.review_assessment_recorded}" rendered="#{select.displayAllAssessments == 1}" />
-		
-      </p>
-
-<%-- pager controls NOT required by mockups, not implemented
-  <span class="rightNav">
-    <samigo:pagerButtons  formId="editTotalResults" dataTableId="myData"
-      prevText="Previous" nextText="Next"
-      firstItem="#{select.reviewPager.firstItem}"
-      lastItem="#{select.reviewPager.lastItem}"
-      totalItems="#{select.reviewPager.totalItems}"
-      numItems="#{select.reviewPager.numItems}" />
-  </span>
-  <br />
-  <br />
-  <br />
---%>
+      </div>
 
   <!-- REVIEW TABLE -->
 <%--
@@ -210,8 +185,7 @@ sorting actions for table:
 * Sort by: Title
 --%>
   <div class="table-responsive">
-  <h:dataTable styleClass="table table-striped" id="reviewTable" value="#{select.reviewableAssessments}"
-       var="reviewable" summary="#{selectIndexMessages.sum_submittedAssessment}">
+  <h:dataTable styleClass="table table-striped" id="reviewTable" value="#{select.reviewableAssessments}" var="reviewable" summary="#{selectIndexMessages.sum_submittedAssessment}">
 
 <%-- TITLE --%>
     <h:column>
