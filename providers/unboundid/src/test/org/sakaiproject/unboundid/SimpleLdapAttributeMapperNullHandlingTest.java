@@ -1,4 +1,4 @@
-package edu.amc.sakai.user;
+package org.sakaiproject.unboundid;
 
 import com.unboundid.ldap.sdk.migrate.ldapjdk.LDAPAttribute;
 import com.unboundid.ldap.sdk.migrate.ldapjdk.LDAPAttributeSet;

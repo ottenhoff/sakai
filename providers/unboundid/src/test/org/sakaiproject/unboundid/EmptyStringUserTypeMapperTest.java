@@ -1,4 +1,4 @@
-package edu.amc.sakai.user;
+package org.sakaiproject.unboundid;
 
 import org.sakaiproject.unboundid.EmptyStringUserTypeMapper;
 import org.sakaiproject.unboundid.SimpleLdapAttributeMapper;

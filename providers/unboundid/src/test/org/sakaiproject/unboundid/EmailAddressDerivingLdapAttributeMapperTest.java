@@ -19,7 +19,7 @@
  *
  **********************************************************************************/
 
-package edu.amc.sakai.user;
+package org.sakaiproject.unboundid;
 
 import org.jmock.Mock;
 import org.jmock.cglib.MockObjectTestCase;
