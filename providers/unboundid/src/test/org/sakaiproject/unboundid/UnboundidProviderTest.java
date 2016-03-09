@@ -19,7 +19,7 @@
  *
  **********************************************************************************/
 
-package edu.amc.sakai.user;
+package org.sakaiproject.unboundid;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,7 +33,6 @@ import org.sakaiproject.unboundid.EidDerivedEmailAddressHandler;
 import org.sakaiproject.unboundid.EidValidator;
 import org.sakaiproject.unboundid.InvalidEmailAddressException;
 import org.sakaiproject.unboundid.LdapAttributeMapper;
-import org.sakaiproject.unboundid.LdapConnectionManager;
 import org.sakaiproject.unboundid.LdapEntryMapper;
 import org.sakaiproject.unboundid.LdapUserData;
 import org.sakaiproject.unboundid.UnboundidDirectoryProvider;
@@ -56,7 +55,6 @@ public class UnboundidDirectoryProviderTest extends MockObjectTestCase {
 	private Mock mockEidValidator;
 	private LdapAttributeMapper attributeMapper;
 	private Mock mockAttributeMapper;
-	private LdapConnectionManager connManager;
 	private Mock mockConnManager;
 	private LDAPConnection conn;
 	private Mock mockConn;
@@ -82,9 +80,6 @@ public class UnboundidDirectoryProviderTest extends MockObjectTestCase {
 		mockAttributeMapper = mock(LdapAttributeMapper.class);
 		attributeMapper = (LdapAttributeMapper)mockAttributeMapper.proxy();
 		provider.setLdapAttributeMapper(attributeMapper);
-		mockConnManager = mock(LdapConnectionManager.class);
-		connManager = (LdapConnectionManager)mockConnManager.proxy();
-		provider.setLdapConnectionManager(connManager);
 		mockConn = mock(LDAPConnection.class);
 		conn = (LDAPConnection) mockConn.proxy();
 		mockSearchResults = mock(LDAPSearchResults.class);
@@ -100,21 +95,21 @@ public class UnboundidDirectoryProviderTest extends MockObjectTestCase {
 	public void testRefusesToSearchOnInvalidEids() throws LDAPException {
 		final String eid = "some-eid";
 		mockEidValidator.expects(once()).method("isSearchableEid").with(eq(eid)).will(returnValue(false));
-		assertNull(provider.getUserByEid(eid, null));
+		assertNull(provider.getUserByEid(eid));
 	}
 	
 	public void testAllowsSearchesOnAnyEidIfNoValidatorConfigured() throws LDAPException {
 		final String eid = "some-eid";
 		provider.setEidValidator(null);
 		expectValidUserEidSearch(eid);
-		assertNotNull(provider.getUserByEid(eid, null));
+		assertNotNull(provider.getUserByEid(eid));
 	}
 	
 	public void testAllowsSearchesOnValidEids() throws LDAPException {
 		final String eid = "some-eid";
 		mockEidValidator.expects(once()).method("isSearchableEid").with(eq(eid)).will(returnValue(true));
 		expectValidUserEidSearch(eid);
-		assertNotNull(provider.getUserByEid(eid, null));
+		assertNotNull(provider.getUserByEid(eid));
 	}
 	
 	protected void expectValidUserEidSearch(String eid) {

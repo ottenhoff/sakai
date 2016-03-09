@@ -19,7 +19,7 @@
  *
  **********************************************************************************/
 
-package edu.amc.sakai.user;
+package org.sakaiproject.unboundid;
 
 import org.apache.commons.pool.ObjectPool;
 import org.jmock.Mock;

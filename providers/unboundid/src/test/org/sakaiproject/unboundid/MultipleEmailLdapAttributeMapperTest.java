@@ -19,7 +19,7 @@
  *
  **********************************************************************************/
 
-package edu.amc.sakai.user;
+package org.sakaiproject.unboundid;
 
 import java.util.ArrayList;
 import java.util.HashMap;
