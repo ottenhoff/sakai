@@ -62,24 +62,24 @@ public interface LdapConnectionManagerConfig {
 	/**
 	 * @return the LDAP host address or name.
 	 */
-	public String getLdapHost();
+	public String[] getLdapHost();
 
 	/**
 	 * @param ldapHost
 	 *        The LDAP host address or name.
 	 */
-	public void setLdapHost(String ldapHost);
+	public void setLdapHost(String[] ldapHost);
 
 	/**
 	 * @return the LDAP connection port.
 	 */
-	public int getLdapPort();
+	public int[] getLdapPort();
 
 	/**
 	 * @param ldapPort
 	 *        The LDAP connection port to set.
 	 */
-	public void setLdapPort(int ldapPort);
+	public void setLdapPort(int[] ldapPort);
 	
 	/**
 	 * @return the LDAP user to bind as, typically a manager acct.

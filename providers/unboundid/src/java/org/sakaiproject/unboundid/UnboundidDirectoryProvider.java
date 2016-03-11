@@ -64,7 +64,7 @@ import com.unboundid.ldap.sdk.migrate.ldapjdk.LDAPException;
 public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapConnectionManagerConfig, ExternalUserSearchUDP, UsersShareEmailUDP, DisplayAdvisorUDP, AuthenticationIdUDP
 {
 	/** Default LDAP connection port */
-	public static final int DEFAULT_LDAP_PORT = 389;
+	public static final int[] DEFAULT_LDAP_PORT = {389};
 
 	/** Default secure/unsecure LDAP connection creation behavior */
 	public static final boolean DEFAULT_IS_SECURE_CONNECTION = false;
@@ -105,10 +105,10 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 	private static Log M_log = LogFactory.getLog(UnboundidDirectoryProvider.class);
 
 	/** LDAP host address */
-	private String ldapHost;
+	private String[] ldapHost;
 
 	/** LDAP connection port. Defaults to {@link #DEFAULT_LDAP_PORT} */
-	private int ldapPort = DEFAULT_LDAP_PORT;
+	private int[] ldapPort = DEFAULT_LDAP_PORT;
 
 	/** DN for LDAP manager user */
 	private String ldapUser;
@@ -226,7 +226,7 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 
 		// Create a new LDAP connection pool with 10 connections spanning multiple
 		// servers using a server set.
-		RoundRobinServerSet serverSet = new RoundRobinServerSet(null, null);
+		RoundRobinServerSet serverSet = new RoundRobinServerSet(ldapHost, ldapPort);
 		SimpleBindRequest bindRequest = new SimpleBindRequest(ldapUser, ldapPassword);
 		try {
 			connectionPool = new LDAPConnectionPool(serverSet, bindRequest, 10);
@@ -998,7 +998,7 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 	/**
 	 * {@inheritDoc}
 	 */
-	public String getLdapHost()
+	public String[] getLdapHost()
 	{
 		return ldapHost;
 	}
@@ -1006,7 +1006,7 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 	/**
 	 * {@inheritDoc}
 	 */
-	public void setLdapHost(String ldapHost)
+	public void setLdapHost(String[] ldapHost)
 	{
 		this.ldapHost = ldapHost;
 	}
@@ -1014,7 +1014,7 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 	/**
 	 * {@inheritDoc}
 	 */
-	public int getLdapPort()
+	public int[] getLdapPort()
 	{
 		return ldapPort;
 	}
@@ -1022,7 +1022,7 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 	/**
 	 * {@inheritDoc}
 	 */
-	public void setLdapPort(int ldapPort)
+	public void setLdapPort(int[] ldapPort)
 	{
 		this.ldapPort = ldapPort;
 	}
