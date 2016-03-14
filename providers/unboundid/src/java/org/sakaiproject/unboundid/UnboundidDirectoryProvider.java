@@ -371,9 +371,9 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 			return false;
 
 		}
-		catch (LDAPException e)
+		catch (com.unboundid.ldap.sdk.LDAPException e)
 		{
-			if (e.getLDAPResultCode() == LDAPException.INVALID_CREDENTIALS) {
+			if (e.getResultCode().intValue() == LDAPException.INVALID_CREDENTIALS) {
 				if ( M_log.isWarnEnabled() ) {
 					M_log.warn("authenticateUser(): invalid credentials [userLogin = "
 							+ userLogin + "]");
@@ -382,8 +382,8 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 			} else {
 				throw new RuntimeException(
 						"authenticateUser(): LDAPException during authentication attempt [userLogin = "
-						+ userLogin + "][result code = " + e.errorCodeToString() + 
-						"][error message = "+ e.getLDAPErrorMessage() + "]", e);
+						+ userLogin + "][result code = " + e.getResultCode().toString() + 
+						"][error message = "+ e.getExceptionMessage() + "]", e);
 			}
 		} catch ( Exception e ) {
 			throw new RuntimeException(
@@ -864,7 +864,7 @@ public class UnboundidDirectoryProvider implements UserDirectoryProvider, LdapCo
 						dr,
 						maxResults,
 						operationTimeout,
-						true,
+						false,
 						filter, 
 						searchResultPhysicalAttributeNames
 						);
