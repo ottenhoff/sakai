@@ -1,5 +1,5 @@
 
-$font-family-url: !important;
+$font-family-url: false;
 $font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 $header-font-family: GalaxiePolarisCondensedBook, "Helvetica Neue", Helvetica, Arial, Verdana, sans-serif;
 
@@ -20,8 +20,8 @@ $toolTabBGColor: #e4e8ec;
 $toolBorderColor: #ced4db;
 
 $okcolor: #5aabbc;
-$errorcolor: #5f1709;
-$warncolor: #999623;
+$errorcolor: lighten(#5f1709, 45%);
+$warncolor: lighten(#999623, 45%);
 
 $logo: 'images/ndlogo.png';
 
