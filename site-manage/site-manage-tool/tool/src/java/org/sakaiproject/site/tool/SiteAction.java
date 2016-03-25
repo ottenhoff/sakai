@@ -1333,11 +1333,26 @@ public class SiteAction extends PagedResourceActionII {
 		}
 		
 		String indexString = (String) state.getAttribute(STATE_TEMPLATE_INDEX);
-
-		// update the visited template list with the current template index
-		addIntoStateVisitedTemplates(state, indexString);
 		
-		template = buildContextForTemplate(getPrevVisitedTemplate(state), Integer.valueOf(indexString), portlet, context, data, state);
+		Integer indexInt = null;
+		try {
+			indexInt = Integer.valueOf(indexString);
+		} catch (NumberFormatException nfe) {
+			indexString = getPrevVisitedTemplate(state);
+			if (StringUtils.isNotBlank(indexString)) {
+				M_log.warn("Missing STATE_TEMPLATE_INDEX, trying previous: " + indexString);
+				indexInt = Integer.valueOf(indexString);
+			} else {
+				M_log.warn("Missing STATE_TEMPLATE_INDEX, resetting state to index 0");
+				cleanState(state);
+				state.setAttribute(STATE_TEMPLATE_INDEX, "0");
+				indexInt = 0;
+			}
+		}
+		// update the visited template list with the current template index
+		addIntoStateVisitedTemplates(state, indexInt.toString());
+		
+		template = buildContextForTemplate(getPrevVisitedTemplate(state), indexInt, portlet, context, data, state);
 		return template;
 
 	} // buildMainPanelContext
@@ -1706,6 +1721,9 @@ public class SiteAction extends PagedResourceActionII {
 				}
 				clearNewSiteStateParameters(state);
 			}
+
+			//SAK-23468 put create variables into context
+            		addSiteCreationValuesIntoContext(context,state);
 
 			
 			return (String) getContext(data).get("template") + TEMPLATE[0];
@@ -3965,6 +3983,37 @@ public class SiteAction extends PagedResourceActionII {
 		context.put("ltitool_id_prefix", LTITOOL_ID_PREFIX);
 	}
 
+	// SAK-23468 If this is after an add site, the 
+	private void addSiteCreationValuesIntoContext(Context context, SessionState state) {
+		String siteID = (String) state.getAttribute(STATE_NEW_SITE_STATUS_ID);
+		if (siteID != null) {  // make sure this message is only seen immediately after a new site is created.
+			context.put(STATE_NEW_SITE_STATUS_ISPUBLISHED, state.getAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED));
+			String siteTitle = (String) state.getAttribute(STATE_NEW_SITE_STATUS_TITLE);
+			context.put(STATE_NEW_SITE_STATUS_TITLE, siteTitle);
+			context.put(STATE_NEW_SITE_STATUS_ID, siteID);
+			// remove the values from state so the values are gone on the next call to chef_site-list
+			//clearNewSiteStateParameters(state);
+		}
+	}	
+	
+	
+	// SAK-23468 
+	private void setNewSiteStateParameters(Site site, SessionState state){
+		if (site != null) {
+			state.setAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED, Boolean.valueOf(site.isPublished()));
+			state.setAttribute(STATE_NEW_SITE_STATUS_ID, site.getId());
+			state.setAttribute(STATE_NEW_SITE_STATUS_TITLE, site.getTitle());
+		}
+	}	
+
+	// SAK-23468 
+        private void clearNewSiteStateParameters(SessionState state) {
+		state.removeAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED);
+		state.removeAttribute(STATE_NEW_SITE_STATUS_ID);
+		state.removeAttribute(STATE_NEW_SITE_STATUS_TITLE);
+
+	}
+	
 	/**
 	 * prepare lti tool information in context and state variables
 	 * @param context
@@ -6793,6 +6842,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			setNewSiteStateParameters(site, state);
 			
 			
+			// SAK-23468  Add new site params to state
+			setNewSiteStateParameters(site, state);
+			
+			
 			// Since the option to input aliases is presented to users prior to
 			// the new site actually being created, it doesn't really make sense 
 			// to check permissions on the newly created site when we assign 
@@ -7114,6 +7167,17 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 
 		List<SectionObject> cmAuthorizerSections = (List<SectionObject>) state
 				.getAttribute(STATE_CM_AUTHORIZER_SECTIONS);
+		
+		if (ServerConfigurationService.getBoolean("site.manage.requested.autoauthorize", false)) {
+			if (cmRequestedSections != null) {
+				for (SectionObject sectionObject : cmRequestedSections) {
+					providerCourseList.add(sectionObject.getEid());
+				}
+				// since rosters are auto authorized
+				cmRequestedSections = null;
+				cmAuthorizerSections = null;
+			}
+		}
 
 		String realm = SiteService.siteReference(siteId);
 
@@ -7519,6 +7583,20 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		}
 		// get the request email from configuration
 		String requestEmail = getSetupRequestEmailAddress();
+		if (ServerConfigurationService.getBoolean("setup.request.notify.maintain", false)) {
+			List<User> users = UserDirectoryService.getUsers(site.getUsersHasRole(site.getMaintainRole()));
+			List<String> emails = new ArrayList<String>();
+			for (User user : users) {
+				if (StringUtils.isNotBlank(user.getEmail())) {
+					emails.add(user.getEmail());
+				}
+			}
+			
+			for (String email : emails) {
+				requestEmail = requestEmail + ", " + email;
+			}
+		}
+		
 		User currentUser = UserDirectoryService.getCurrentUser();
 		// read from configuration whether to send out site notification emails, which defaults to be true
 		boolean sendSiteNotificationChoice = ServerConfigurationService.getBoolean("site.setup.creation.notification", true);
