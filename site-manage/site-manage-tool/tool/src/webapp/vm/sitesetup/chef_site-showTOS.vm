@@ -54,5 +54,6 @@
 				<input type="submit" accesskey="b" name="eventSubmit_doBack" value="$tlang.getString("ediacc.bac")" />
 				<input type="submit" accesskey="x" name="eventSubmit_doCancel_create" value="$tlang.getString("ediacc.can")" />
 		</p>
+		<input type="hidden" name="sakai_csrf_token" value="$sakai_csrf_token" />
 	</form>
 </div>

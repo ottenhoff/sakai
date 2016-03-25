@@ -15,7 +15,6 @@
 		<span>$tlang.getString("add.official1")</span><br/>
 		<span class="instruction">$tlang.getString("add.official.instruction")</span>
 	</div>
-	<form name="toolkitsForm" action="#toolForm("SiteAction")" method="post">
 		<input type="hidden" name="option" value="cancel" />
 		<iframe id="wciframe" width="100%" scrolling="auto" frameborder="0"
 			onload="updateMainFrameHeight();"
@@ -24,9 +23,11 @@
 			style="width: 100%; padding: 0pt ! important; height: 600px;"
 			title="Duke Toolkits">
 		</iframe>
+	<form name="toolkitsForm" action="#toolForm("SiteAction")" method="post">
 		<p class="act">
 			<input type="submit" accesskey="x" name="eventSubmit_doCancel" value="$tlang.getString("gen.finish")" />
 		</p>
+                <input type="hidden" name="sakai_csrf_token" value="$sakai_csrf_token" />
 	</form>
 
 </div>
