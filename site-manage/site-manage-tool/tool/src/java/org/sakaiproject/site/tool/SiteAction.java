@@ -25,10 +25,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -223,6 +225,10 @@ public class SiteAction extends PagedResourceActionII {
 	
 	private static org.sakaiproject.sitemanage.api.model.SiteSetupQuestionService questionService = (org.sakaiproject.sitemanage.api.model.SiteSetupQuestionService) ComponentManager
 	.get(org.sakaiproject.sitemanage.api.model.SiteSetupQuestionService.class);
+
+	private static org.sakaiproject.sitemanage.api.TermsOfServiceHelper termsOfServiceHelper = (org.sakaiproject.sitemanage.api.TermsOfServiceHelper) ComponentManager
+	.get(org.sakaiproject.sitemanage.api.TermsOfServiceHelper.class);
+
 	
 	private static org.sakaiproject.sitemanage.api.UserNotificationProvider userNotificationProvider = (org.sakaiproject.sitemanage.api.UserNotificationProvider) ComponentManager
 	.get(org.sakaiproject.sitemanage.api.UserNotificationProvider.class);
@@ -305,7 +311,9 @@ public class SiteAction extends PagedResourceActionII {
 			"-siteInfo-importMigrate",    //59
 			"-importSitesMigrate",  //60
 			"-siteInfo-importUser",
-			"-uploadArchive"
+			"-uploadArchive", // 62
+			"-showTOS",  // 63
+			"-toolkits"  // 64
 	};
 
 	/** Name of state attribute for Site instance id */
@@ -400,6 +408,10 @@ public class SiteAction extends PagedResourceActionII {
 	private final static String STATE_SITE_QUEST_UNIQNAME = "site_quest_uniqname";
 	
 	private static final String STATE_SITE_ADD_COURSE = "canAddCourse";
+	
+	private static final String STATE_TOS_ACCEPT = "tosAccept";
+	private final static String PROP_PRIMARY_USE = "primaryUse";
+
 	
 	private static final String STATE_SITE_ADD_PORTFOLIO = "canAddPortfolio";
 	
@@ -1199,6 +1211,8 @@ public class SiteAction extends PagedResourceActionII {
 		state.removeAttribute(STATE_LTITOOL_EXISTING_SELECTED_LIST);
 		state.removeAttribute(STATE_LTITOOL_SELECTED_LIST);
 
+		state.removeAttribute(STATE_TOS_ACCEPT);
+
 		// bjones86 - SAK-24423 - remove joinable site settings from the state
 		JoinableSiteSettings.removeJoinableSiteSettingsFromState( state );
 
@@ -1892,7 +1906,9 @@ public class SiteAction extends PagedResourceActionII {
 			context.put("short_description", siteInfo.short_description);
 			context.put("siteContactName", siteInfo.site_contact_name);
 			context.put("siteContactEmail", siteInfo.site_contact_email);
-			
+			if (siteInfo.getPrimaryUse() != null) {
+				context.put("primaryUse",  siteInfo.getPrimaryUse());
+			}	
 			/// site language information
  							
  			String locale_string_selected = (String) state.getAttribute("locale_string");
@@ -2012,6 +2028,7 @@ public class SiteAction extends PagedResourceActionII {
 					context.put("published", Boolean.FALSE);
 					context.put("owner", site.getCreatedBy().getSortName());
 				}
+				context.put("primaryUse", siteProperties.get(PROP_PRIMARY_USE));
 				Time creationTime = site.getCreatedTime();
 				if (creationTime != null) {
 					context.put("siteCreationDate", creationTime
@@ -2076,7 +2093,8 @@ public class SiteAction extends PagedResourceActionII {
 						// stealthed and not hidden, show the link
 						if (notStealthOrHiddenTool("sakai-site-manage-participant-helper")) {
 							b.add(new MenuEntry(rb.getString("java.addp"),
-									"doParticipantHelper"));
+								"doMenu_toolkits"));
+//								"doParticipantHelper"));
 						}
 						
 						// show the Edit Class Roster menu
@@ -2584,6 +2602,14 @@ public class SiteAction extends PagedResourceActionII {
 				context.put("isCourseSite", Boolean.FALSE);
 				if (SiteTypeUtil.isProjectSite(siteType)) {
 					context.put("isProjectSite", Boolean.TRUE);
+					String primaryUse = (String) state.getAttribute("primaryUse");
+					if (StringUtils.isBlank(primaryUse)) {
+						primaryUse = siteInfo.getPrimaryUse();
+					}
+					if (StringUtils.isNotBlank(primaryUse)) {
+						context.put("primaryUseList", termsOfServiceHelper.getPrimaryUseList());
+						context.put("primaryUse", primaryUse);
+					}
 				}
 
 				if (StringUtils.trimToNull(siteInfo.iconUrl) != null) {
@@ -2675,6 +2701,7 @@ public class SiteAction extends PagedResourceActionII {
 			context.put("name", siteInfo.site_contact_name);
 			context.put("oName", siteProperties.getProperty(Site.PROP_SITE_CONTACT_NAME));
 			context.put("email", siteInfo.site_contact_email);
+			context.put("primaryUse", siteInfo.getPrimaryUse());
 			context.put("oEmail", siteProperties.getProperty(Site.PROP_SITE_CONTACT_EMAIL));
 			context.put("siteUrls",  getSiteUrlsForAliasIds(siteInfo.siteRefAliases));
 			context.put("oSiteUrls", getSiteUrlsForSite(site));
@@ -3756,6 +3783,48 @@ public class SiteAction extends PagedResourceActionII {
 
 			//now go to uploadArchive template
 			return (String) getContext(data).get("template") + TEMPLATE[62];
+
+		/*
+		 * Additional template for DUKE TOS and Tracking information:
+		 */
+		case 63:
+			/*
+			 * build context for chef_site-showTos.vm
+			 */
+			String primaryUse = siteInfo.getPrimaryUse();
+			context.put("primaryUse", primaryUse == null ? "-1" : primaryUse);
+			String tosAccept = (String)state.getAttribute(STATE_TOS_ACCEPT);
+			context.put("tosAccept", tosAccept == null ? "decline" : tosAccept);
+			List<String> primaryUseList = termsOfServiceHelper.getPrimaryUseList();
+			if (primaryUseList != null) {
+				context.put("primaryUseList", primaryUseList);
+			}
+			String tosText = termsOfServiceHelper.getTosText();
+			context.put("tosText", tosText);
+			return (String) getContext(data).get("template") + TEMPLATE[62];
+		case 64:
+			/*
+			 * build context for chef_site-toolkits
+			 */
+
+			String title = site.getTitle();
+			String id = site.getId();
+			context.put("toolkitsHeader", rb.getFormattedMessage("sitegen.toolkits.title", new Object[]{title}));
+			try {
+				title = URLEncoder.encode(title,"utf-8");
+			} catch (UnsupportedEncodingException ue) {
+				// do nothing just keep the title as is
+			}
+			String url = ServerConfigurationService.getString("duke.toolkits.url");
+			if (url.contains("${SITE_TITLE}")) {
+				url = url.replace("${SITE_TITLE}", title);
+			}
+			if (url.contains("${SITE_ID}")) {
+				url = url.replace("${SITE_ID}", id);
+			}
+			context.put("toolkitsUrl", url);
+
+			return (String) getContext(data).get("template") + TEMPLATE[63];
 		}
 			
 		// should never be reached
@@ -5522,6 +5591,33 @@ public class SiteAction extends PagedResourceActionII {
 	} // doView_sites
 
 	/**
+	 * doAccept_TOS is called when "eventSubmit_doShow_TOS" is in the request
+	 * parameters
+	 */
+	public void doAccept_TOS(RunData data) throws Exception {
+		SessionState state = ((JetspeedRunData) data)
+				.getPortletSessionState(((JetspeedRunData) data).getJs_peid());
+		ParameterParser params = data.getParameters();
+
+		String primaryUse = params.getString("primaryUse");
+		String tosAccept = params.getString("tosAccept");
+		if (!"-1".equals(primaryUse)) {
+			state.setAttribute("primaryUse", primaryUse);
+		} else {
+			state.removeAttribute("primaryUse");
+		}
+		state.setAttribute("tosAccept", tosAccept);
+
+		// if the site was craeted using a template, finish the creation
+		if (state.getAttribute(STATE_TEMPLATE_SITE) != null) {
+			doFinish(data);
+		} else {
+			state.setAttribute(STATE_TEMPLATE_INDEX, "13");
+		}
+	} // doAccept_TOS
+
+
+	/**
 	 * do called when "eventSubmit_do" is in the request parameters to c
 	 */
 	public void doView(RunData data) throws Exception {
@@ -5563,7 +5659,7 @@ public class SiteAction extends PagedResourceActionII {
 				// redirect
 				redirectCourseCreation(params, state, "selectTerm");
 			} else if (SiteTypeUtil.isProjectSite(type)) { // UMICH-1035
-				state.setAttribute(STATE_TEMPLATE_INDEX, "13");
+				state.setAttribute(STATE_TEMPLATE_INDEX, "63");
 			} else if (pSiteTypes != null && pSiteTypes.contains(SiteTypeUtil.getTargetSiteType(type))) {  // UMICH-1035
 				// if of customized type site use pre-defined site info and exclude
 				// from public listing
@@ -8106,6 +8202,20 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 	} // doMenu_edit_site_access
 
 	/**
+	 * doMenu_edit_site_access
+	 *
+	 */
+	public void doMenu_toolkits(RunData data) {
+		SessionState state = ((JetspeedRunData) data)
+				.getPortletSessionState(((JetspeedRunData) data).getJs_peid());
+
+		if (state.getAttribute(STATE_MESSAGE) == null) {
+			state.setAttribute(STATE_TEMPLATE_INDEX, "63");
+		}
+
+	} // doMenu_edit_site_access
+
+	/**
 	 * Back to worksite setup's list view
 	 * 
 	 */
@@ -8178,6 +8288,11 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		// SAK-22384 mathjax support
 		MathJaxEnabler.prepareMathJaxAllowedSettingsForSave(Site, state);
 				
+		String primaryUse = siteInfo.getPrimaryUse();
+		if (primaryUse != null) {
+			siteProperties.addProperty(PROP_PRIMARY_USE, primaryUse);
+		}
+
 		if (state.getAttribute(STATE_MESSAGE) == null) {
 			try {
 				SiteService.save(Site);
@@ -10075,6 +10190,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 	 * @param bypassSecurity use SecurityAdvisor if true
 	 */
 	private void importToolContent(String oSiteId, Site site, boolean bypassSecurity) {
+		Set<String> copiedToolIds = new HashSet<String>();
 		String nSiteId = site.getId();
 
 		// import tool content
@@ -10126,7 +10242,14 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 						String newSiteInfoUrl = transferSiteResource(oSiteId, nSiteId, site.getInfoUrl());
 						site.setInfoUrl(newSiteInfoUrl);
 					}
-					else {
+					else if (toolId.equalsIgnoreCase("sakai.iframe")) {
+						// for multipe instance only copy once.
+						if (!copiedToolIds.contains(toolId)) {
+							// other tools
+//							transferCopyEntities(toolId,oSiteId, nSiteId);
+							copiedToolIds.add(toolId);
+					        }
+					}else {
 						// other
 						// tools
 						// SAK-19686 - added if statement and toolsCopied.add
@@ -10690,6 +10813,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 
 		// bjones86 - SAK-24423 - update site info for joinable site settings
 		JoinableSiteSettings.updateSiteInfoFromParams( params, siteInfo );
+
+		if (params.getString("primaryUse") != null) {
+			siteInfo.setPrimaryUse(params.getString("primaryUse"));
+		}
 
 		// site contact information
 		String name = StringUtils.trimToEmpty(params.getString("siteContactName"));
@@ -12031,6 +12158,11 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 						siteInfo.site_contact_name);
 				rp.addProperty(Site.PROP_SITE_CONTACT_EMAIL,
 						siteInfo.site_contact_email);
+
+				String primaryUse = siteInfo.getPrimaryUse();
+				if (primaryUse != null && !"-1".equals(primaryUse)) {
+					rp.addProperty(PROP_PRIMARY_USE, primaryUse);
+				}
 				
 				// SAK-22790 add props from SiteInfo object
 				rp.addAll(siteInfo.getProperties());
@@ -12108,6 +12240,8 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			templateCriteria.put("template", "true");
 			
 			templateSites = SiteService.getSites(org.sakaiproject.site.api.SiteService.SelectionType.ANY, null, null, templateCriteria, SortType.TITLE_ASC, null);
+
+			context.put("enableDukeTemplateFeature", true); // !SecurityService.isSuperUser());
 		}
 		
 		// If no templates could be found, stick an empty list in the context
@@ -12117,7 +12251,6 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
                 //SAK25400 sort templates by type
                 context.put("templateSites",sortTemplateSitesByType(templateSites));
 		context.put("titleMaxLength", state.getAttribute(STATE_SITE_TITLE_MAX));
-		
 	} // setTemplateListForContext
 	
 	/**
@@ -12171,7 +12304,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 				if (contactEmail != null) {
 					siteInfo.site_contact_email = contactEmail;
 				}
-				
+				siteInfo.primaryUse = siteProperties.getProperty(PROP_PRIMARY_USE);	
 				state.setAttribute(FORM_SITEINFO_ALIASES, getSiteReferenceAliasIds(site));
 			}
 			
@@ -13226,6 +13359,8 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		public String site_contact_email = NULL_STRING; // site contact email
 		
 		public String term = NULL_STRING; // academic term
+
+		public String primaryUse = NULL_STRING; // academic term
 		
 		public ResourceProperties properties = new BaseResourcePropertiesEdit();
 
@@ -13334,6 +13469,15 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		public void setTerm(String term) {
 			this.term = term;
 		}		
+	
+		public String getPrimaryUse() {
+			return primaryUse;
+		}
+
+		public void setPrimaryUse(String primaryUse) {
+			this.primaryUse = primaryUse;
+		}
+
 
 	} // SiteInfo
 
@@ -15255,7 +15399,12 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			}
 			else if ("createOnTemplate".equals(option))
 			{
-				doSite_copyFromTemplate(data);
+				readCreateSiteTemplateInformation(params, state);
+				state.setAttribute(STATE_TEMPLATE_INDEX, "62");
+				SiteInfo info = (SiteInfo)state.getAttribute(STATE_SITE_INFO);
+				getSelectedTemplate(state, params, info.getSiteType());
+				redirectToQuestionVM(state,  info.getSiteType());
+//				doSite_copyFromTemplate(data);
 			}
 			else if ("createCourseOnTemplate".equals(option))
 			{
@@ -15345,8 +15494,18 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			JoinableSiteSettings.updateSiteInfoFromParams( params, siteInfo );
 			
 			// whether to copy users or site content over?
-			if (params.getBoolean("copyUsers")) state.setAttribute(STATE_TEMPLATE_SITE_COPY_USERS, Boolean.TRUE); else state.removeAttribute(STATE_TEMPLATE_SITE_COPY_USERS);
-			if (params.getBoolean("copyContent")) state.setAttribute(STATE_TEMPLATE_SITE_COPY_CONTENT, Boolean.TRUE); else state.removeAttribute(STATE_TEMPLATE_SITE_COPY_CONTENT);
+			Object copyUsersProperty = templateSite.getProperties().get("copyUsers");
+			Boolean copyUsers = copyUsersProperty == null ? Boolean.FALSE : Boolean.valueOf(copyUsersProperty.toString());
+			if (params.getBoolean("copyUsers") || copyUsers) {
+				state.setAttribute(STATE_TEMPLATE_SITE_COPY_USERS, Boolean.TRUE); 
+			} else {
+				state.removeAttribute(STATE_TEMPLATE_SITE_COPY_USERS);
+			}
+			if (params.getBoolean("copyContent")) {
+				state.setAttribute(STATE_TEMPLATE_SITE_COPY_CONTENT, Boolean.TRUE); 
+			} else {
+				state.removeAttribute(STATE_TEMPLATE_SITE_COPY_CONTENT);
+			}
 			if (params.getBoolean("publishSite")) state.setAttribute(STATE_TEMPLATE_PUBLISH, Boolean.TRUE); else state.removeAttribute(STATE_TEMPLATE_PUBLISH);
 		}
 		catch(Exception e){

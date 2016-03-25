@@ -265,6 +265,20 @@
 			</label>	
 			<input type="text" name="siteContactEmail" id="siteContactEmail" size="20" maxlength="99" value="$!form_site_contact_email" />
 		</p>
+
+		#if ($!primaryUse)	
+		<p class="shorttext">
+			<label for="primaryUse">
+				$tlang.getString("sitegen.tos.primaryUse")
+			</label>	
+			<select id="primaryUse" name="primaryUse">
+				#foreach($primaryUseOption in $primaryUseList)
+					<option #if ($primaryUse == $primaryUseOption) selected="selected" #end>$primaryUseOption</option>
+				#end
+			</select>
+		</p>
+		#end
+
         #if ($isMathJaxInstalled)
         <div>
             <input type="checkbox" name="allowMathJax" id="allowMathJax" value="true" #if ($isMathJaxAllowedInSite)checked#end/>

@@ -166,6 +166,80 @@ sakai.setupSelectList = function(list, allcontrol, highlightClass){
     });
 };
 
+sakai.setupTos = function(primaryUse, tosAccept){
+	$('#primaryUse').change(function(e) {
+		if ($(this).val() != "-1" &&
+				$('#tosAccept :checked').val() == 'accept') {
+	            $('#submitContinue').attr('disabled', '');
+		} else {
+	            $('#submitContinue').attr('disabled', 'disabled');
+		}
+	});
+
+	$('#tosAccept :radio').click(function(e) {
+		if ($('#primaryUse').val() != "-1" &&
+				$(this).val() == 'accept') {
+	            $('#submitContinue').attr('disabled', '');
+		} else {
+	            $('#submitContinue').attr('disabled', 'disabled');
+		}
+	});
+
+	$('#primaryUse').val(primaryUse);
+	$('#tosAccept :radio[value="'+ tosAccept+'"]').attr("checked", "checked").click();
+};
+
+sakai.enableDukeFeatures = function() {
+    $('#siteTypeList input').click(function(e){
+        if ($(this).attr('id') == 'course') {
+            $('#submitFromTemplate').hide();
+            $('#submitFromTemplateCourse').show();
+            $('#submitFromTemplateCourse').attr('disabled', '');
+            $('#templateCourseInstruction').show();
+            $('#templateNonCourseInstruction').hide();
+            $('#submitBuildOwn').hide();
+            $('#buildOwn').val('');
+            $('#copy').val('copy');
+            utils.resizeFrame('grow');
+        }
+        else {   // if ($(this).attr('id') == 'project') {
+            $('#submitFromTemplateCourse').attr('disabled', 'disabled');
+            $('#submitFromTemplate').hide();
+            $('#submitFromTemplateCourse').hide();
+            $('#templateCourseInstruction').hide();
+            $('#templateNonCourseInstruction').hide();
+            $('#submitBuildOwn').show();
+            $('#buildOwn').val('buildOwn');
+        }
+//        else if ($(this).attr('id') == 'portfolio') {
+//        }
+
+    });
+
+    $('#siteTitleFieldDuke').keyup(function(e){
+        if ($(this).attr('value').length >= 1) {
+            $('#submitFromTemplate').attr('disabled', '');
+        }
+        else {
+            $('#submitFromTemplate').attr('disabled', 'disabled');
+        }
+    });
+    $('#siteTitleFieldDuke').blur(function(){
+        if ($(this).attr('value').length >= 1) {
+            $('#submitFromTemplate').attr('disabled', '');
+        }
+        else {
+            $('#submitFromTemplate').attr('disabled', 'disabled');
+        }
+    });
+
+   
+    utils.resizeFrame('grow');
+    $('#submitFromTemplate').hide();
+    $('#submitBuildOwn').show();
+    $('#submitBuildOwn').attr('disabled', 'disabled');
+};
+
 sakai.siteTypeSetup = function(){
     var templateControls='';
     //from sakai.properties - json with what controls to display (and in what state) for each site type    
@@ -490,6 +564,9 @@ sakai.siteTypeSetup = function(){
             }
         	
             $('#termList').show();
+        }
+        else if ($(this).attr('id') == 'project') {
+            $('#termList').hide();
         }
         else {
             $('#termList').hide();
