@@ -3996,24 +3996,6 @@ public class SiteAction extends PagedResourceActionII {
 		}
 	}	
 	
-	
-	// SAK-23468 
-	private void setNewSiteStateParameters(Site site, SessionState state){
-		if (site != null) {
-			state.setAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED, Boolean.valueOf(site.isPublished()));
-			state.setAttribute(STATE_NEW_SITE_STATUS_ID, site.getId());
-			state.setAttribute(STATE_NEW_SITE_STATUS_TITLE, site.getTitle());
-		}
-	}	
-
-	// SAK-23468 
-        private void clearNewSiteStateParameters(SessionState state) {
-		state.removeAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED);
-		state.removeAttribute(STATE_NEW_SITE_STATUS_ID);
-		state.removeAttribute(STATE_NEW_SITE_STATUS_TITLE);
-
-	}
-	
 	/**
 	 * prepare lti tool information in context and state variables
 	 * @param context
