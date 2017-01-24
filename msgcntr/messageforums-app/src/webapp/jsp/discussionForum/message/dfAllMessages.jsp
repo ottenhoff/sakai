@@ -115,7 +115,7 @@
 
 		</script>	
 		// element into which the value gets insert and retrieved from
-		<span class="highlight"  id="maxthreaddepth" class="skip"><h:outputText value="#{msgs.cdfm_maxthreaddepth}" /></span>
+		<span class="highlight" id="maxthreaddepth" class="sr-only"><h:outputText value="#{msgs.cdfm_maxthreaddepth}" /></span>
 //--%>
 	<h:form id="msgForum" rendered="#{!ForumTool.selectedTopic.topic.draft || ForumTool.selectedTopic.topic.createdBy == ForumTool.userId}">
         <f:subview id="picker2">
