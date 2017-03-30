@@ -1455,12 +1455,15 @@ SiteContentAdvisorProvider, SiteContentAdvisorTypeRegistry, EntityTransferrerRef
 				{
 					ref = getReference(id);
 				}
-				
+
+				//Http servlet access to dropbox resources
 				if (parts.length>=4)
 				{
-					//Http servlet access to dropbox resources
+					// If user is maintainer, then no group checks
+					boolean isMaintainer = m_securityService.unlock(AUTH_DROPBOX_MAINTAIN, ref);
 					String userId=parts[3];
-					if ((userId==null)||(!isDropboxOwnerInCurrentUserGroups(ref,userId)))
+					// The group check below is a performance killer with many groups
+					if ((userId==null) || isMaintainer || (!isDropboxOwnerInCurrentUserGroups(ref,userId)))
 					{
 						authDropboxGroupsCheck=false;
 					}
