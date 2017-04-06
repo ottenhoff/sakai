@@ -57,6 +57,7 @@ import org.sakaiproject.gradebookng.tool.panels.CategoryColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.CourseGradeColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.CourseGradeItemCellPanel;
 import org.sakaiproject.gradebookng.tool.panels.GradeItemCellPanel;
+import org.sakaiproject.gradebookng.tool.panels.StudentExtraInfoColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.StudentNameCellPanel;
 import org.sakaiproject.gradebookng.tool.panels.StudentNameColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.ToggleGradeItemsToolbarPanel;
@@ -279,6 +280,40 @@ public class GradebookPage extends BasePage {
 
 		};
 		cols.add(studentNameColumn);
+
+		// student extra info optional column
+		final AbstractColumn studentExtraInfoColumn = new AbstractColumn(new Model("studentColumn")) {
+
+			@Override
+			public Component getHeader(final String componentId) {
+				return new StudentExtraInfoColumnHeaderPanel(componentId, Model.of(settings.getNameSortOrder()));
+			}
+
+			@Override
+			public void populateItem(final Item cellItem, final String componentId, final IModel rowModel) {
+				final GbStudentGradeInfo studentGradeInfo = (GbStudentGradeInfo) rowModel.getObject();
+
+				final Map<String, Object> modelData = new HashMap<>();
+				modelData.put("userId", studentGradeInfo.getStudentUuid());
+				modelData.put("eid", studentGradeInfo.getStudentEid());
+				modelData.put("firstName", studentGradeInfo.getStudentFirstName());
+				modelData.put("lastName", studentGradeInfo.getStudentLastName());
+				modelData.put("displayName", studentGradeInfo.getStudentDisplayName());
+				modelData.put("nameSortOrder", settings.getNameSortOrder());
+
+				cellItem.add(new studentExtraInfoCellPanel(componentId, Model.ofMap(modelData)));
+				cellItem.add(new AttributeModifier("data-studentUuid", studentGradeInfo.getStudentUuid()));
+				cellItem.add(new AttributeModifier("abbr", studentGradeInfo.getStudentDisplayName()));
+				cellItem.add(new AttributeModifier("aria-label", studentGradeInfo.getStudentDisplayName()));
+			}
+
+			@Override
+			public String getCssClass() {
+				return "gb-student-extrainfo-cell";
+			}
+
+		};
+		cols.add(studentExtraInfoColumn);
 
 		// course grade column
 		final boolean courseGradeVisible = this.businessService.isCourseGradeVisible(this.currentUserUuid);
