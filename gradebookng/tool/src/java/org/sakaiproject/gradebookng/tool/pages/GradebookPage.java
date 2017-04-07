@@ -57,6 +57,7 @@ import org.sakaiproject.gradebookng.tool.panels.CategoryColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.CourseGradeColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.CourseGradeItemCellPanel;
 import org.sakaiproject.gradebookng.tool.panels.GradeItemCellPanel;
+import org.sakaiproject.gradebookng.tool.panels.StudentExtraInfoCellPanel;
 import org.sakaiproject.gradebookng.tool.panels.StudentExtraInfoColumnHeaderPanel;
 import org.sakaiproject.gradebookng.tool.panels.StudentNameCellPanel;
 import org.sakaiproject.gradebookng.tool.panels.StudentNameColumnHeaderPanel;
@@ -286,7 +287,7 @@ public class GradebookPage extends BasePage {
 
 			@Override
 			public Component getHeader(final String componentId) {
-				return new StudentExtraInfoColumnHeaderPanel(componentId, Model.of(settings.getNameSortOrder()));
+				return new StudentExtraInfoColumnHeaderPanel(componentId, Model.of(settings.getStudentExtraInfoSortOrder()));
 			}
 
 			@Override
@@ -301,7 +302,7 @@ public class GradebookPage extends BasePage {
 				modelData.put("displayName", studentGradeInfo.getStudentDisplayName());
 				modelData.put("nameSortOrder", settings.getNameSortOrder());
 
-				cellItem.add(new studentExtraInfoCellPanel(componentId, Model.ofMap(modelData)));
+				cellItem.add(new StudentExtraInfoCellPanel(componentId, Model.ofMap(modelData)));
 				cellItem.add(new AttributeModifier("data-studentUuid", studentGradeInfo.getStudentUuid()));
 				cellItem.add(new AttributeModifier("abbr", studentGradeInfo.getStudentDisplayName()));
 				cellItem.add(new AttributeModifier("aria-label", studentGradeInfo.getStudentDisplayName()));

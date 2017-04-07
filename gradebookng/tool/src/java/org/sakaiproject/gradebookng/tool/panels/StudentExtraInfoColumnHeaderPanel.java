@@ -23,9 +23,9 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 
 	private static final long serialVersionUID = 1L;
 
-	IModel<Boolean> model;
+	IModel<SortDirection> model;
 
-	public StudentExtraInfoColumnHeaderPanel(final String id, final IModel<Boolean> model) {
+	public StudentExtraInfoColumnHeaderPanel(final String id, final IModel<SortDirection> model) {
 		super(id, model);
 		this.model = model;
 	}
@@ -37,7 +37,7 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 		final GradebookPage gradebookPage = (GradebookPage) getPage();
 
 		// setup model
-		final Boolean sortType = this.model.getObject();
+		final SortDirection sortType = this.model.getObject();
 
 		// title
 		final Link<String> title = new Link<String>("title") {
@@ -75,19 +75,19 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 		add(title);
 
 		// sort by first/last name link
-		final GbAjaxLink<Boolean> sortByName = new GbAjaxLink<Boolean>("sortByName", this.model) {
+		final GbAjaxLink<SortDirection> sortByName = new GbAjaxLink<SortDirection>("sortByName", this.model) {
 			private static final long serialVersionUID = 1L;
 
 			@Override
 			public void onClick(final AjaxRequestTarget target) {
 
 				// get current sort
-				final Boolean currentSort = StudentExtraInfoColumnHeaderPanel.this.model.getObject();
+				final SortDirection currentSort = StudentExtraInfoColumnHeaderPanel.this.model.getObject();
 
 				// set the sort
 				final GradebookPage gradebookPage = (GradebookPage) getPage();
 				final GradebookUiSettings settings = gradebookPage.getUiSettings();
-				settings.setStudentExtraInfoSortOrder(currentSort ? SortDirection.ASCENDING : SortDirection.DESCENDING);
+				settings.setStudentExtraInfoSortOrder(currentSort.toggle());
 
 				// save settings
 				gradebookPage.setUiSettings(settings);
@@ -105,7 +105,7 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 			public String getObject() {
 
 				// shows the label opposite to the current sort type
-				if (sortType) {
+				if (sortType == SortDirection.ASCENDING) {
 					return getString("sortbyname.option.last");
 				} else {
 					return getString("sortbyname.option.first");
