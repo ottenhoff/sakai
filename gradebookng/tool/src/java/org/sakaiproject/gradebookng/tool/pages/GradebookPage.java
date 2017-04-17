@@ -283,7 +283,7 @@ public class GradebookPage extends BasePage {
 		cols.add(studentNameColumn);
 
 		// student extra info optional column
-		final AbstractColumn studentExtraInfoColumn = new AbstractColumn(new Model("studentColumn")) {
+		final AbstractColumn studentExtraInfoColumn = new AbstractColumn(new Model("")) {
 
 			@Override
 			public Component getHeader(final String componentId) {
@@ -303,9 +303,6 @@ public class GradebookPage extends BasePage {
 				modelData.put("nameSortOrder", settings.getNameSortOrder());
 
 				cellItem.add(new StudentExtraInfoCellPanel(componentId, Model.ofMap(modelData)));
-				cellItem.add(new AttributeModifier("data-studentUuid", studentGradeInfo.getStudentUuid()));
-				cellItem.add(new AttributeModifier("abbr", studentGradeInfo.getStudentDisplayName()));
-				cellItem.add(new AttributeModifier("aria-label", studentGradeInfo.getStudentDisplayName()));
 			}
 
 			@Override

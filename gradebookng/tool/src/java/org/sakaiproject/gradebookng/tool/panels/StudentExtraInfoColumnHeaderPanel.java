@@ -36,9 +36,6 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 
 		final GradebookPage gradebookPage = (GradebookPage) getPage();
 
-		// setup model
-		final SortDirection sortType = this.model.getObject();
-
 		// title
 		final Link<String> title = new Link<String>("title") {
 			private static final long serialVersionUID = 1L;
@@ -73,47 +70,5 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 				new AttributeModifier("class", "gb-sort-" + settings.getStudentSortOrder().toString().toLowerCase()));
 		}
 		add(title);
-
-		// sort by first/last name link
-		final GbAjaxLink<SortDirection> sortByName = new GbAjaxLink<SortDirection>("sortByName", this.model) {
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public void onClick(final AjaxRequestTarget target) {
-
-				// get current sort
-				final SortDirection currentSort = StudentExtraInfoColumnHeaderPanel.this.model.getObject();
-
-				// set the sort
-				final GradebookPage gradebookPage = (GradebookPage) getPage();
-				final GradebookUiSettings settings = gradebookPage.getUiSettings();
-				settings.setStudentExtraInfoSortOrder(currentSort.toggle());
-
-				// save settings
-				gradebookPage.setUiSettings(settings);
-
-				// refresh
-				setResponsePage(GradebookPage.class);
-			}
-		};
-
-		// the label changes depending on the state so we wrap it in a model
-		final IModel<String> sortByNameModel = new Model<String>() {
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public String getObject() {
-
-				// shows the label opposite to the current sort type
-				if (sortType == SortDirection.ASCENDING) {
-					return getString("sortbyname.option.last");
-				} else {
-					return getString("sortbyname.option.first");
-				}
-			}
-		};
-
-		sortByName.add(new Label("sortByNameLabel", sortByNameModel));
-		add(sortByName);
 	}
 }
