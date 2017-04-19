@@ -1026,6 +1026,18 @@ public class GradebookNgBusinessService {
 		}
 		stopwatch.timeWithContext("buildGradeMatrix", "matrix sorted by course grade", stopwatch.getTime());
 
+		if (settings.getStudentExtraInfoSortOrder() != null) {
+
+			Comparator<GbStudentGradeInfo> comp = new StudentExtraInfoComparator(this.getExtraStudentProperty());
+			// reverse if required
+			if (settings.getStudentExtraInfoSortOrder() == SortDirection.DESCENDING) {
+				comp = Collections.reverseOrder(comp);
+			}
+			// sort
+			Collections.sort(items, comp);
+		}
+		stopwatch.timeWithContext("buildGradeMatrix", "matrix sorted by student extra info", stopwatch.getTime());
+
 		return items;
 	}
 

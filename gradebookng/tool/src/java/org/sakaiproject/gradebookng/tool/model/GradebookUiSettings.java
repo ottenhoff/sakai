@@ -108,7 +108,6 @@ public class GradebookUiSettings implements Serializable {
 
 		// default sort order to student
 		this.nameSortOrder = GbStudentNameSortOrder.LAST_NAME;
-		this.studentExtraInfoSortOrder = SortDirection.ASCENDING;
 		this.studentSortOrder = SortDirection.ASCENDING;
 
 		this.categoryColors = new HashMap<String, String>();

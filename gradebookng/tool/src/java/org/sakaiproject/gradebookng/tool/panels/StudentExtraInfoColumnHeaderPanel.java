@@ -61,7 +61,7 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 
 		final GradebookUiSettings settings = gradebookPage.getUiSettings();
 		title.add(new AttributeModifier("title", this.headerTitle));
-		title.add(new Label("label", this.headerTitle));
+		title.add(new Label("label", this.headerTitle.toUpperCase()));
 		if (settings != null && settings.getStudentExtraInfoSortOrder() != null) {
 			title.add(
 				new AttributeModifier("class", "gb-sort-" + settings.getStudentExtraInfoSortOrder().toString().toLowerCase()));
