@@ -1,33 +1,30 @@
 package org.sakaiproject.gradebookng.tool.panels;
 
 import org.apache.wicket.AttributeModifier;
-import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.model.IModel;
-import org.apache.wicket.model.Model;
 import org.apache.wicket.model.ResourceModel;
 import org.sakaiproject.gradebookng.business.SortDirection;
-import org.sakaiproject.gradebookng.tool.component.GbAjaxLink;
 import org.sakaiproject.gradebookng.tool.model.GradebookUiSettings;
 import org.sakaiproject.gradebookng.tool.pages.GradebookPage;
 
 /**
  *
- * Header panel for the student name/eid
- *
- * @author Steve Swinsburg (steve.swinsburg@gmail.com)
+ * Header panel for an optional student extra value field
  *
  */
 public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 
 	private static final long serialVersionUID = 1L;
 
-	IModel<SortDirection> model;
+	private final IModel<SortDirection> model;
+	private final String headerTitle;
 
-	public StudentExtraInfoColumnHeaderPanel(final String id, final IModel<SortDirection> model) {
+	public StudentExtraInfoColumnHeaderPanel(final String id, final IModel<SortDirection> model, final String headerTitle) {
 		super(id, model);
 		this.model = model;
+		this.headerTitle = headerTitle;
 	}
 
 	@Override
@@ -63,11 +60,11 @@ public class StudentExtraInfoColumnHeaderPanel extends BasePanel {
 		};
 
 		final GradebookUiSettings settings = gradebookPage.getUiSettings();
-		title.add(new AttributeModifier("title", new ResourceModel("column.header.students")));
-		title.add(new Label("label", new ResourceModel("column.header.students")));
-		if (settings != null && settings.getStudentSortOrder() != null) {
+		title.add(new AttributeModifier("title", this.headerTitle));
+		title.add(new Label("label", this.headerTitle));
+		if (settings != null && settings.getStudentExtraInfoSortOrder() != null) {
 			title.add(
-				new AttributeModifier("class", "gb-sort-" + settings.getStudentSortOrder().toString().toLowerCase()));
+				new AttributeModifier("class", "gb-sort-" + settings.getStudentExtraInfoSortOrder().toString().toLowerCase()));
 		}
 		add(title);
 	}

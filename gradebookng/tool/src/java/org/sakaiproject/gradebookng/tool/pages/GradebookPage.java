@@ -283,35 +283,37 @@ public class GradebookPage extends BasePage {
 		cols.add(studentNameColumn);
 
 		// student extra info optional column
-		final AbstractColumn studentExtraInfoColumn = new AbstractColumn(new Model("")) {
-
-			@Override
-			public Component getHeader(final String componentId) {
-				return new StudentExtraInfoColumnHeaderPanel(componentId, Model.of(settings.getStudentExtraInfoSortOrder()));
-			}
-
-			@Override
-			public void populateItem(final Item cellItem, final String componentId, final IModel rowModel) {
-				final GbStudentGradeInfo studentGradeInfo = (GbStudentGradeInfo) rowModel.getObject();
-
-				final Map<String, Object> modelData = new HashMap<>();
-				modelData.put("userId", studentGradeInfo.getStudentUuid());
-				modelData.put("eid", studentGradeInfo.getStudentEid());
-				modelData.put("firstName", studentGradeInfo.getStudentFirstName());
-				modelData.put("lastName", studentGradeInfo.getStudentLastName());
-				modelData.put("displayName", studentGradeInfo.getStudentDisplayName());
-				modelData.put("nameSortOrder", settings.getNameSortOrder());
-
-				cellItem.add(new StudentExtraInfoCellPanel(componentId, Model.ofMap(modelData)));
-			}
-
-			@Override
-			public String getCssClass() {
-				return "gb-student-extrainfo-cell";
-			}
-
-		};
-		cols.add(studentExtraInfoColumn);
+		String extraStudentproperty = this.businessService.getExtraStudentProperty();
+		if (StringUtils.isNotBlank(extraStudentproperty)) {
+			final AbstractColumn studentExtraInfoColumn = new AbstractColumn(new Model("")) {
+	
+				@Override
+				public Component getHeader(final String componentId) {
+					return new StudentExtraInfoColumnHeaderPanel(componentId, Model.of(settings.getStudentExtraInfoSortOrder()), extraStudentproperty);
+				}
+	
+				@Override
+				public void populateItem(final Item cellItem, final String componentId, final IModel rowModel) {
+					final GbStudentGradeInfo studentGradeInfo = (GbStudentGradeInfo) rowModel.getObject();
+					final Map<String, String> studentProps = studentGradeInfo.getStudentExtraProperties();
+					String studentProperty = "";
+					if (studentProps.containsKey(extraStudentproperty)) {
+						studentProperty = studentProps.get(extraStudentproperty);
+					}
+	
+					final Map<String, Object> modelData = new HashMap<>();
+					modelData.put("extraStudentProperty", studentProperty);
+					cellItem.add(new StudentExtraInfoCellPanel(componentId, Model.ofMap(modelData)));
+				}
+	
+				@Override
+				public String getCssClass() {
+					return "gb-student-extrainfo-cell";
+				}
+	
+			};
+			cols.add(studentExtraInfoColumn);
+		}
 
 		// course grade column
 		final boolean courseGradeVisible = this.businessService.isCourseGradeVisible(this.currentUserUuid);

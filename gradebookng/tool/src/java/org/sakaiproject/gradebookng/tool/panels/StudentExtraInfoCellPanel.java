@@ -27,8 +27,8 @@ public class StudentExtraInfoCellPanel extends BasePanel {
 
 		// unpack model
 		final Map<String, Object> modelData = this.model.getObject();
-		final String firstName = (String) modelData.get("firstName");
-		add(new Label("name", firstName));
+		final String extraStudentProperty = (String) modelData.get("extraStudentProperty");
+		add(new Label("extraInfo", extraStudentProperty));
 	}
 
 }

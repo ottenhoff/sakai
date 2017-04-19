@@ -1959,4 +1959,12 @@ public class GradebookNgBusinessService {
 		return iconClass;
 	}
 
+	/**
+	 * Helper to see if institution wants to display extra student information in All Grades display.
+	 * Example: student internal id that would help the instructor grade.
+	 * @return property name if available or null
+	 */
+	public String getExtraStudentProperty() {
+		return this.serverConfigurationService.getString("gradebook.extra.student.property", null);
+	}
 }
