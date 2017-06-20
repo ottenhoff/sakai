@@ -4,6 +4,9 @@ $logo: 'images/pepperdine-logo.svg';
 $logo-height: 42px;
 $logo-width: 200px;
 
+$tool-menu-color: #00205c;
+$button-primary-background-color: #00205c;
+
 $sites-nav-background: #00205c;
 $sites-nav-menu-item-background: #5b8ab5;
 $sites-nav-menu-item-border-color: transparent;
@@ -11,12 +14,14 @@ $sites-nav-menu-item-color: #ffffff;
 $sites-nav-menu-item-icon-color: #ffffff;
 $sites-nav-menu-item-hover-background: #5b8ab5;
 $sites-nav-menu-item-hover-color: #ffffff;
+$sites-nav-menu-item-hover-icon-color: #ffffff;
 $sites-nav-menu-item-hover-border-color: #ffffff;
 $sites-nav-menu-item-selected-background: #ffffff;
 $sites-nav-menu-item-selected-color: #4c4c4c;
 $sites-nav-menu-item-selected-icon-color: #4c4c4c;
 $sites-nav-menu-item-selected-border-color: #00205c;
-$sites-nav-menu-item-selected-hover-background: #00205c;
+$sites-nav-menu-item-selected-hover-background: #ffffff;
+$sites-nav-menu-item-selected-hover-color: #4c4c4c;
 $sites-nav-menu-item-selected-hover-icon-color: #4c4c4c;
 $sites-nav-menu-item-selected-hover-border-color: #00205c;
 
@@ -30,6 +35,9 @@ $tool-tab-hover-text-color: #333333;
 $tool-tab-hover-highlight-color: #716f6f;
 $tool-tab-hover-background-color: #dedede;
 
+$all-sites-button-star-full-color: #ee7624;
+$all-sites-button-selected-star-full-color: #ee7624;
+
 nav#toolMenu ul li {
   border: 0;
 
@@ -39,7 +47,7 @@ nav#toolMenu ul li {
   }
 
   &.is-current {
-    border-bottom: 1px solid rgba(211, 211, 211, .6);
+    border-bottom: 2px solid rgba(211, 211, 211, .5);
 
     span.Mrphs-toolsNav__menuitem--title {
       &::after {
@@ -64,4 +72,36 @@ nav#toolMenu ul li {
       }
     }
   }
+}
+
+div.Mrphs-portalWrapper .instruction {
+  color: #777;
+  border-left-color: #999;
+}
+			
+@media only screen and (max-width: 800px) {
+  ul.Mrphs-skipNav__menu li.Mrphs-skipNav__menuitem.Mrphs-skipNav__menuitem--tools a {
+    color: #00205b;
+  }
+  div.Mrphs-mainHeader .Mrphs-headerLogo .Mrphs-headerLogo--institution {
+    width: 100px;
+    background-size: 100px 21px;
+  }
+  div.Mrphs-mainHeader .Mrphs-loginUser p {
+    margin: 0.05em 0.8em 0 0;
+  }
+  .table-responsive {
+    > .table {
+      > thead,
+      > tbody,
+      > tfoot {
+        > tr {
+          > th,
+          > td {
+            white-space: normal !important;
+           }
+         }
+       }
+     }
+   }
 }
