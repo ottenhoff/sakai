@@ -29,11 +29,17 @@ $tool-menu-item-selected-text-color: #00205c;
 $tool-menu-item-selected-icon-color: #00205c;
 $tool-menu-item-selected-border-left: 4px solid #00205c;
 $tool-tab-active-highlight-color: #00205c;
-$tool-menu-item-hover-background-color: #f3f3f3;
+$tool-menu-background-color: #f3f3f3;
+$tool-menu-item-background-color: #f3f3f3;
+$tool-menu-item-hover-background-color: #dddddd;
 $tool-border-color: transparent;
 $tool-tab-hover-text-color: #333333;
 $tool-tab-hover-highlight-color: #716f6f;
 $tool-tab-hover-background-color: #dedede;
+
+$breadcrumbs-tool-color: #00205c;
+$breadcrumbs-hover-color: #00205c;
+
 
 $all-sites-button-star-full-color: #ee7624;
 $all-sites-button-selected-star-full-color: #ee7624;
@@ -104,4 +110,37 @@ div.Mrphs-portalWrapper .instruction {
        }
      }
    }
+}
+
+#mastLogin #loginLinks > * {
+  line-height: 1.5em;
+}
+
+.Mrphs-multipleTools div.Mrphs-container {
+  border: 0;
+}
+
+.Mrphs-topHeader #loginLinks a {
+  text-decoration: none;
+}
+.Mrphs-topHeader #loginLinks a:hover {
+  text-decoration: underline;
+  color: inherit;
+}
+
+div.Mrphs-sakai-samigo #samigo-create-new-box, div.Mrphs-sakai-samigo #samigo-create-import-box {
+  background-color: #edf3f8;
+  border-color: #5b8ab5;
+  border-left-color: #00205c;
+}
+#authorIndexForm #tabs .ui-state-active, #authorIndexForm #tabs .ui-widget-content .ui-state-active, #authorIndexForm #tabs .ui-widget-header .ui-state-active {
+  background: #5b8ab5 !important;
+  border: 1px solid #00205c !important;
+}
+
+.column .commentDiv, .column .studentContentTable, .column .questionDiv .contentCol, .column .checklistDiv, .column .forumSummaryHeaderDiv, .column .announcementsHeaderDiv, .column .fc-toolbar .timeline-Header {
+  background-color: #edf3f8 !important;
+}
+div.colblue {
+  background-color: #edf3f8 !important;
 }
