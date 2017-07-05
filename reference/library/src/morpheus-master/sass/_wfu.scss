@@ -1,3 +1,8 @@
+/* Logo location */
+$logo: 'images/wfu.svg';
+$logo-height: 50px;
+$logo-width: 400px;
+
 /* Color palette */
 $background-color: #FFFFFF;
 
@@ -39,15 +44,16 @@ $tool-menu-item-selected-border-left:                      4px solid #3b3836 !de
 
 $tool-tab-text-color:                                     $tool-menu-color !default;
 $tool-tab-background-color:                               $tool-menu-background-color !default;
+$tool-tab-active-highlight-color:                         #9e7e38 !default;
 
 
 $main-content-background: $background-color !important;
 $top-header-background: #FFFFFF !important;
-$sites-nav-background: $top-header-background !important;
+$sites-nav-background: #3c3937 !important;
 
-$breadcrumbs-color:    			 #FFFFFF !important;
-$breadcrumbs-tool-color:       		 #FFFFFF !important;
-$breadcrumbs-hover-color:      		 #FFFFFF !important;
+$breadcrumbs-color:    			 #000000 !important;
+$breadcrumbs-tool-color:       		 #000000 !important;
+$breadcrumbs-hover-color:      		 #444444 !important;
 
 /* Link colors */
 $link-color: #544a45;
@@ -98,13 +104,19 @@ $sites-nav-submenu-background:              $sites-nav-menu-item-background !def
 $sites-nav-submenu-item-background:         $sites-nav-menu-item-background !important;
 $sites-nav-submenu-item-background-hover:   $sites-nav-menu-item-background !important;
 $sites-nav-submenu-item-color:              $sites-nav-menu-item-color;
-$sites-nav-submenu-item-color-hover:        $sites-nav-submenu-item-color !default;
+$sites-nav-submenu-item-color-hover:        #3c3937 !default;
 $sites-nav-submenu-item-border:             none !default;
 $sites-nav-submenu-item-border-hover:       none !default;
 $sites-nav-submenu-selected-background:     $sites-nav-menu-item-selected-background !default;
 $sites-nav-submenu-item-selected-background:$sites-nav-menu-item-selected-background !default;
 $sites-nav-submenu-item-selected-color:     $sites-nav-menu-item-selected-color;
 $sites-nav-submenu-item-selected-border:    none !default;
+
+/* Favorites - tool submenu items hovered */
+$sites-nav-submenu-item-hover-background:   #ECECEC !default;
+$sites-nav-submenu-item-hover-color:        #3c3937 !important;
+$sites-nav-submenu-item-hover-icon-color:   #3c3937 !important;
+$sites-nav-submenu-item-hover-left-border-color: #3c3937 !important;
 
 .Mrphs-sakai-samigo #samigo-create-new-box, .Mrphs-sakai-samigo #samigo-create-import-box {
    border-color: $primary-color !important;
