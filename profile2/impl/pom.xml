@@ -59,6 +59,10 @@
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
         </dependency>
+        <dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>net.sf.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
@@ -110,7 +114,13 @@
 			<groupId>org.sakaiproject.kernel</groupId>
   			<artifactId>sakai-kernel-util</artifactId>
 		</dependency>
-
+		<!-- Inotado --> 
+        <dependency>
+            <artifactId>sakai-inotado-api</artifactId>
+            <groupId>org.sakaiproject</groupId>
+            <version>${inotado.version}</version>
+            <scope>provided</scope>
+		</dependency>
   	</dependencies>
   	
 	<build>

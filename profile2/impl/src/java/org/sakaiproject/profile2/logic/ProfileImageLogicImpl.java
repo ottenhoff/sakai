@@ -20,8 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -45,6 +47,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import lombok.Setter;
+
+import edu.wfu.inotado.api.InotadoService;
+import edu.wfu.inotado.api.WinProfile;
+import edu.wfu.inotado.api.WinProfileRequest;
+import edu.wfu.inotado.api.WinProfileResponse;
 
 /**
  * Implementation of ProfileImageLogic API
@@ -235,7 +242,16 @@ public class ProfileImageLogicImpl implements ProfileImageLogic {
 				//if no uploaded image, use the default image url
 				if(mtba == null || mtba.getBytes() == null) {
 					image.setExternalImageUrl(defaultImageUrl);
-					image.setDefault(true);
+					// Load WIN photo as profile image if available
+					if (this.inotadoService.isToolEnabled()) {
+						byte[] winImage = this.getWinImageByte(userUuid,
+								currentUserUuid);
+						if (winImage != null) {
+							// Save WIN image as profile image
+							image.setUploadedImage(winImage);
+							image.setMimeType("image/jpg");
+						}
+					}
 				} else {
 					image.setUploadedImage(mtba.getBytes());
 					image.setMimeType(mtba.getMimeType());
@@ -818,6 +834,12 @@ public class ProfileImageLogicImpl implements ProfileImageLogic {
 		//get external image record for this user
 		ProfileImageOfficial official = dao.getOfficialImageRecordForUser(userUuid);
 		
+		// load the official image from WIN
+		if(official == null){
+			String currentUserUuid = sakaiProxy.getCurrentUserId();
+			official = this.getProfileImageFromWin(userUuid, currentUserUuid);
+		}
+		
 		//setup default
 		String defaultImageUrl = getUnavailableImageURL();
 		
@@ -995,5 +1017,43 @@ public class ProfileImageLogicImpl implements ProfileImageLogic {
 	
 	@Setter
 	private ProfileDao dao;
+	
+	@Setter
+	private InotadoService inotadoService;
+	
+	private byte[] getWinImageByte(String userUuid, String currentUserUuid){
+		byte[] image = null;
+		WinProfile winProfile = this.getWinProfile(userUuid, currentUserUuid);
+		if(winProfile!=null && winProfile.getImageUrl()!=null){
+			image = winProfile.getImage();
+		}
+		return image;
+	}
+	
+	private ProfileImageOfficial getProfileImageFromWin(String userUuid, String currentUserUuid) {
+		ProfileImageOfficial officialImage = new ProfileImageOfficial();
+		WinProfile winProfile = this.getWinProfile(userUuid, currentUserUuid);
+		if (winProfile != null && winProfile.getImageUrl() != null) {
+			officialImage.setUrl(winProfile.getImageUrl());
+			officialImage.setUserUuid(userUuid);
+		}
+		return officialImage;
+	}
+	
+	private WinProfile getWinProfile(String userUuid, String currentUserUuid){
+		WinProfile winProfile = null;
+		if(this.inotadoService.isToolEnabled()){
+        	List<String> users = new ArrayList<String>();
+        	String id = userUuid;
+        	users.add(id);
+        	WinProfileRequest winRequest = this.inotadoService.createWinProfileRequestByInternalIds(users);
+        	WinProfileResponse winResponse = this.inotadoService.getWinProfiles(winRequest);
+        	if(winResponse != null){
+				Map<String,WinProfile> profiles = winResponse.getProfiles();
+				winProfile = profiles.get(this.inotadoService.getUserIdFromInternalId(id));							
+			}        	
+        }
+		return winProfile;
+	}
 	
 }
