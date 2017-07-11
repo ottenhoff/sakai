@@ -12,9 +12,13 @@ import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.lang.StringUtils;
 import org.sakaiproject.importer.api.ImportFileParser;
 import org.sakaiproject.archive.api.ImportMetadata;
+import org.sakaiproject.importer.api.IMSResourceTranslator;
 import org.sakaiproject.importer.api.Importable;
+import org.sakaiproject.importer.impl.importables.FileResource;
 import org.sakaiproject.importer.impl.importables.Folder;
 import org.sakaiproject.importer.impl.importables.HtmlDocument;
 import org.sakaiproject.importer.impl.translators.Bb6AnnouncementTranslator;
@@ -39,6 +43,9 @@ import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
 
 public class Blackboard6FileParser extends IMSFileParser {
+	
+	public static final String BB_NAMESPACE_URI = "http://www.blackboard.com/content-packaging/";
+  public static final String WEBCT_NAMESPACE_URI = "http://www.webct.com/IMS";
 	
 	public static final String ASSESSMENT_GROUP = "Assessments";
 	public static final String ANNOUNCEMENT_GROUP = "Announcements";
@@ -113,22 +120,23 @@ public class Blackboard6FileParser extends IMSFileParser {
 	protected Importable getCompanionForCompoundDocument(Document resourceDescriptor, Folder folder) {
 		HtmlDocument html = new HtmlDocument();
 		StringBuffer content = new StringBuffer();
+		
+		String bbText = XPathHelper.getNodeValue("/CONTENT/BODY/TEXT", resourceDescriptor);
+		bbText = StringUtils.replace(bbText, "@X@EmbeddedFile.location@X@", "");
+		content.append("    <p>" + bbText + "</p>\n");
+
 		List<Node> fileNodes = XPathHelper.selectNodes("/CONTENT/FILES/FILE", resourceDescriptor);
-		content.append("<html>\n");
-		content.append("  <head><title>" + folder.getTitle() + "</title></head>\n");
-		content.append("  <body>\n");
-		content.append("    <p>" + XPathHelper.getNodeValue("/CONTENT/BODY/TEXT", resourceDescriptor) + "</p>\n");
-		content.append("    <table border=\"1\">\n");
+		content.append("    <table class=\"bb-files\"><tr><th colspan=\"2\">Included Files</th></tr>\n");
+		int cnt = 1;
 		for (Node fileNode : fileNodes) {
 			String fileName = XPathHelper.getNodeValue("./NAME", fileNode);
-			content.append("      <tr><td><a href=\""+ folder.getTitle() + "/" + fileName + "\">" + fileName + "</a></td></tr>\n");
+			content.append("<tr><td>" + cnt + ") </td><td><a href=\"" + fileName + "\">" + fileName + "</a></td></tr>\n");
+			cnt++;
 		}
 		content.append("    </table>\n");
-		content.append("  </body>\n");
-		content.append("</html>");
 		html.setContent(content.toString());
 		html.setTitle(folder.getTitle());
-		html.setContextPath(folder.getPath() + folder.getTitle() + "_manifest");
+		html.setContextPath(folder.getPath() + folder.getTitle().replaceAll("/", "_") + "/introduction");
 		html.setLegacyGroup(folder.getLegacyGroup());
 		// we want the html document to come before the folder in sequence
 		html.setSequenceNum(folder.getSequenceNum() - 1);
@@ -192,6 +200,173 @@ public class Blackboard6FileParser extends IMSFileParser {
 	                categories.add(im);
 		}
 		return categories;
+	}
+	
+	protected Collection<Object> translateFromNodeToImportables(Node node, String contextPath, int priority, Importable parent) {
+		Collection<Object> branchOfImportables = new ArrayList<Object>();
+		String tag = node.getNodeName();
+		String itemResourceId = null;
+		if ("item".equals(tag)) {
+			itemResourceId = itemHelper.getResourceId(node);
+		} else if ("resource".equals(tag)) {
+			itemResourceId = resourceHelper.getId(node);
+		} else if ("file".equals(tag)) {
+			itemResourceId = resourceHelper.getId(node.getParentNode());
+		}
+		Document resourceDescriptor = resourceHelper.getDescriptor(manifestHelper.getResourceForId(itemResourceId, this.archiveManifest));
+		if (resourceHelper.isFolder(resourceDescriptor) || 
+						("item".equals(tag) && (XPathHelper.selectNodes("./item", node).size() > 0)) ||
+						( "item".equals(tag) && 
+								isCompoundDocument(manifestHelper.getResourceForId(itemResourceId, archiveManifest),resourceDescriptor)
+						)) {
+			String folderTitle = getTitleForNode(node);
+			Folder folder = new Folder();
+			folder.setPath(contextPath);
+			folder.setTitle(folderTitle);
+			folder.setDescription(getDescriptionForNode(node));
+			folder.setSequenceNum(priority);
+			if (parent != null) {
+				folder.setParent(parent);
+				folder.setLegacyGroup(parent.getLegacyGroup());
+			} else {
+				folder.setLegacyGroup(folderTitle);
+			}
+			// now we take care of the folder's child Nodes
+			// construct a new path and make sure we replace any forward slashes from the resource title
+			String folderPath = contextPath + folderTitle.replaceAll("/", "_") + "/";
+			if (isCompoundDocument(manifestHelper.getResourceForId(itemResourceId, archiveManifest),resourceDescriptor)) {
+				if (wantsCompanionForCompoundDocument()) {
+					priority++;
+					folder.setSequenceNum(priority);
+					branchOfImportables.add(getCompanionForCompoundDocument(resourceDescriptor, folder));
+				}
+				branchOfImportables.addAll(translateFromNodeToImportables(manifestHelper.getResourceForId(itemResourceId, archiveManifest), folderPath, priority, folder));
+			} else {
+				List<Node> children = XPathHelper.selectNodes("./item", node);
+				int childPriority = 1;
+				for (Iterator<Node> i = children.iterator(); i.hasNext();) {
+					branchOfImportables.addAll(
+						translateFromNodeToImportables((Node)i.next(),folderPath, childPriority, folder));
+					childPriority++;
+				}
+			}
+			resourceMap.remove(itemResourceId);
+			branchOfImportables.add(folder);
+		} // node is folder
+		else if ("item".equals(tag)) {
+			// this item is a leaf, so we handle the resource associated with it
+			Node resourceNode = manifestHelper.getResourceForId(itemResourceId, this.archiveManifest);
+				if (resourceNode != null) {
+					if (parent == null) {
+						parent = new Folder();
+						parent.setLegacyGroup(itemHelper.getTitle(node));
+					}
+					branchOfImportables.addAll(
+						translateFromNodeToImportables(resourceNode,contextPath, priority, parent));
+				}
+		} else if ("file".equals(tag)) {
+			FileResource file = new FileResource();
+			try {
+				String fileName = fileHelper.getFilenameForNode(node);
+ 				file.setFileName(fileName);
+ 				
+ 				// this will get the bb:title (friendly title, not filename)
+ 				String folderName = fileHelper.getTitle(node);
+ 				
+ 				// custom vars to help put this single file into a subfolder 
+ 				//String fileHolderFolder = fileName.substring(0, fileName.lastIndexOf('.'));
+ 				boolean putThisFileIntoAFolder = false;
+ 				 
+				if (node.getParentNode().getChildNodes().getLength() > 1) {
+					file.setDescription("");
+				} else {
+					// Stay consistent and null it
+					file.setDescription("");
+					putThisFileIntoAFolder = true;
+					String newItemText = resourceHelper.getDescription(node.getParentNode());
+					newItemText = StringUtils.replace(newItemText, "@X@EmbeddedFile.location@X@", "");
+					
+					if (StringUtils.trimToNull(newItemText) != null) {
+						HtmlDocument introFile = new HtmlDocument();
+						String tmpName = contextPath + folderName + "/" + folderName;
+						introFile.setContextPath(tmpName);
+						introFile.setTitle(folderName);
+						introFile.setContent(newItemText);
+						if (parent != null) {
+							introFile.setParent(parent);
+							introFile.setLegacyGroup(parent.getLegacyGroup());
+						}
+						branchOfImportables.add(introFile);
+					}
+				}
+				InputStream is = fileHelper.getInputStreamForNode(node, contextPath);
+				file.setInputStream(is);
+
+				if (putThisFileIntoAFolder) {
+					file.setDestinationResourcePath(contextPath + folderName + "/" + fileName);
+				}
+				else {
+					file.setDestinationResourcePath(
+						fileHelper.getFilePathForNode(node, contextPath).
+							replaceAll("//", "/").replaceAll("embedded/", "") /*.replace(fileHolderFolder, fileHolderFolder + "/" + fileHolderFolder) */
+						);
+				}
+
+				file.setContentType(this.mimeTypes.getContentType(fileName));
+				file.setTitle(fileHelper.getTitle(node));
+				if (parent != null) {
+					file.setParent(parent);
+					file.setLegacyGroup(parent.getLegacyGroup());
+				} else file.setLegacyGroup("");
+			} catch (IOException e) {
+				resourceMap.remove(resourceHelper.getId(node.getParentNode()));
+				return branchOfImportables;
+			}
+			branchOfImportables.add(file);
+			resourceMap.remove(resourceHelper.getId(node.getParentNode()));
+			return branchOfImportables;
+		} else if ("resource".equals(tag)) {
+			Importable resource = null;
+			boolean processResourceChildren = true;
+			IMSResourceTranslator translator = (IMSResourceTranslator)translatorMap.get(resourceHelper.getType(node));
+			if (translator != null) {
+				String title = resourceHelper.getTitle(node);
+				((Element)node).setAttribute("title", title);
+				((Element)node).setAttribute("priority", Integer.toString(priority));
+				resource = translator.translate(node, resourceHelper.getDescriptor(node), contextPath, this.pathToData);
+				processResourceChildren = translator.processResourceChildren();
+			}
+			if (resource != null) {
+				// make a note of a dependency if there is one.
+				String dependency = resourceHelper.getDependency(node);
+				if (!"".equals(dependency)) {
+					dependencies.put(resourceHelper.getId(node), dependency);
+				}
+				// section to twiddle with the Importable's legacyGroup,
+				// which we only want to do if it hasn't already been set.
+				if ((resource.getLegacyGroup() == null) || ("".equals(resource.getLegacyGroup()))) {
+					// find out if something depends on this.
+					if (dependencies.containsValue(resourceHelper.getId(node))) {
+						resource.setLegacyGroup("mandatory");
+					} else if (parent != null) {
+						resource.setParent(parent);
+						resource.setLegacyGroup(parent.getLegacyGroup());
+					} else resource.setLegacyGroup(resourceHelper.getTitle(node));
+				}
+				branchOfImportables.add(resource);
+				parent = resource;
+			}
+			// processing the child nodes implies that their files can wind up in the Resources tool.
+			// this is not always desirable, such as the QTI files from assessments.
+			if (processResourceChildren) {
+				NodeList children = node.getChildNodes();
+				for (int i = 0;i < children.getLength();i++) {
+					branchOfImportables.addAll(translateFromNodeToImportables(children.item(i), contextPath, priority, parent));
+				}
+			}
+			resourceMap.remove(itemResourceId);
+		}
+		return branchOfImportables;
 	}
 	
 	protected class Bb6ResourceHelper extends ResourceHelper {
@@ -273,7 +448,22 @@ public class Blackboard6FileParser extends IMSFileParser {
 		}
 
 		public String getTitle(Node itemNode) {
-			return XPathHelper.getNodeValue("./title",itemNode);
+			String tempString = XPathHelper.getNodeValue("./title",itemNode);
+
+			if (tempString.equals("content.Assignments.label")) return "Assignments";
+			if (tempString.equals("content.Documents.label")) return "Documents";
+			if (tempString.equals("content.Syllabus.label")) return "Syllabus";
+			if (tempString.equals("staff_information.FacultyInformation.label")) return "Faculty Information";
+			if (tempString.equals("COURSE_DEFAULT.Assignments.CONTENT_LINK.label")) return "Assignments";
+			if (tempString.equals("COURSE_DEFAULT.Communication.APPLICATION.label")) return "Communication";
+			if (tempString.equals("COURSE_DEFAULT.CourseInformation.CONTENT_LINK.label")) return "Course Information";
+			if (tempString.equals("COURSE_DEFAULT.ExternalLinks.CONTENT_LINK.label")) return "External Links";
+			if (tempString.equals("COURSE_DEFAULT.CourseDocuments.CONTENT_LINK.label")) return "Documents";
+			if (tempString.equals("COURSE_DEFAULT.StaffInformation.STAFF.label")) return "Staff";
+			if (tempString.equals("ORGANIZATION_DEFAULT.Information.CONTENT_LINK.label")) return "Information";
+			if (tempString.equals("ORGANIZATION_DEFAULT.Documents.CONTENT_LINK.label")) return "Documents";
+			if (tempString.equals("ORGANIZATION_DEFAULT.ExternalLinks.CONTENT_LINK.label")) return "External Links";
+			return tempString;
 		}
 
 		public String getDescription(Node itemNode) {
@@ -311,6 +501,72 @@ public class Blackboard6FileParser extends IMSFileParser {
 			String basePath = XPathHelper.getNodeValue("./@identifier",node.getParentNode());
 			String fileHref = XPathHelper.getNodeValue("./@href", node).replaceAll("\\\\", "/");
 			String filePath = basePath + "/" + fileHref;
+			File f = new File(pathToData + "/" + filePath);
+
+			// If the file doesn't exist in the expected location, find it
+			if (!f.exists()) {
+				filePath = fileHref;
+				f = new File(pathToData + "/" + filePath);	
+			}
+			
+			if (f.exists()) {
+					System.out.println("Found file directly: " + pathToData + "/" + filePath + ";exists=" + f.exists());
+					return getBytesFromFile(f);
+			}
+			
+			// Now iterate through to explicitly find the file (bad exclamation mark file issue)	
+			System.out.println("Folder: " + pathToData + "/" + basePath + "/");
+			File folder = new File(pathToData + "/" + basePath + "/");
+			File[] listOfFiles = folder.listFiles();
+
+			try {
+				for (int i = 0; i < listOfFiles.length; i++) {
+					if (listOfFiles[i].isFile()) {
+							String fileName = listOfFiles[i].getName();
+							String strippedFileName = fileName;
+							String strippedFileExtension = "";
+							if (fileName.startsWith("!")) {
+								strippedFileName = fileName.substring(1);
+
+								int suffixPos = strippedFileName.lastIndexOf(".");
+								strippedFileName = strippedFileName.substring(0, suffixPos);
+								strippedFileExtension = fileName.substring(suffixPos+1, fileName.length());
+
+								byte[] hexedName = Hex.decodeHex(strippedFileName.toCharArray());
+								String hexString = new String(hexedName);
+								System.out.println("sfile: " + strippedFileName + ";hex=" + hexString);
+
+									String fileNameWithoutExtension = fileHref;
+									String fileNameExtension = "";
+									if (fileHref.contains(".")) {
+										fileNameWithoutExtension = fileHref.substring(0,fileHref.lastIndexOf("."));
+										fileNameExtension = fileHref.substring(fileHref.lastIndexOf("."), fileHref.length());
+									}
+
+									if (fileNameWithoutExtension.equals(hexString) && strippedFileExtension.equalsIgnoreCase(fileNameExtension)) {
+										System.out.println("found file match: " + fileNameWithoutExtension + "::" + hexString);
+
+										filePath = basePath + "/" + fileName;
+										f = new File(pathToData + "/" + filePath);
+
+										if (f.exists()) {
+											return getBytesFromFile(f);
+										}
+									}
+							}
+
+						filePath = basePath + "/" + fileName;
+						} else if (listOfFiles[i].isDirectory()) {
+							System.out.println("Directory " + listOfFiles[i].getName());
+						}
+ 				}
+			}
+			catch (Exception exc) {
+				exc.printStackTrace();
+				System.out.println("Bad folder: " + exc.getMessage());
+			}
+
+			System.out.println("never found a matching file  so just returning last doc");
 			return getBytesFromFile(new File(pathToData + "/" + filePath));
 		}	
 	
@@ -322,8 +578,61 @@ public class Blackboard6FileParser extends IMSFileParser {
 				contextPath = contextPath + "/" + ASSESSMENT_FILES_DIRECTORY;
 			}
 			String fileHref = XPathHelper.getNodeValue("./@href", node);
+			fileHref = fileHref.replaceAll("\\\\", "/");
+
+			if (parentType.equals("webcontent")) {
+				System.out.println("filehref: " + fileHref);
+				if (fileHref.indexOf("/") > -1) {
+					String [] temp = null;	
+					temp = fileHref.split("/");
+
+					String resourceId = XPathHelper.getNodeValue("./@identifier", node.getParentNode());
+					System.out.println("resourceId: " + resourceId);
+					Node itemNode = XPathHelper.selectNode("//item[@identifierref='" + resourceId + "']",archiveManifest);
+					String tempString = XPathHelper.getNodeValue("./title",itemNode);
+					tempString = tempString.replaceAll("\\<.*?\\>", ""); // get rid of HTML tags in a title
+					System.out.println("getting title from item: " + tempString);
+
+
+					System.out.println("temp2: " + temp[2] + ";length: " + temp[2].length());
+					if (temp[2].length() == 38) {
+					System.out.println("temp2: " + temp[2] + ";length: " + temp[2].length());
+						return contextPath + "/" + tempString.replaceAll("\\\\", "/") + "/index.html";
+					}
+					else {
+						return contextPath + "/" +tempString.replaceAll("\\\\", "/") + "/" + temp[2];
+					}
+				}		
+			}
 			return contextPath + "/" + fileHref.replaceAll("\\\\", "/");
 		}
+
+		public String getTitle(Node fileNode) {
+			// if the resource that this file belongs to has multiple files,
+			// we just want to use the filename as the title
+			if (fileNode.getParentNode().getChildNodes().getLength() > 1) {
+					return getFilenameForNode(fileNode);
+			} 
+			else {
+				return resourceHelper.getTitle(fileNode.getParentNode());
+			}
+		}
+
+		public String getFilenameForNode(Node node) {
+			String sourceFilePath = XPathHelper.getNodeValue("./@href", node).replaceAll("\\\\", "/");
+			String temp =	(sourceFilePath.lastIndexOf("/") < 0) ? sourceFilePath
+				: sourceFilePath.substring(sourceFilePath.lastIndexOf("/") + 1);
+
+			if (temp.indexOf(".htm") > -1 && temp.length() == 38) {
+				return "index.html";
+			}
+			else {
+				return temp;
+			}
+
+		}
+
+
 		
 	}
 	// RU: Needed this for 2.6 -- Cat
