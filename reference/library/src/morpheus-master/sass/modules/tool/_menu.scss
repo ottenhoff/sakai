@@ -52,7 +52,7 @@
 			&.current{
 				color: $tool-tab-active-text-color;
 				font-size: $tool-tab-active-text-size;
-				background-color: $tool-tab-active-background-color;
+				background: $tool-tab-background-color;
 				border-top: 1px solid $tool-tab-border-color;
 				border-left: 1px solid $tool-tab-border-color;
 				border-right: 1px solid $tool-tab-border-color;
