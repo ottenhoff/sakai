@@ -47,8 +47,7 @@ public interface SakaiProxy {
 	public final static Boolean DEFAULT_VIEW_EMAIL = true;
 	public final static Boolean DEFAULT_VIEW_CONNECTIONS = true;
 	public final static Boolean DEFAULT_VIEW_USER_DISPLAY_ID = true;
-	// WFU modification: change default state to 1-"picture" instead of 0-"overview"
-	public final static Integer DEFAULT_ROSTER_STATE = 1;
+	public final static Integer DEFAULT_ROSTER_STATE = 0;
 	
 	/**
 	 * Returns the ID of the current user.
