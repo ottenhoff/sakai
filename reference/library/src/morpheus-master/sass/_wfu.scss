@@ -139,3 +139,11 @@ $sites-nav-submenu-item-hover-left-border-color: #3c3937 !important;
 .dropzone .dz-preview .dz-progress {
     opacity: 0 !important;
 }
+
+#authorIndexForm .ui-state-active, #authorIndexForm .ui-widget-content .ui-state-active, #authorIndexForm .ui-widget-header .ui-state-active {
+  background: #9c7d37 !important;
+}
+
+.ui-state-active, .ui-widget-content .ui-state-active, .ui-widget-header .ui-state-active {
+    border: transparent !important;
+}
