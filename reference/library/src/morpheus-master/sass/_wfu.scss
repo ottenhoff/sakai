@@ -135,3 +135,7 @@ $sites-nav-submenu-item-hover-left-border-color: #3c3937 !important;
     width: 145px !important;
     }
 }
+
+.dropzone .dz-preview .dz-progress {
+    opacity: 0 !important;
+}
