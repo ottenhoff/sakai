@@ -59,7 +59,7 @@ public class GradePointsMapping extends GradeMapping {
         grades.add("F (0)");
 
         defaultValues = new ArrayList<Double>();
-        defaultValues.add(Double.valueOf(100));
+        defaultValues.add(Double.valueOf(93));
         defaultValues.add(Double.valueOf(90));
         defaultValues.add(Double.valueOf(87));
         defaultValues.add(Double.valueOf(83));
