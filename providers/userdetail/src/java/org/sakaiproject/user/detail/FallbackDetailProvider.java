@@ -40,7 +40,7 @@ public class FallbackDetailProvider implements CandidateDetailProvider {
 	
 	private final static String SYSTEM_PROP_USE_INSTITUTIONAL_ANONYMOUS_ID = "useInstitutionalAnonymousID";
 	private final static String SYSTEM_PROP_DISPLAY_ADDITIONAL_INFORMATION = "displayAdditionalInformation";
-	private final static String SYSTEM_PROP_USE_INSTITUTIONAL_NUMERIC_ID = "useInsitutionalNumericID";
+	private final static String SYSTEM_PROP_USE_INSTITUTIONAL_NUMERIC_ID = "useInstitutionalNumericID";
 
 	private ServerConfigurationService serverConfigurationService;
 	private SiteService siteService;
