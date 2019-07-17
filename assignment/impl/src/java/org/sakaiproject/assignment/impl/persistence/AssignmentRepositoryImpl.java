@@ -16,7 +16,9 @@
 package org.sakaiproject.assignment.impl.persistence;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -216,6 +218,32 @@ public class AssignmentRepositoryImpl extends BasicSerializableRepository<Assign
                         throw new NonUniqueResultException(sizeDiff);
                 }
         }
+    }
+
+    @Override
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public Map<String, AssignmentSubmission> findSubmissionsForUsers(String assignmentId, Set<String> userIds) {
+        List<AssignmentSubmission> submissions = sessionFactory.getCurrentSession().createCriteria(AssignmentSubmission.class)
+                .add(Restrictions.eq("assignment.id", assignmentId))
+                .createAlias("submitters", "s")
+                .add(Restrictions.in("s.submitter", userIds))
+                .list();
+
+        Map<String, AssignmentSubmission> submissionMap = new HashMap<>();
+        for (AssignmentSubmission sub : submissions) {
+        	for (AssignmentSubmissionSubmitter submitter : sub.getSubmitters()) {
+        		if (submissionMap.containsKey(submitter.getSubmitter())) {
+        			// This call should clean the duplicate submissions
+        			AssignmentSubmission cleanedSub = findSubmissionForUser(assignmentId, submitter.getSubmitter());
+        			submissionMap.put(submitter.getSubmitter(), cleanedSub);
+        		}
+        		else {
+        			submissionMap.put(submitter.getSubmitter(), sub);
+        		}
+        	}
+    	}
+        return submissionMap;
     }
 
     @Override

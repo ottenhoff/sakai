@@ -2135,8 +2135,12 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
             }
 
             if (!rvUsers.isEmpty()) {
+            	// Batch retrieve all submissions in one SQL call
+            	Set<String> rvUserSet = rvUsers.stream().map(User::getId).collect(Collectors.toSet());
+            	Map<String, AssignmentSubmission> submissionMap = assignmentRepository.findSubmissionsForUsers(assignment.getId(), rvUserSet);
+
                 for (User user : rvUsers) {
-                    AssignmentSubmission submission = assignmentRepository.findSubmissionForUser(assignment.getId(), user.getId());
+                    AssignmentSubmission submission = submissionMap.get(user.getId());
 
                     if (submission != null) {
                         rv.put(user, submission);

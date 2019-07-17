@@ -64,6 +64,8 @@ public interface AssignmentRepository extends SerializableRepository<Assignment,
 
     AssignmentSubmission findSubmissionForUser(String assignmentId, String userId);
 
+    Map<String, AssignmentSubmission> findSubmissionsForUsers(String assignmentId, Set<String> userIds);
+
     AssignmentSubmission findSubmissionForGroup(String assignmentId, String groupId);
 
     void initializeAssignment(Assignment assignment);
