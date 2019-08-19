@@ -5367,7 +5367,7 @@ public class SiteAction extends PagedResourceActionII {
 	/**
 	 * Is it from the ENW edit page?
 	 * 
-	 * @return ture if the process went through the ENW page; false, otherwise
+	 * @return true if the process went through the ENW page; false, otherwise
 	 */
 	private boolean fromENWModifyView(SessionState state) {
 		boolean fromENW = false;
@@ -11599,13 +11599,13 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		
 		site = refreshSiteObject(site);
 
-		Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
-
 		// import tools and content via the new site -> re-use content workflow
 		if (importTools != null && !importTools.isEmpty()) {
-			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions, false);
+			Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
+
+			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions, true);
 			if (importTaskStarted) {
-				addFlashNotif(state, rb.get("importQueued").toString());
+				addFlashNotif(state, (String) rb.get("importQueued"));
 				state.removeAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
 				state.removeAttribute(STATE_IMPORT_SITE_TOOL);
 				state.removeAttribute(STATE_IMPORT_SITES);

@@ -493,7 +493,7 @@ public class SiteManageServiceImpl implements SiteManageService {
                         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
                             @Override
                             protected void doInTransactionWithoutResult(TransactionStatus status) {
-                                List<String> options = (toolOptions != null) ? toolOptions.get(toolId) : null;
+                                List<String> options = (toolOptions != null) ? toolOptions.get(toolId) : new ArrayList<>();
 
                                 Map<String, String> entityMap
                                     = et.transferCopyEntities(
