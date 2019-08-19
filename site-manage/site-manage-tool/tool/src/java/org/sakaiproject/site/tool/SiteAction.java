@@ -11601,16 +11601,18 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 
 		Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
 
-		// import
-		boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions, false);
-		if (importTaskStarted) {
-			state.setAttribute(IMPORT_QUEUED, rb.get("importQueued"));
-			state.removeAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
-			state.removeAttribute(STATE_IMPORT_SITE_TOOL);
-			state.removeAttribute(STATE_IMPORT_SITES);
-		} else {
-			// an existing thread is running for this site import, throw warning
-			addAlert(state, rb.getString("java.import.existing"));
+		// import tools and content via the new site -> re-use content workflow
+		if (importTools != null && !importTools.isEmpty()) {
+			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions, false);
+			if (importTaskStarted) {
+				addFlashNotif(state, rb.get("importQueued").toString());
+				state.removeAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
+				state.removeAttribute(STATE_IMPORT_SITE_TOOL);
+				state.removeAttribute(STATE_IMPORT_SITES);
+			} else {
+				// an existing thread is running for this site import, throw warning
+				addAlert(state, rb.getString("java.import.existing"));
+			}
 		}
 
 		// SAK-22384 add LaTeX (MathJax) support

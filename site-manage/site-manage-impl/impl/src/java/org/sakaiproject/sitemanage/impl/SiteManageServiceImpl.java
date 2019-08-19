@@ -372,11 +372,11 @@ public class SiteManageServiceImpl implements SiteManageService {
 
                 //now compare what we have to what we need to add
                 final List<String> selectedTools = new ArrayList<String>(toolsToProcess);
-                log.debug("selectedTools: " + selectedTools);
+                log.debug("selectedTools: {}", selectedTools);
 
                 List<String> missingToolIds = new ArrayList<String>(selectedTools);
                 missingToolIds.removeAll(toolIds);
-                log.debug("missingToolIds: " + missingToolIds);
+                log.debug("missingToolIds: {}", missingToolIds);
 
                 //and add
                 for (String missingToolId : missingToolIds) {
@@ -391,7 +391,7 @@ public class SiteManageServiceImpl implements SiteManageService {
             
             //set custom title
             if (cleanup) {
-                log.debug("allToolIds: " + toolIds);
+                log.debug("allToolIds: {}", toolIds);
                 for (String toolId : toolIds) {
                     try {
                         String siteFromId = importTools.get(toolId).get(0);
