@@ -359,8 +359,7 @@ public class SiteManageServiceImpl implements SiteManageService {
         return toSite;
     }
 
-    @Override
-    public void importToolsIntoSite(Site site, List<String> toolIds, Map<String, List<String>> importTools, Map<String, List<String>> toolOptions, boolean cleanup) {
+    private void importToolsIntoSite(Site site, List<String> toolIds, Map<String, List<String>> importTools, Map<String, List<String>> toolOptions, boolean cleanup) {
 
         if (importTools != null && !importTools.isEmpty()) {
 
@@ -494,7 +493,6 @@ public class SiteManageServiceImpl implements SiteManageService {
                         transactionTemplate.execute(new TransactionCallbackWithoutResult() {
                             @Override
                             protected void doInTransactionWithoutResult(TransactionStatus status) {
-
                                 List<String> options = (toolOptions != null) ? toolOptions.get(toolId) : null;
 
                                 Map<String, String> entityMap
@@ -507,7 +505,8 @@ public class SiteManageServiceImpl implements SiteManageService {
                         });
                     }
                 } catch (Exception e) {
-                    log.error("Error encountered while asking EntityTransfer to transferCopyEntities from: {} to: {}, {}", fromContext, toContext, e.getMessage());
+                    log.error("Error encountered while asking EntityTransfer to transferCopyEntities from: {} to: {}", fromContext, toContext, e.getMessage());
+                    log.debug("transferCopyEntities stack trace", e);
                 }
             }
         }

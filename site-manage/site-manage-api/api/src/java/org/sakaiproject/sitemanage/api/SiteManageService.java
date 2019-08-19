@@ -28,15 +28,6 @@ public interface SiteManageService {
     boolean importToolsIntoSiteThread(final Site site, final List<String> toolIds, final Map<String, List<String>> toolsToImport, Map<String, List<String>> toolOptions, final boolean cleanup);
 
     /**
-     * Contains the actual workflow for tools to be imported and their references to be updated
-     * @param site        the site
-     * @param toolIds     the tool ids in the site to be imported into
-     * @param importTools the tools selected to be imported
-     * @param cleanup     true if content should be removed before the tool is copied
-     */
-    void importToolsIntoSite(Site site, List<String> toolIds, Map<String, List<String>> importTools, Map<String, List<String>> toolOptions, boolean cleanup);
-
-    /**
      * Copy tool content from old site
      *
      * @param oSiteId        source (old) site id
