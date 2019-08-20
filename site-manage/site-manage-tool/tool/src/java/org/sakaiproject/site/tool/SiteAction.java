@@ -2869,6 +2869,8 @@ public class SiteAction extends PagedResourceActionII {
 				} else {
 					context.put("continue", "18");
 				}
+
+				importableToolsIdsInDestinationSite = getToolsAvailableForImport(state, importableToolsIdsInDestinationSite);
 			}
 			
 			// list of all tools that participate in the archive/merge process that are in the site selected to import from
@@ -9637,7 +9639,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 						//list of existing tools in the destination site
 						List<String> existingTools = getOriginalToolIds((List<String>) state.getAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST), state);
 
-						boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(existingSite, existingTools, importTools, toolOptions, false);
+						boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(existingSite, existingTools, importTools, toolOptions);
 						if (importTaskStarted) {
 							// ***** import tools here
 							state.setAttribute(IMPORT_QUEUED, rb.get("importQueued"));
@@ -9679,7 +9681,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 						//list of existing tools in the destination site
 						List<String> existingTools = getOriginalToolIds((List<String>) state.getAttribute(STATE_TOOL_REGISTRATION_SELECTED_LIST), state);
 
-						boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(existingSite, existingTools, importTools, toolOptions, true);
+						boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(existingSite, existingTools, importTools, toolOptions);
 
 						if (importTaskStarted) {
 							// ***** import tools here
@@ -11595,7 +11597,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		if (importTools != null && !importTools.isEmpty()) {
 			Map<String, List<String>> toolOptions = (Map<String, List<String>>) state.getAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
 
-			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions, true);
+			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions);
 			if (importTaskStarted) {
 				addFlashNotif(state, rb.getString("importQueued"));
 				state.removeAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
