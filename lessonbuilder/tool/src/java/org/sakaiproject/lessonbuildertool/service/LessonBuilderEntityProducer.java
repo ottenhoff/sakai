@@ -1026,6 +1026,12 @@ public class LessonBuilderEntityProducer extends AbstractEntityProvider
    public String merge(String siteId, Element root, String archivePath, String fromSiteId, Map attachmentNames, Map userIdTrans,
 		       Set userListAllowImport, Map<String, String> entityMap)
    {
+	   try {
+		Thread.sleep(9000);
+	} catch (InterruptedException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	}
       StringBuilder results = new StringBuilder();
       // map old to new page ids
       Map <Long,Long> pageMap = new HashMap<Long,Long>();
@@ -1097,6 +1103,13 @@ public class LessonBuilderEntityProducer extends AbstractEntityProvider
 		 ResourcePropertiesEdit rp = site.getPropertiesEdit();
 		 rp.addProperty("lessonbuilder-needsfixup", "2");
 		 siteService.save(site);
+		   try {
+				Thread.sleep(9000);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		   
 		// unfortunately in duplicate site, site-admin has the site open, so this doesn't actually do anything
 		// site-manage will stomp on it. However it does work for the other import operations, which is where
 		// we need it, since site manage will call the fixup itself for duplicate

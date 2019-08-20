@@ -7914,7 +7914,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 				catch (Exception e)
 				{
 					// not the right tool id
-					log.debug(this + ".findOriginalToolId not matching tool id = " + toolRegistrationId + " original tool id=" + toolId + e.getMessage(), e);
+					log.debug(this + ".findOriginalToolId not matching tool id = " + toolRegistrationId + " original tool id=" + toolId + ":" + e.getMessage());
 				}
 			}
 			
@@ -11600,28 +11600,12 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions);
 			if (importTaskStarted) {
 				addFlashNotif(state, rb.getString("importQueued"));
-				state.removeAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
-				state.removeAttribute(STATE_IMPORT_SITE_TOOL);
-				state.removeAttribute(STATE_IMPORT_SITES);
 			} else {
 				// an existing thread is running for this site import, throw warning
 				addAlert(state, rb.getString("java.import.existing"));
 			}
 		}
 
-		// SAK-22384 add LaTeX (MathJax) support
-		if (MathJaxEnabler.prepareMathJaxToolSettingsForSave(site, state))
-		{
-			commitSite(site);
-		}
-
-		if (LessonsSubnavEnabler.prepareSiteForSave(site, state)) {
-			commitSite(site);
-		}
-
-		if (PortalNeochatEnabler.prepareSiteForSave(site, state)) {
-			commitSite(site);
-		}
 	} // saveFeatures
 
 	/**

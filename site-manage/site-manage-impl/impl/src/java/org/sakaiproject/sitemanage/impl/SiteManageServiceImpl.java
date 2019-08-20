@@ -195,6 +195,14 @@ public class SiteManageServiceImpl implements SiteManageService {
                                                 contentHostingService.getSiteCollection(nSiteId),
                                                 toolOptions,
                                                 false));
+                                
+                         	   try {
+                         			Thread.sleep(9000);
+                         		} catch (InterruptedException e1) {
+                         			// TODO Auto-generated catch block
+                         			e1.printStackTrace();
+                         		}
+                         	   
                                 transversalMap.putAll(getDirectToolUrlEntityReferences(toolId, oSiteId, nSiteId));
 
                             } else if (StringUtils.equalsIgnoreCase(toolId, SiteManageConstants.SITE_INFO_TOOL_ID)) {
@@ -219,7 +227,7 @@ public class SiteManageServiceImpl implements SiteManageService {
                 toolsCopied.forEach(t -> updateEntityReferences(t, nSiteId, transversalMap, site));
             }
         } catch (Exception e) {
-            log.warn("Error during tool import for site {}, {}", nSiteId, e.getMessage());
+            log.warn("Error during tool import for site {}, {}", nSiteId, e);
         } finally {
             if (bypassSecurity) {
                 securityService.popAdvisor(securityAdvisor);
@@ -382,6 +390,13 @@ public class SiteManageServiceImpl implements SiteManageService {
                 for (String missingToolId : missingToolIds) {
                     site = addToolToSiteIfMissing(site, missingToolId);
                     saveSite(site);
+             	   try {
+             			Thread.sleep(9000);
+             		} catch (InterruptedException e1) {
+             			// TODO Auto-generated catch block
+             			e1.printStackTrace();
+             		}
+             	   
                 }
 
                 //now update toolIds to match importTools so that the content is imported
@@ -463,6 +478,13 @@ public class SiteManageServiceImpl implements SiteManageService {
     private void saveSite(Site site) {
         try {
             siteService.save(site);
+            
+     	   try {
+     			Thread.sleep(9000);
+     		} catch (InterruptedException e1) {
+     			// TODO Auto-generated catch block
+     			e1.printStackTrace();
+     		}
         } catch (IdUnusedException iue) {
             log.warn("The site {} must exist in order to update it, {}", site.getId(), iue.getMessage());
         } catch (PermissionException pe) {
