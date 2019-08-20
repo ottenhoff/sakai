@@ -11605,7 +11605,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 
 			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions, true);
 			if (importTaskStarted) {
-				addFlashNotif(state, (String) rb.get("importQueued"));
+				addFlashNotif(state, rb.getString("importQueued"));
 				state.removeAttribute(STATE_IMPORT_SITE_TOOL_OPTIONS);
 				state.removeAttribute(STATE_IMPORT_SITE_TOOL);
 				state.removeAttribute(STATE_IMPORT_SITES);
