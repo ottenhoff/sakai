@@ -11599,7 +11599,7 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 
 			boolean importTaskStarted = siteManageService.importToolsIntoSiteThread(site, chosenList, importTools, toolOptions);
 			if (importTaskStarted) {
-				addFlashNotif(state, rb.getString("importQueued"));
+				addFlashNotif(state, "TODO REMOVE ME");
 			} else {
 				// an existing thread is running for this site import, throw warning
 				addAlert(state, rb.getString("java.import.existing"));

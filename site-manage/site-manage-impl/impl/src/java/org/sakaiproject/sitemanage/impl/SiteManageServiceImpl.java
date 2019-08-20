@@ -197,7 +197,7 @@ public class SiteManageServiceImpl implements SiteManageService {
                                                 false));
                                 
                          	   try {
-                         			Thread.sleep(9000);
+                         			Thread.sleep(2000);
                          		} catch (InterruptedException e1) {
                          			// TODO Auto-generated catch block
                          			e1.printStackTrace();
@@ -390,13 +390,6 @@ public class SiteManageServiceImpl implements SiteManageService {
                 for (String missingToolId : missingToolIds) {
                     site = addToolToSiteIfMissing(site, missingToolId);
                     saveSite(site);
-             	   try {
-             			Thread.sleep(9000);
-             		} catch (InterruptedException e1) {
-             			// TODO Auto-generated catch block
-             			e1.printStackTrace();
-             		}
-             	   
                 }
 
                 //now update toolIds to match importTools so that the content is imported
@@ -480,7 +473,7 @@ public class SiteManageServiceImpl implements SiteManageService {
             siteService.save(site);
             
      	   try {
-     			Thread.sleep(9000);
+     			Thread.sleep(2000);
      		} catch (InterruptedException e1) {
      			// TODO Auto-generated catch block
      			e1.printStackTrace();
