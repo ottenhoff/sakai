@@ -1185,7 +1185,7 @@ public void setFeedbackComponentOption(String feedbackComponentOption) {
     if (!this.isValidFeedbackEndDate) {
       return this.originalFeedbackEndDateString;
     } else {
-      return getDisplayFormatFromDate(feedbackEndDate);
+      return getDisplayFormatFromDate(feedbackEndDate, false);
     }
   }
 
