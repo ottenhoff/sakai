@@ -2249,8 +2249,8 @@ public class DeliveryBean
     	  if ( moduleId != null && ! SecureDeliveryServiceAPI.NONE_ID.equals( moduleId ) ) {
     		  HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
     		  PhaseStatus status = secureDelivery.validatePhase(moduleId, Phase.ASSESSMENT_START, publishedAssessment, request );
-    		  setSecureDeliveryHTMLFragment( 
-    		  			secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale() ) );
+    		  			String htmlFrag = secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale() );
+    		  setSecureDeliveryHTMLFragment(htmlFrag);
     		  setBlockDelivery( PhaseStatus.FAILURE == status );
     		  if ( PhaseStatus.SUCCESS == status ) {
     			  results = "takeAssessment";
@@ -2298,9 +2298,9 @@ public class DeliveryBean
         return "takeAssessment";
       }
       return results;
-    } catch (Exception e)
-    {
-    	log.error("accessError{}", e.getMessage());
+    } catch (Exception e) {
+    	log.error("accessError", e);
+
       EventLogService eventService = new EventLogService();
 		 EventLogFacade eventLogFacade = new EventLogFacade();
 		 EventLogData eventLogData = null;
