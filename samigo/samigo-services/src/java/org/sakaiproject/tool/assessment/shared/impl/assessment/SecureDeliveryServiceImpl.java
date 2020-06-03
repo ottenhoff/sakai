@@ -29,6 +29,8 @@ import javax.servlet.http.HttpServletRequest;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.Resource;
 
@@ -36,6 +38,7 @@ import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.PublishedAssessmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.RegisteredSecureDeliveryModuleIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.SecureDeliveryModuleIfc;
+import org.sakaiproject.tool.assessment.services.assessment.SecureDeliveryProctorio;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI;
 
 /**
@@ -144,6 +147,7 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 			module.id = entry.getKey();
 			module.name = entry.getValue().getModuleName( locale );
 			module.enabled = entry.getValue().isEnabled();
+			System.out.println("zz40: " + entry.toString());
 			moduleSet.add( module );
 		}
 		
@@ -241,11 +245,16 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 		
 		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
 		
+		System.out.println("zz20: " + moduleId + ":" + secureDeliveryModules.toString());
+		
 		if ( moduleId == null || NONE_ID.equals( moduleId ) || module == null  || !module.isEnabled() )
 			return "";
 		
 		try {
-			return module.getHTMLFragment(assessment, request, phase, status, locale );
+			System.out.println("zz21: about to call");
+			String tmep = module.getHTMLFragment(assessment, request, phase, status, locale );
+			System.out.println("zz22: " + tmep);
+			return tmep;
 		}
 		catch ( Exception e ) {
 			
@@ -345,40 +354,39 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 	 * @param secureDeliveryPlugin the path to the plugin JAR file
 	 */
 	private void handlePlugin( String secureDeliveryPlugin ) {
-	
-		try
-		{
-			File file = new File( secureDeliveryPlugin );
-			if ( !file.exists() ) {
-				log.warn( "Secure delivery plugin " + secureDeliveryPlugin + " not found" );
-				return;
-			}
-
-			URL pluginUrl = new URL( "file:" + secureDeliveryPlugin );
-			URLClassLoader classLoader = new URLClassLoader( new URL[] { pluginUrl },  this.getClass().getClassLoader() );
-			GenericApplicationContext ctx = new GenericApplicationContext();
-			ctx.setClassLoader( classLoader );
-			Resource resource = ctx.getResource( "jar:file:" + secureDeliveryPlugin + "!/spring-context.xml" );
-
-			XmlBeanDefinitionReader xmlReader = new XmlBeanDefinitionReader(ctx);
-			xmlReader.loadBeanDefinitions( resource );
-			ctx.refresh();
-			
-			String[] secureDeliveryModuleBeanNames = ctx.getBeanNamesForType( SecureDeliveryModuleIfc.class );
-			if ( secureDeliveryModuleBeanNames.length == 0 )
-				log.warn( "Secure delivery plugin doesn't define any beans of type SecureDeliveryModuleIfc" );
-			for ( String name : secureDeliveryModuleBeanNames ) {
-				
-				SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc) ctx.getBean( name );				
-				log.info( "Loaded secure delivery module: " + secureDeliveryModuleBean + " (" + secureDeliveryModuleBean.getModuleName( Locale.getDefault() ) + ")"  );				
-				if ( secureDeliveryModuleBean.initialize() ) {
-				
-					secureDeliveryModules.put( secureDeliveryModuleBean.getClass().getName(), secureDeliveryModuleBean );
-				}
-			}				
-		}
-		catch ( Exception e ) {
-			log.error( "Unable to load secure delivery plugin " + secureDeliveryPlugin, e );
-		}
+		ApplicationContext ctx = new AnnotationConfigApplicationContext(SecureDeliveryProctorio.class);
+		SecureDeliveryModuleIfc xxBean = (SecureDeliveryModuleIfc) ctx.getBean("secureDeliveryProctorio");
+		//System.out.println("zz01: " + xxBean.toString());
+		secureDeliveryModules.put( "Proctorio", xxBean );
+		/*
+		 * try { File file = new File( secureDeliveryPlugin ); if ( !file.exists() ) {
+		 * log.warn( "Secure delivery plugin " + secureDeliveryPlugin + " not found" );
+		 * return; }
+		 * 
+		 * URL pluginUrl = new URL( "file:" + secureDeliveryPlugin ); URLClassLoader
+		 * classLoader = new URLClassLoader( new URL[] { pluginUrl },
+		 * this.getClass().getClassLoader() );
+		 * 
+		 * ctx.setClassLoader( classLoader ); Resource resource = ctx.getResource(
+		 * "jar:file:" + secureDeliveryPlugin + "!/spring-context.xml" );
+		 * 
+		 * XmlBeanDefinitionReader xmlReader = new XmlBeanDefinitionReader(ctx);
+		 * xmlReader.loadBeanDefinitions( resource ); ctx.refresh();
+		 * 
+		 * String[] secureDeliveryModuleBeanNames = ctx.getBeanNamesForType(
+		 * SecureDeliveryModuleIfc.class ); if ( secureDeliveryModuleBeanNames.length ==
+		 * 0 ) log.warn(
+		 * "Secure delivery plugin doesn't define any beans of type SecureDeliveryModuleIfc"
+		 * ); for ( String name : secureDeliveryModuleBeanNames ) {
+		 * 
+		 * SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc)
+		 * ctx.getBean( name ); log.info( "Loaded secure delivery module: " +
+		 * secureDeliveryModuleBean + " (" + secureDeliveryModuleBean.getModuleName(
+		 * Locale.getDefault() ) + ")" ); if ( secureDeliveryModuleBean.initialize() ) {
+		 * 
+		 * secureDeliveryModules.put( secureDeliveryModuleBean.getClass().getName(),
+		 * secureDeliveryModuleBean ); } } } catch ( Exception e ) { log.error(
+		 * "Unable to load secure delivery plugin " + secureDeliveryPlugin, e ); }
+		 */
 	}
 }

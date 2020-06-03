@@ -1271,15 +1271,20 @@ public class DeliveryBean implements Serializable {
       setSecureDeliveryHTMLFragment( "" );
       setBlockDelivery( false );
       SecureDeliveryServiceAPI secureDelivery = SamigoApiFactory.getInstance().getSecureDeliveryServiceAPI();
+      System.out.println("zz10: " + results + ":" + secureDelivery.isSecureDeliveryAvaliable() );
       if ( "takeAssessment".equals(results) && secureDelivery.isSecureDeliveryAvaliable() ) {
    
     	  String moduleId = publishedAssessment.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY );
+      System.out.println("zz11: " + moduleId);
     	  if ( moduleId != null && ! SecureDeliveryServiceAPI.NONE_ID.equals( moduleId ) ) {
     		  HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
     		  PhaseStatus status = secureDelivery.validatePhase(moduleId, Phase.ASSESSMENT_START, publishedAssessment, request );
-    		  setSecureDeliveryHTMLFragment( 
-    		  			secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale() ) );
+      System.out.println("zz12: " + status);
+    		  			String htmlFrag = secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale() );
+      System.out.println("zz13: " + htmlFrag);
+    		  setSecureDeliveryHTMLFragment(htmlFrag);
     		  setBlockDelivery( PhaseStatus.FAILURE == status );
+      System.out.println("zz14: " + status);
     		  if ( PhaseStatus.SUCCESS == status ) {
     			  results = "takeAssessment";
               } else {
@@ -1325,7 +1330,7 @@ public class DeliveryBean implements Serializable {
       }
       return results;
     } catch (Exception e) {
-    	log.error("accessError{}", e.getMessage());
+    	log.error("accessError", e);
       EventLogService eventService = new EventLogService();
 		 EventLogFacade eventLogFacade = new EventLogFacade();
 		 EventLogData eventLogData = null;
