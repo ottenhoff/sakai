@@ -355,9 +355,11 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 	 */
 	private void handlePlugin( String secureDeliveryPlugin ) {
 		ApplicationContext ctx = new AnnotationConfigApplicationContext(SecureDeliveryProctorio.class);
-		SecureDeliveryModuleIfc xxBean = (SecureDeliveryModuleIfc) ctx.getBean("secureDeliveryProctorio");
-		//System.out.println("zz01: " + xxBean.toString());
-		secureDeliveryModules.put( "Proctorio", xxBean );
+		SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc) ctx.getBean("secureDeliveryProctorio");
+		System.out.println("zz01: " + secureDeliveryModuleBean.toString());
+		if ( secureDeliveryModuleBean.initialize() ) {
+			secureDeliveryModules.put( "Proctorio", secureDeliveryModuleBean );
+		}
 		/*
 		 * try { File file = new File( secureDeliveryPlugin ); if ( !file.exists() ) {
 		 * log.warn( "Secure delivery plugin " + secureDeliveryPlugin + " not found" );

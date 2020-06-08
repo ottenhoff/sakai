@@ -24,6 +24,7 @@ import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
+import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.PublishedAssessmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.SecureDeliveryModuleIfc;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI;
@@ -41,13 +42,24 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
+	final private static String ENCODING = java.nio.charset.StandardCharsets.US_ASCII.toString();
+	private static String proctorioKey;
+	private static String proctorioSecret;
+	private static String proctorioUrl;
+
 	private SessionManager sessionManager = ComponentManager.get(SessionManager.class);
 	private UserDirectoryService userDirectoryService = ComponentManager.get(UserDirectoryService.class);
 	private ServerConfigurationService serverConfigurationService = ComponentManager.get(ServerConfigurationService.class);
 
 	@Override
 	public boolean initialize() {
-		return true;
+		proctorioKey = serverConfigurationService.getString("proctorio.key", null);
+		proctorioSecret = serverConfigurationService.getString("proctorio.secret", null);
+		proctorioUrl = serverConfigurationService.getString("proctorio.url", null);
+		
+		System.out.println("zz01: " + proctorioKey + ":" + proctorioSecret + ":" + proctorioUrl);
+
+		return (proctorioKey != null) && (proctorioSecret != null) && (proctorioUrl != null);
 	}
 
 	@Override
@@ -62,7 +74,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public String getTitleDecoration(Locale locale) {
-		return " - Proctorio";
+		return " (Proctorio required)	";
 	}
 
 	@Override
@@ -73,7 +85,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public String getInitialHTMLFragment(HttpServletRequest request, Locale locale) {
-		return "<strong>Proctorio initial HTML fragment</strong>";
+		return ""; //"<strong>Proctorio initial HTML fragment</strong>";
 	}
 
 	@Override
@@ -85,27 +97,26 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		final Session sakaiSession = sessionManager.getCurrentSession();
 		final String userId = sakaiSession.getUserId();
 		User user = null;
+
 		try {
 			user = userDirectoryService.getUser(userId);
 		} catch (UserNotDefinedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.warn("ProctorIO secure delivery could not find user ({})", userId);
+			return "";
 		}
 		
-		System.out.println("zz03: " + user.toString() + "::" + phase + "::" + assessment.toString());
+		final String assessmentPath = serverConfigurationService.getServerUrl() + 
+				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
+		System.out.println("zz03: " + user.toString() + "::" + phase + "::" + assessment.toString() + "::" + assessmentPath);
 		
 		switch (phase) {
 			case ASSESSMENT_START:
 			case ASSESSMENT_FINISH:
 			case ASSESSMENT_REVIEW:
 			try {
-				return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId());
-			} catch (ClientProtocolException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.warn("ProctorIO could not build the URL", e);
 			}
 		}
 
@@ -119,14 +130,12 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public String encryptPassword(String password) {
-		// TODO Auto-generated method stub
-		return "xx";
+		return "";
 	}
 
 	@Override
 	public String decryptPassword(String password) {
-		// TODO Auto-generated method stub
-		return "xx";
+		return "";
 	}
 
 	/*
@@ -173,21 +182,15 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 		return normalizedString.substring(1); // remove the leading ampersand
 	}
-	
-	final private static String ACCOUNTREGION = "us1";
-	final private static String URL = "5499ws.proctor.io/6521ca945bd84cfc85d2767da06aa7c8";
-	final private static String ENCODING = java.nio.charset.StandardCharsets.US_ASCII.toString();
-	final private static String PROCTORIO_KEY = "978d20c2958b4547bbd1b66c17b15bd3";
-	final private static String PROCTORIO_SECRET = "2919c2250a7647769523e5350be30bb9";
 
-	private String buildURL(String eid, String fullname, Long assessmentId) throws ClientProtocolException, IOException {
+	private String buildURL(String eid, String fullname, Long assessmentId, String launchUrl) throws ClientProtocolException, IOException {
         Map<String, String> parameters = new LinkedHashMap<>();
-        parameters.put("launch_url", "https://qa.longsight.com/portal/xxx");
+        parameters.put("launch_url", launchUrl);
         parameters.put("user_id", eid);
-        parameters.put("oauth_consumer_key", PROCTORIO_KEY);
-        parameters.put("exam_start", "https:\\/\\/qa.longsight.com\\/portal\\/xxx");
-        parameters.put("exam_take", "https:\\/\\/qa.longsight.com\\/portal\\/uuu");
-        parameters.put("exam_end", "https:\\/\\/qa.longsight.com\\/portal\\/zzz");
+        parameters.put("oauth_consumer_key", proctorioKey);
+        parameters.put("exam_start", "http(.*)/samigo-app/servlet/Login(.*)");
+        parameters.put("exam_take", "http(.*)/samigo-app/jsf/delivery(.*)");
+        parameters.put("exam_end", "http(.*)confirmSubmit(.*)");
         parameters.put("exam_settings", "recordvideo");
         parameters.put("fullname", fullname);
         parameters.put("exam_tag", assessmentId + "");
@@ -197,12 +200,12 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         parameters.put("oauth_nonce", (int)(Math.random() * 100000000) + "");
         
         String signature_base_string = "POST&" 
-                    + UriUtils.encode("https://" + ACCOUNTREGION + URL, ENCODING) 
+                    + UriUtils.encode(proctorioUrl, ENCODING) 
                     + "&" + UriUtils.encode(toNormalizedString(parameters, null), ENCODING);
         
         log.debug("Proctorio signature_base_string: {}", signature_base_string);
 
-        byte[] hmac = new HmacUtils(HmacAlgorithms.HMAC_SHA_1, PROCTORIO_SECRET).hmac(signature_base_string);
+        byte[] hmac = new HmacUtils(HmacAlgorithms.HMAC_SHA_1, proctorioSecret).hmac(signature_base_string);
         //  BASE64 ENCODED
         String oauthSignature = Base64.getEncoder().encodeToString(hmac);
         //  Add the signature to the params list
@@ -227,7 +230,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         log.debug("Proctorio parameterString: {}", parameterString);
         
         CloseableHttpClient client = HttpClients.createDefault();
-        HttpPost httpPost = new HttpPost("https://" + ACCOUNTREGION + URL);
+        HttpPost httpPost = new HttpPost(proctorioUrl);
         httpPost.setEntity(new StringEntity(parameterString));
         CloseableHttpResponse response = client.execute(httpPost);
         int statusCode = response.getStatusLine().getStatusCode();
