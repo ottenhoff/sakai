@@ -92,32 +92,12 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	public String getHTMLFragment(PublishedAssessmentIfc assessment, HttpServletRequest request, Phase phase,
 			PhaseStatus status, Locale locale) {
 		
-		System.out.println("zz02: " + assessment.getTitle());
-
-		final Session sakaiSession = sessionManager.getCurrentSession();
-		final String userId = sakaiSession.getUserId();
-		User user = null;
-
-		try {
-			user = userDirectoryService.getUser(userId);
-		} catch (UserNotDefinedException e) {
-			log.warn("ProctorIO secure delivery could not find user ({})", userId);
-			return "";
-		}
-		
-		final String assessmentPath = serverConfigurationService.getServerUrl() + 
-				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
-		System.out.println("zz03: " + user.toString() + "::" + phase + "::" + assessment.toString() + "::" + assessmentPath);
 		
 		switch (phase) {
 			case ASSESSMENT_START:
 			case ASSESSMENT_FINISH:
 			case ASSESSMENT_REVIEW:
-			try {
-				return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
-			} catch (IOException e) {
-				log.warn("ProctorIO could not build the URL", e);
-			}
+				return "";
 		}
 
 		return "<strong>Proctorio HTML</strong>";
@@ -136,6 +116,34 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	@Override
 	public String decryptPassword(String password) {
 		return "";
+	}
+
+	@Override
+	public String getAlternativeDeliveryUrl (PublishedAssessmentIfc assessment) {
+		System.out.println("zz02: " + assessment.getTitle());
+
+		final Session sakaiSession = sessionManager.getCurrentSession();
+		final String userId = sakaiSession.getUserId();
+		User user = null;
+
+		try {
+			user = userDirectoryService.getUser(userId);
+		} catch (UserNotDefinedException e) {
+			log.warn("ProctorIO secure delivery could not find user ({})", userId);
+			return "";
+		}
+		
+		final String assessmentPath = serverConfigurationService.getServerUrl() + 
+				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
+		System.out.println("zz03: " + user.toString() + "::" + assessment.toString() + "::" + assessmentPath);
+		
+		try {
+			return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
+		} catch (IOException e) {
+			log.warn("ProctorIO could not build the URL", e);
+			return "ProctorIO " + e.getMessage();
+		}
+
 	}
 
 	/*

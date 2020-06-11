@@ -427,18 +427,20 @@ public class SelectActionListener implements ActionListener {
     	Collections.reverse(submittedAssessmentGradingList);
     }
 
+    // If secure delivery modules are installed, then insert their html fragments      
+    select.setSecureDeliveryHTMLFragments( "" );
+    SecureDeliveryServiceAPI secureDelivery = SamigoApiFactory.getInstance().getSecureDeliveryServiceAPI();
+
+    if ( secureDelivery.isSecureDeliveryAvaliable() ) {
+      //secureDelivery.getModifiedTabeableAssessments(takeablePublishedList);
+    	HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
+    	select.setSecureDeliveryHTMLFragments( secureDelivery.getInitialHTMLFragments(request, new ResourceLoader().getLocale() ) );
+    }
+
     // set the managed beanlist properties that we need
     select.setTakeableAssessments(takeablePublishedList);
     select.setReviewableAssessments(submittedAssessmentGradingList);
 
-    // If secure delivery modules are installed, then insert their html fragments      
-    select.setSecureDeliveryHTMLFragments( "" );
-    SecureDeliveryServiceAPI secureDelivery = SamigoApiFactory.getInstance().getSecureDeliveryServiceAPI();
-    if ( secureDelivery.isSecureDeliveryAvaliable() ) {
-    	
-    	HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
-    	select.setSecureDeliveryHTMLFragments( secureDelivery.getInitialHTMLFragments(request, new ResourceLoader().getLocale() ) );
-    }
   }
 
   /**

@@ -110,4 +110,16 @@ public interface SecureDeliveryModuleIfc {
 	 * @return the plain text password
 	 */
 	public String decryptPassword( String password );
+
+	/**
+	 * Returns an absolute URL to an alternative location to take the assessment.
+	 * For example, a cloud proctoring company could use this URL to embed the Samigo assessment in an iframe.
+	 * Using a default empty return to avoid breaking legacy code.
+	 * @param moduleId
+	 * @param assessment
+	 * @return
+	 */
+	default String getAlternativeDeliveryUrl (PublishedAssessmentIfc assessment) {
+		return "";
+	}
 }
