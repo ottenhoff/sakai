@@ -20,6 +20,7 @@ import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
@@ -345,7 +346,12 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 			return password;
 		}
 	}
-	
+
+	@Override
+	public String getAlternativeDeliveryUrls( PublishedAssessmentIfc assessment ) {
+		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
+		return module.getAlternativeDeliveryUrl(assessment);
+	}	
 
 	/**
 	 * Looks for the spring-context.xml file on the plugin JAR and loads the beans that implement the
@@ -391,4 +397,5 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 		 * "Unable to load secure delivery plugin " + secureDeliveryPlugin, e ); }
 		 */
 	}
+
 }

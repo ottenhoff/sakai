@@ -435,6 +435,10 @@ public class SelectActionListener implements ActionListener {
       //secureDelivery.getModifiedTabeableAssessments(takeablePublishedList);
     	HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
     	select.setSecureDeliveryHTMLFragments( secureDelivery.getInitialHTMLFragments(request, new ResourceLoader().getLocale() ) );
+
+    	for (PublishedAssessmentFacade paf : takeablePublishedList) {
+    	  select.setAlternativeDeliveryUrl( secureDelivery.getAlternativeDeliveryUrl(paf) );
+      }
     }
 
     // set the managed beanlist properties that we need

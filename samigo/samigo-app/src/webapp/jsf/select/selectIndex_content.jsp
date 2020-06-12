@@ -201,6 +201,10 @@
                             </h:panelGroup>
                         </f:facet>
 
+                        <h:panelGroup>
+                            <h:outputText value="#{takeable.alternativeDeliveryUrl}" rendered="#{not empty takeable.alternativeDeliveryUrl}" styleClass="validate" />
+                        </h:panelGroup>
+
                         <h:commandLink title="#{selectIndexMessages.t_takeAssessment}" id="takeAssessment" action="beginAssessment">
                             <f:param name="publishedId" value="#{takeable.assessmentId}" />
                             <f:param name="actionString" value="takeAssessment"/>
