@@ -119,7 +119,8 @@ public interface SecureDeliveryModuleIfc {
 	 * @param assessment
 	 * @return
 	 */
-	default String getAlternativeDeliveryUrl (PublishedAssessmentIfc assessment) {
+	default String getAlternativeDeliveryUrl (Long assessmentId, String uid) {
 		return "";
 	}
+
 }

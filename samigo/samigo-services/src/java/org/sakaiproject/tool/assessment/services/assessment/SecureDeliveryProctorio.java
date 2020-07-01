@@ -27,6 +27,7 @@ import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.PublishedAssessmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.SecureDeliveryModuleIfc;
+import org.sakaiproject.tool.assessment.facade.PublishedAssessmentFacade;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI.Phase;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI.PhaseStatus;
@@ -119,7 +120,10 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	}
 
 	@Override
-	public String getAlternativeDeliveryUrl (PublishedAssessmentIfc assessment) {
+	public String getAlternativeDeliveryUrl (Long assessmentId, String uid) {
+		PublishedAssessmentService pubService = new PublishedAssessmentService();
+		PublishedAssessmentFacade assessment = pubService.getPublishedAssessment(assessmentId.toString());
+
 		System.out.println("zz02: " + assessment.getTitle());
 
 		final Session sakaiSession = sessionManager.getCurrentSession();

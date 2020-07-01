@@ -347,11 +347,23 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 		}
 	}
 
+
+	/**
+	 * Provide the student a custom URL to begin the secured delivery of the assessment.
+	 * This alternative URL could take the user to a commercial service where they would 
+	 * begin a proctored environment with lots of browser checks and maybe user verification.
+	 * Sakai could then be iframed in this newly-locked down browser.
+	 */
 	@Override
-	public String getAlternativeDeliveryUrls( PublishedAssessmentIfc assessment ) {
+	public String getAlternativeDeliveryUrl(String moduleId, Long assessmentId, String uid) {
 		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
-		return module.getAlternativeDeliveryUrl(assessment);
-	}	
+
+		if ( moduleId == null || assessmentId == null || uid == null || NONE_ID.equals( moduleId ) || module == null ) {
+			return "";
+		}
+		
+		return module.getAlternativeDeliveryUrl(assessmentId, uid);
+	}
 
 	/**
 	 * Looks for the spring-context.xml file on the plugin JAR and loads the beans that implement the
