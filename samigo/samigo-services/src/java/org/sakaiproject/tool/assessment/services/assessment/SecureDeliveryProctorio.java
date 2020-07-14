@@ -124,8 +124,6 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		PublishedAssessmentService pubService = new PublishedAssessmentService();
 		PublishedAssessmentFacade assessment = pubService.getPublishedAssessment(assessmentId.toString());
 
-		System.out.println("zz02: " + assessment.getTitle());
-
 		final Session sakaiSession = sessionManager.getCurrentSession();
 		final String userId = sakaiSession.getUserId();
 		User user = null;

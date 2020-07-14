@@ -35,7 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-
+import org.elasticsearch.common.lang3.StringUtils;
 import org.sakaiproject.tool.assessment.api.SamigoApiFactory;
 import org.sakaiproject.tool.assessment.data.dao.assessment.PublishedAssessmentData;
 import org.sakaiproject.tool.assessment.data.dao.grading.AssessmentGradingData;
@@ -436,11 +436,18 @@ public class SelectActionListener implements ActionListener {
         select.setSecureDeliveryHTMLFragments( secureDelivery.getInitialHTMLFragments(request, new ResourceLoader().getLocale() ) );
 
         for (DeliveryBeanie db : takeablePublishedList) {
-            Long dbaid = new Long(db.getAssessmentId());
-            PublishedAssessmentFacade paf = publishedAssessmentHash.get(dbaid);
-            String moduleId = paf.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY );
+            // We have to refetch the published assessment because the hash above doesn't have the metadata
+            PublishedAssessmentFacade paf = publishedAssessmentService.getPublishedAssessment(db.getAssessmentId());
+            final String moduleId = paf.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY );
+            String altUrl = paf.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY + "_STUDENT_URL" );
+            if (StringUtils.isBlank(altUrl)) {
+            	altUrl = secureDelivery.getAlternativeDeliveryUrl(moduleId, new Long(db.getAssessmentId()), AgentFacade.getAgentString());
+            	if (StringUtils.isNotBlank(altUrl)) {
+            		paf.addAssessmentMetaData( SecureDeliveryServiceAPI.MODULE_KEY + "_STUDENT_URL" , altUrl );
+            	}
+            }
 
-            db.setAlternativeDeliveryUrl( secureDelivery.getAlternativeDeliveryUrl(moduleId, dbaid, AgentFacade.getAgentString()) );
+            db.setAlternativeDeliveryUrl( altUrl );
         }
     }
 
