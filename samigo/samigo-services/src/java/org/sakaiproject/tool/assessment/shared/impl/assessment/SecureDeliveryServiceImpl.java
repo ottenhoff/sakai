@@ -148,7 +148,6 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 			module.id = entry.getKey();
 			module.name = entry.getValue().getModuleName( locale );
 			module.enabled = entry.getValue().isEnabled();
-			System.out.println("zz40: " + entry.toString());
 			moduleSet.add( module );
 		}
 		
@@ -246,15 +245,11 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 		
 		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
 		
-		System.out.println("zz20: " + moduleId + ":" + secureDeliveryModules.toString());
-		
 		if ( moduleId == null || NONE_ID.equals( moduleId ) || module == null  || !module.isEnabled() )
 			return "";
 		
 		try {
-			System.out.println("zz21: about to call");
 			String tmep = module.getHTMLFragment(assessment, request, phase, status, locale );
-			System.out.println("zz22: " + tmep);
 			return tmep;
 		}
 		catch ( Exception e ) {
@@ -374,7 +369,7 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 	private void handlePlugin( String secureDeliveryPlugin ) {
 		ApplicationContext ctx = new AnnotationConfigApplicationContext(SecureDeliveryProctorio.class);
 		SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc) ctx.getBean("secureDeliveryProctorio");
-		System.out.println("zz01: " + secureDeliveryModuleBean.toString());
+		System.out.println("handlePlugin Proctorio: " + secureDeliveryModuleBean.toString());
 		if ( secureDeliveryModuleBean.initialize() ) {
 			secureDeliveryModules.put( "Proctorio", secureDeliveryModuleBean );
 		}

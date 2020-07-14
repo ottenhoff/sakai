@@ -439,15 +439,8 @@ public class SelectActionListener implements ActionListener {
             // We have to refetch the published assessment because the hash above doesn't have the metadata
             PublishedAssessmentFacade paf = publishedAssessmentService.getPublishedAssessment(db.getAssessmentId());
             final String moduleId = paf.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY );
-            String altUrl = paf.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY + "_STUDENT_URL" );
-            if (StringUtils.isBlank(altUrl)) {
-            	altUrl = secureDelivery.getAlternativeDeliveryUrl(moduleId, new Long(db.getAssessmentId()), AgentFacade.getAgentString());
-            	if (StringUtils.isNotBlank(altUrl)) {
-            		paf.addAssessmentMetaData( SecureDeliveryServiceAPI.MODULE_KEY + "_STUDENT_URL" , altUrl );
-            	}
-            }
 
-            db.setAlternativeDeliveryUrl( altUrl );
+            db.setAlternativeDeliveryUrl( secureDelivery.getAlternativeDeliveryUrl(moduleId, new Long(db.getAssessmentId()), AgentFacade.getAgentString()) );
         }
     }
 

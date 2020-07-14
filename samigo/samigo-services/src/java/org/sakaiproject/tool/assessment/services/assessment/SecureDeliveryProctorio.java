@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.digest.HmacAlgorithms;
 import org.apache.commons.codec.digest.HmacUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.entity.StringEntity;
@@ -22,6 +23,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.component.cover.ComponentManager;
+import org.sakaiproject.memory.api.Cache;
+import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
@@ -37,6 +40,10 @@ import org.sakaiproject.user.api.UserNotDefinedException;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.util.UriUtils;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Configuration
@@ -47,10 +54,13 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	private static String proctorioKey;
 	private static String proctorioSecret;
 	private static String proctorioUrl;
+	private Cache<String, String> studentUrlCache;
+	private Cache<String, String> instructorUrlCache;
 
 	private SessionManager sessionManager = ComponentManager.get(SessionManager.class);
 	private UserDirectoryService userDirectoryService = ComponentManager.get(UserDirectoryService.class);
 	private ServerConfigurationService serverConfigurationService = ComponentManager.get(ServerConfigurationService.class);
+	private MemoryService memoryService = ComponentManager.get(MemoryService.class);
 
 	@Override
 	public boolean initialize() {
@@ -58,7 +68,11 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		proctorioSecret = serverConfigurationService.getString("proctorio.secret", null);
 		proctorioUrl = serverConfigurationService.getString("proctorio.url", null);
 		
-		System.out.println("zz01: " + proctorioKey + ":" + proctorioSecret + ":" + proctorioUrl);
+		// Init the caches to hold the URLs
+		studentUrlCache = memoryService.getCache("proctorio.studentUrlCache");
+		instructorUrlCache = memoryService.getCache("proctorio.instructorUrlCache");
+		
+		log.debug("Proctorio init: key={}", proctorioKey);
 
 		return (proctorioKey != null) && (proctorioSecret != null) && (proctorioUrl != null);
 	}
@@ -80,7 +94,6 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public PhaseStatus validatePhase(Phase phase, PublishedAssessmentIfc assessment, HttpServletRequest request) {
-		System.out.println("zz01: validate : " + phase);
 		return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
 	}
 
@@ -137,10 +150,10 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		
 		final String assessmentPath = serverConfigurationService.getServerUrl() + 
 				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
-		System.out.println("zz03: " + user.toString() + "::" + assessment.toString() + "::" + assessmentPath);
 		
 		try {
-			return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
+			String[] urls = buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
+			return urls[0];
 		} catch (IOException e) {
 			log.warn("ProctorIO could not build the URL", e);
 			return "ProctorIO " + e.getMessage();
@@ -183,8 +196,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 				String decodedValue = UriUtils.decode(value, ENCODING);
 				encodedValue = UriUtils.encode(decodedValue, ENCODING);
 			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				log.warn("Could not encode", e);
 			}
 			
 			normalizedString.append("&").append(encodedKey != null ? encodedKey : key).append("=").append(encodedValue != null ? encodedValue : value);
@@ -193,7 +205,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		return normalizedString.substring(1); // remove the leading ampersand
 	}
 
-	private String buildURL(String eid, String fullname, Long assessmentId, String launchUrl) throws ClientProtocolException, IOException {
+	private String[] buildURL(String eid, String fullname, Long assessmentId, String launchUrl) throws ClientProtocolException, IOException {
         Map<String, String> parameters = new LinkedHashMap<>();
         parameters.put("launch_url", launchUrl);
         parameters.put("user_id", eid);
@@ -243,11 +255,40 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         HttpPost httpPost = new HttpPost(proctorioUrl);
         httpPost.setEntity(new StringEntity(parameterString));
         CloseableHttpResponse response = client.execute(httpPost);
-        int statusCode = response.getStatusLine().getStatusCode();
-        HttpEntity returnEntity = response.getEntity();
-        String r = EntityUtils.toString(returnEntity);
-        System.out.println("zz50: " + statusCode + ":" + r);
-        return r;
+        final int statusCode = response.getStatusLine().getStatusCode();
+        final HttpEntity returnEntity = response.getEntity();
+        final String r = EntityUtils.toString(returnEntity);
+        
+        // Good return now take the JSON and unsplit it
+        if (statusCode == 200) {
+        	ObjectMapper mapper = new ObjectMapper();
+        	JsonNode root = mapper.readTree(r);
+        	if (root.isArray()) {
+        		String studentUrl = root.get(0).asText();
+        		String instructorUrl = root.get(1).asText();
+        		
+        		if (StringUtils.isNoneBlank(studentUrl, instructorUrl)) {
+        			studentUrl = UriUtils.decode(studentUrl, ENCODING);
+        			instructorUrl = UriUtils.decode(instructorUrl, ENCODING);
+
+        			// Add to the caches
+        			final String cacheKey = assessmentId + "-" + eid;
+        			studentUrlCache.put(cacheKey, studentUrl);
+        			instructorUrlCache.put(cacheKey, instructorUrl);
+        		}
+        		
+        		log.debug("Proctorio studentUrl={}, instructorUrl={}", studentUrl, instructorUrl);
+        		return new String[] { studentUrl, instructorUrl };
+        	}
+        	else {
+        		log.warn("Proctorio JSON was not an array as expected={}", r);
+        	}
+        }
+        else {
+        	log.warn("Proctorio statusCode={}, return={}", statusCode, r);
+        }
+
+        return null;
 	}
 
 }
