@@ -134,6 +134,18 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public String getAlternativeDeliveryUrl (Long assessmentId, String uid) {
+		String[] urls = getProctorioUrls(assessmentId, uid);
+		return urls[0];
+	}
+		
+	@Override
+	public String getInstructorReviewUrl (Long assessmentId, String studentId) {
+		String[] urls = getProctorioUrls(assessmentId, studentId);
+		return urls[1];
+	}
+
+	private String[] getProctorioUrls(Long assessmentId, String uid) {
+		
 		PublishedAssessmentService pubService = new PublishedAssessmentService();
 		PublishedAssessmentFacade assessment = pubService.getPublishedAssessment(assessmentId.toString());
 
@@ -145,18 +157,17 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 			user = userDirectoryService.getUser(userId);
 		} catch (UserNotDefinedException e) {
 			log.warn("ProctorIO secure delivery could not find user ({})", userId);
-			return "";
+			return null;
 		}
 		
 		final String assessmentPath = serverConfigurationService.getServerUrl() + 
 				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
 		
 		try {
-			String[] urls = buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
-			return urls[0];
+			return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
 		} catch (IOException e) {
 			log.warn("ProctorIO could not build the URL", e);
-			return "ProctorIO " + e.getMessage();
+			return null;
 		}
 
 	}

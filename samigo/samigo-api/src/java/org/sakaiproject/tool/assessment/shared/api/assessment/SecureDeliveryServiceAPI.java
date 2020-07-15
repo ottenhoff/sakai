@@ -152,4 +152,6 @@ public interface SecureDeliveryServiceAPI {
 
 	public String getAlternativeDeliveryUrl( String moduleId, Long assessmentId, String uid );
 
+	public String getInstructorReviewUrl( String moduleId, Long assessmentId, String studentId );
+
 }

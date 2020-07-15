@@ -115,11 +115,22 @@ public interface SecureDeliveryModuleIfc {
 	 * Returns an absolute URL to an alternative location to take the assessment.
 	 * For example, a cloud proctoring company could use this URL to embed the Samigo assessment in an iframe.
 	 * Using a default empty return to avoid breaking legacy code.
-	 * @param moduleId
-	 * @param assessment
+	 * @param assessmentId
+	 * @param uid
 	 * @return
 	 */
 	default String getAlternativeDeliveryUrl (Long assessmentId, String uid) {
+		return "";
+	}
+
+	/**
+	 * Returns an absolute URL to an alternative location to review the student's taking of the proctored assessment.
+	 * Using a default empty return to avoid breaking legacy code.
+	 * @param assessmentId
+	 * @param studentId (internal user id)
+	 * @return
+	 */
+	default String getInstructorReviewUrl(Long assessmentId, String studentId) {
 		return "";
 	}
 

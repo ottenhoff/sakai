@@ -361,6 +361,21 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 	}
 
 	/**
+	 * Provide the instructor a custom URL to review a specific student's proctored taking of the assessment.
+	 * This alternative URL could take the user to a commercial service.
+	 */
+	@Override
+	public String getInstructorReviewUrl(String moduleId, Long assessmentId, String studentId) {
+		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
+
+		if ( moduleId == null || assessmentId == null || studentId == null || NONE_ID.equals( moduleId ) || module == null ) {
+			return "";
+		}
+		
+		return module.getInstructorReviewUrl(assessmentId, studentId);
+	}
+
+	/**
 	 * Looks for the spring-context.xml file on the plugin JAR and loads the beans that implement the
 	 * SecureDeliveryModuleIfc interface 
 	 * 
