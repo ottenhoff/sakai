@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.crypto.Mac;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.digest.HmacAlgorithms;
@@ -238,8 +239,8 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         parameters.put("launch_url", launchUrl);
         parameters.put("user_id", eid);
         parameters.put("oauth_consumer_key", proctorioKey);
-        parameters.put("exam_start", "http(.*)/samigo-app/servlet/Login(.*)");
-        parameters.put("exam_take", "http(.*)/samigo-app/jsf/delivery(.*)");
+        parameters.put("exam_start", "http(.*\\/samigo-app\\/servlet\\/Login(.*)");
+        parameters.put("exam_take", "http(.*)\\/samigo-app\\/jsf\\/delivery(.*)");
         parameters.put("exam_end", "http(.*)confirmSubmit(.*)");
         parameters.put("exam_settings", "recordvideo");
         parameters.put("fullname", fullname);
@@ -255,7 +256,9 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         
         log.debug("Proctorio signature_base_string: {}", signature_base_string);
 
-        byte[] hmac = new HmacUtils(HmacAlgorithms.HMAC_SHA_1, proctorioSecret).hmac(signature_base_string);
+        final Mac mac = HmacUtils.getHmacSha1(proctorioSecret.getBytes());
+        HmacUtils.updateHmac(mac, signature_base_string);
+        byte[] hmac = mac.doFinal();
         //  BASE64 ENCODED
         String oauthSignature = Base64.getEncoder().encodeToString(hmac);
         //  Add the signature to the params list
@@ -286,29 +289,35 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         final int statusCode = response.getStatusLine().getStatusCode();
         final HttpEntity returnEntity = response.getEntity();
         final String r = EntityUtils.toString(returnEntity);
+        log.debug("Proctorio return status={}, text={}", statusCode, r);
         
         // Good return now take the JSON and unsplit it
         if (statusCode == 200) {
-        	ObjectMapper mapper = new ObjectMapper();
-        	JsonNode root = mapper.readTree(r);
-        	if (root.isArray()) {
-        		String studentUrl = root.get(0).asText();
-        		String instructorUrl = root.get(1).asText();
-        		
-        		if (StringUtils.isNoneBlank(studentUrl, instructorUrl)) {
-        			studentUrl = UriUtils.decode(studentUrl, ENCODING);
-        			instructorUrl = UriUtils.decode(instructorUrl, ENCODING);
-        		}
-        		
-        		log.debug("Proctorio studentUrl={}, instructorUrl={}", studentUrl, instructorUrl);
-        		return new String[] { studentUrl, instructorUrl };
-        	}
-        	else {
-        		log.warn("Proctorio JSON was not an array as expected={}", r);
-        	}
+          try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(r);
+            if (root.isArray()) {
+              String studentUrl = root.get(0).asText();
+              String instructorUrl = root.get(1).asText();
+
+              if (StringUtils.isNoneBlank(studentUrl, instructorUrl)) {
+                studentUrl = UriUtils.decode(studentUrl, ENCODING);
+                instructorUrl = UriUtils.decode(instructorUrl, ENCODING);
+              }
+
+              log.debug("Proctorio studentUrl={}, instructorUrl={}", studentUrl, instructorUrl);
+              return new String[] { studentUrl, instructorUrl };
+            }
+            else {
+              log.warn("Proctorio JSON was not an array as expected={}", r);
+            }
+          }
+          catch (Exception e) {
+            log.warn("Proctorio error", e);
+          }
         }
         else {
-        	log.warn("Proctorio statusCode={}, return={}", statusCode, r);
+          log.warn("Proctorio statusCode={}, return={}", statusCode, r);
         }
 
         return null;
