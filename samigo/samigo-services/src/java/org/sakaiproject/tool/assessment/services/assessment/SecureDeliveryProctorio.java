@@ -239,7 +239,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         parameters.put("launch_url", launchUrl);
         parameters.put("user_id", eid);
         parameters.put("oauth_consumer_key", proctorioKey);
-        parameters.put("exam_start", "(.*\\/samigo-app\\/servlet\\/Login.*");
+        parameters.put("exam_start", "(.)*\\/samigo-app\\/servlet\\/Login.*");
         parameters.put("exam_take", "(.*)\\/samigo-app\\/jsf\\/delivery.*");
         parameters.put("exam_end", "(.*)confirmSubmit.*");
         parameters.put("exam_settings", "recordvideo");
