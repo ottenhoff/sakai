@@ -106,9 +106,24 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	public String getHTMLFragment(PublishedAssessmentIfc assessment, HttpServletRequest request, Phase phase,
 			PhaseStatus status, Locale locale) {
 		
-		
 		switch (phase) {
 			case ASSESSMENT_START:
+				final String currentAgentId = userDirectoryService.getCurrentUser().getId();
+				final String url = getAlternativeDeliveryUrl(assessment.getPublishedAssessmentId(), currentAgentId);
+				log.debug("Proctorio: phase={}, agentId={}, url={}", phase, currentAgentId, url);
+
+				return "<script> window.addEventListener(\"message\", function(event) {\n" + 
+						"    if(event.origin === \"https://getproctorio.com\") {\n" + 
+						"        // event.data.active should be true if Proctorio is running\n" + 
+						"        console.log(\"Proctorio is running: \" + event.data.active)\n" + 
+						"    } else {\n" +
+						"        window.location.href='" + url + "'; \n" +
+						"    }\n" +
+						"});" +
+						" if (window.top.location.origin != 'https://getproctorio.com') window.top.location.replace('" + url + "'); \n" +
+						"try { window.top.postMessage([10, \"proctorio_status\"], \"https://getproctorio.com\"); } " +
+						" catch(e) { jQuery('#takeAssessmentForm input.active').prop('disabled', true); window.location.href='" + url + "'; }" +
+						" </script>";
 			case ASSESSMENT_FINISH:
 			case ASSESSMENT_REVIEW:
 				return "";
