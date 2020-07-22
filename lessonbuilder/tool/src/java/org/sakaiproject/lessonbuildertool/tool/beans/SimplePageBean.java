@@ -60,6 +60,8 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.sakaiproject.lessonbuildertool.ActivityAlert;
+import org.sakaiproject.lessonbuildertool.ActivityAlertImpl;
 
 import javax.servlet.http.HttpServletResponse;
 
