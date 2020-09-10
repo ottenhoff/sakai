@@ -221,7 +221,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     {
       return true;
     }
-    if (securityService.unlock(siteService.SECURE_UPDATE_SITE, getContextSiteId())){
+    if (securityService.unlock(SiteService.SECURE_UPDATE_SITE, getContextSiteId())){
       if (!forum.getRestrictPermissionsForGroups()){
         return true;
       }
@@ -1024,7 +1024,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
 		Set thisForumItemSet = forum.getMembershipItemSet();
 
-		if(thisForumItemSet.size()==0&&getAnonRole()==true&&".anon".equals(forum.getCreatedBy())&&forum.getTopicsSet()==null){
+		if(getAnonRole() == true && ".anon".equals(forum.getCreatedBy()) && forum.getTopicsSet() == null && thisForumItemSet.isEmpty()) {
 			Set newForumMembershipset=forum.getMembershipItemSet();
 	        Iterator iterNewForum = newForumMembershipset.iterator();
 	        while (iterNewForum.hasNext())
@@ -1080,10 +1080,13 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private Iterator<DBMembershipItem> getTopicItemsByUser(DiscussionTopic topic, String userId, String siteId)
   {
 	List<DBMembershipItem> topicItems = new ArrayList<>();
-	Set<DBMembershipItem> thisTopicItemSet = topic.getMembershipItemSet();
+	// Set<DBMembershipItem> thisTopicItemSet = topic.getMembershipItemSet();
 
-    DBMembershipItem item = forumManager.getDBMember(thisTopicItemSet, getUserRole(siteId, userId),
-        DBMembershipItem.TYPE_ROLE, "/site/" + siteId);
+	// Query for just the membership item for this role
+	final String userRoleName = getUserRole(siteId, userId);
+	List<DBMembershipItem> roleMembership = permissionLevelManager.getSpecificMembershipItemsForTopics(topic.getId(),userRoleName, DBMembershipItem.TYPE_ROLE);
+	System.out.println("zz01: found " + roleMembership.size());
+    DBMembershipItem item = forumManager.getDBMember(new HashSet<DBMembershipItem>(roleMembership), userRoleName, DBMembershipItem.TYPE_ROLE, "/site/" + siteId);
 
     if (item != null){
       topicItems.add(item);
@@ -1091,18 +1094,19 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
     //for group awareness
     try {
+    	// TODO only retrieve for necessary groups. Do we need to do this for instructors? 
     	Site currentSite = siteService.getSite(siteId);
     	Set<String> groups = getGroupsWithMember(currentSite, userId);
     	if (groups != null) {
             groups.stream().map(currentSite::getGroup)
-                    .map(g -> forumManager.getDBMember(thisTopicItemSet, g.getTitle(), DBMembershipItem.TYPE_GROUP, "/site/" + siteId))
+                    .map(g -> forumManager.getDBMember(new HashSet<DBMembershipItem>(roleMembership), g.getTitle(), DBMembershipItem.TYPE_GROUP, "/site/" + siteId))
                     .filter(Objects::nonNull)
                     .forEach(topicItems::add);
     	}
     }
     catch(Exception iue)
     {
-    	log.error(iue.getMessage(), iue);
+    	log.error("Attempted to stream groups and find user's membership items", iue);
     }
 
     return topicItems.iterator();

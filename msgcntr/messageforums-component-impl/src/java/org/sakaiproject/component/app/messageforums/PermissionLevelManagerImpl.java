@@ -21,6 +21,7 @@
 package org.sakaiproject.component.app.messageforums;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -73,7 +74,7 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 	private static final String QUERY_BY_AREA_ALL_FORUMS_MEMBERSHIP = "findAllMembershipItemsForForumsForSite";
 	private static final String QUERY_GET_ALL_TOPICS = "findAllTopicsForSite";
 	private static final String QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP = "findAllMembershipItemsForTopicsForSite";
-	private static final String QUERY_BY_TOPIC_ID_FOR_TOPIC_MEMBERSHIP = "findMembershipItemsByTopic";
+	private static final String QUERY_BY_TOPIC_IDS_AND_TYPE_FOR_MEMBERSHIPS = "findSpecificMembershipItemsForTopics";
 	
 	private Boolean autoDdl;
 	
@@ -605,7 +606,8 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 	public void setAreaManager(AreaManager areaManager) {
 		this.areaManager = areaManager;
 	}
-	
+
+	// This query will return (number of forums) * (roles + sections + groups) rows
 	public List getAllMembershipItemsForForumsForSite(final Long areaId)
 	{
 		if (log.isDebugEnabled())
@@ -679,10 +681,27 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 		return new ArrayList<DBMembershipItem>();
 	}
 
+	// This query will return (number of topics) * (roles + sections + groups) rows
 	private List<DBMembershipItem> getAllMembershipItemsForTopics(final List<Long> topicIds) {
 		HibernateCallback<List> hcb1 = session -> {
             Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP);
             return queryWithParameterList(q, "topicIdList", topicIds);
+        };
+		return getHibernateTemplate().execute(hcb1);
+	}
+
+	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final Long topicId, final String roleName, final Integer membershipType) {
+		return getSpecificMembershipItemsForTopics(Arrays.asList(topicId), roleName, membershipType);
+	}
+
+	// This query will return (number of topics) * (roles + sections + groups) rows
+	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final List<Long> topicIds, final String roleName, final Integer membershipType) {
+		HibernateCallback<List> hcb1 = session -> {
+            org.hibernate.Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_AND_TYPE_FOR_MEMBERSHIPS);
+            q.setParameterList("topicIdList", topicIds);
+            q.setString("roleName", roleName);
+            q.setInteger("membershipType", membershipType);
+            return q.list();
         };
 		return getHibernateTemplate().execute(hcb1);
 	}

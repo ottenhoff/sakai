@@ -6354,7 +6354,7 @@ public class DiscussionForumTool {
     			// if the forum is new, we retrieve the area's perms.
     			// otherwise, we'll use the ootb defaults that will be picked up 
     			// via getAreaDBMember at the end of this method
-    			if ((membershipItems == null || membershipItems.size() == 0) && selectedForum.getForum().getId() == null)
+    			if ((membershipItems == null || membershipItems.isEmpty()) && selectedForum.getForum().getId() == null)
     			{
     				membershipItems = uiPermissionsManager.getAreaItemsSet(forumManager.getDiscussionForumArea());
     			}
@@ -6374,7 +6374,7 @@ public class DiscussionForumTool {
     			// if the topic is new, we will use the forum's perms. otherwise,
     			// there are no perms associated with an existing topic so we
     			// use the defaults
-    			if ((membershipItems == null || membershipItems.size() == 0)
+    			if ((membershipItems == null || membershipItems.isEmpty())
                         && selectedTopic.getTopic().getId() == null 
                         && (selectedForum != null && selectedForum.getForum() != null)
                         && uiPermissionsManager != null)

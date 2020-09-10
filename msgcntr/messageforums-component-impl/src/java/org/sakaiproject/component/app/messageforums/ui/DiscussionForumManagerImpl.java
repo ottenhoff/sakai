@@ -21,6 +21,7 @@
 package org.sakaiproject.component.app.messageforums.ui;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +34,8 @@ import java.util.Set;
 import java.util.Vector;
 
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.sakaiproject.tool.api.Tool;
 import org.springframework.orm.hibernate5.support.HibernateDaoSupport;
@@ -2186,25 +2189,29 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 	}
 
   public DBMembershipItem getDBMember(Set originalSet, String name,
-      Integer type, String contextSiteId)
+	      Integer type, String contextSiteId)
+	  {
+	    DBMembershipItem membershipItem = null;
+	    
+	    if (originalSet != null){
+	      Iterator iter = originalSet.iterator();
+	      while (iter.hasNext())
+	      {
+	      	DBMembershipItem membershipItemIter = (DBMembershipItem) iter.next();
+	        if (membershipItemIter.getType().equals(type)
+	            && membershipItemIter.getName().equals(name))
+	        {
+	        	membershipItem = membershipItemIter;
+	          break;
+	        }
+	      }
+	    }
+	    
+	    return getDBMember(membershipItem, name, type, contextSiteId);
+	  }
+
+  public DBMembershipItem getDBMember(DBMembershipItem membershipItem, String name, Integer type, String contextSiteId)
   {
-      	
-    DBMembershipItem membershipItem = null;
-    DBMembershipItem membershipItemIter;
-    
-    if (originalSet != null){
-      Iterator iter = originalSet.iterator();
-      while (iter.hasNext())
-      {
-      	membershipItemIter = (DBMembershipItem) iter.next();
-        if (membershipItemIter.getType().equals(type)
-            && membershipItemIter.getName().equals(name))
-        {
-        	membershipItem = membershipItemIter;
-          break;
-        }
-      }
-    }
     
     if (membershipItem == null || membershipItem.getPermissionLevel() == null){    	
     	PermissionLevel level = null;
@@ -2212,38 +2219,38 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     	if (type.equals(DBMembershipItem.TYPE_ROLE) || type.equals(DBMembershipItem.TYPE_GROUP))
       { 
     		
-    		String levelName = null;
-    		
-    		if (membershipItem != null){
-    			/** use level from stored item */
-    			levelName = membershipItem.getPermissionLevelName();
-    		}
-    		else{    	
-    			/** get level from config file */
-    			levelName = ServerConfigurationService.getString(MC_DEFAULT
-              + name);
-    			    			
-    			
-    		}
+		String levelName = null;
+		
+		if (membershipItem != null)
+		{
+			/** use level from stored item */
+			levelName = membershipItem.getPermissionLevelName();
+		}
+		else
+		{    	
+			/** get level from config file */
+			levelName = ServerConfigurationService.getString(MC_DEFAULT + name);
+		}
       	        	
-        if (levelName != null && levelName.trim().length() > 0)
+        if (StringUtils.isNotBlank(levelName))
         {
-          level = permissionLevelManager.getPermissionLevelByName(levelName);
-        } else if (name == null || ".anon".equals(name)) {
+            level = permissionLevelManager.getPermissionLevelByName(levelName);
+        }
+        else if (name == null || ".anon".equals(name))
+        {
             level = permissionLevelManager.getDefaultNonePermissionLevel();
-        } else{
-        	Collection siteIds = new Vector();
-        	siteIds.add(contextSiteId);        	
-        	
-        	if(type.equals(DBMembershipItem.TYPE_GROUP))
-        	{
-        	  level = permissionLevelManager.getDefaultNonePermissionLevel();
-        	}else{
+        }
+        else if(type.equals(DBMembershipItem.TYPE_GROUP))
+        {
+        	level = permissionLevelManager.getDefaultNonePermissionLevel();
+        }
+        else
+        {
         		//check cache first:
         		final String cacheId = contextSiteId + "/" + name;
         		Set<String> allowedFunctions = allowedFunctionsCache.get(cacheId);
         		if (allowedFunctions == null) {
-        			allowedFunctions = authzGroupService.getAllowedFunctions(name, siteIds);
+        			allowedFunctions = authzGroupService.getAllowedFunctions(name, Arrays.asList(contextSiteId));
         			allowedFunctionsCache.put(cacheId, allowedFunctions);
         		}
         		if (allowedFunctions.contains(SiteService.SECURE_UPDATE_SITE)){        			        	        	
@@ -2251,8 +2258,6 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
         		}else{
         			level = permissionLevelManager.getDefaultContributorPermissionLevel();
         		}
-        	}
-        	
         }
       }
     	PermissionLevel noneLevel = permissionLevelManager.getDefaultNonePermissionLevel();

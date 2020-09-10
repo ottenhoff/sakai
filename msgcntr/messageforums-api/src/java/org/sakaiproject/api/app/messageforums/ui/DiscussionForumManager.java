@@ -500,6 +500,7 @@ public interface DiscussionForumManager
 
   public DBMembershipItem getDBMember(Set originalSet, String name, Integer type);
   public DBMembershipItem getDBMember(Set originalSet, String name, Integer type, String contextSiteId);
+  public DBMembershipItem getDBMember(DBMembershipItem membershipItem, String name, Integer type, String contextSiteId);
   
   /**
    * 
