@@ -81,9 +81,15 @@
 		 ]]>
   </query>
 
+   <query name="findSpecificMembershipItemsForForums">
+     <![CDATA[select membership from org.sakaiproject.component.app.messageforums.dao.hibernate.DBMembershipItemImpl as membership
+		     where membership.forum.id in ( :forumIdList ) and membership.type = :membershipType and membership.name in (:permNames)
+		 ]]>
+  </query>
+
    <query name="findSpecificMembershipItemsForTopics">
      <![CDATA[select membership from org.sakaiproject.component.app.messageforums.dao.hibernate.DBMembershipItemImpl as membership
-		     where membership.topic.id in ( :topicIdList ) and membership.type = :membershipType and membership.name = :roleName
+		     where membership.topic.id in ( :topicIdList ) and membership.type = :membershipType and membership.name in (:permNames)
 		 ]]>
   </query>
 

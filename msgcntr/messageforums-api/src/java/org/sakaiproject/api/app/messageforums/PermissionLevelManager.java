@@ -102,9 +102,13 @@ public interface PermissionLevelManager {
     public Boolean getCustomPermissionByName(String customPermissionName, PermissionLevel permissionLevel);
     public List getCustomPermissions();
   	public List<DBMembershipItem> getAllMembershipItemsForForumsForSite(final Long areaId);
+  	public List<DBMembershipItem> getSpecificMembershipItemsForForums(Long forumId, String permName, Integer membershipType);
+  	public List<DBMembershipItem> getSpecificMembershipItemsForForums(Long forumId, List<String> permNames, Integer membershipType);
+  	public List<DBMembershipItem> getSpecificMembershipItemsForForums(List<Long> forumIds, List<String> permNames, Integer membershipType);
   	public List<DBMembershipItem> getAllMembershipItemsForTopicsForSite(final Long areaId);
-  	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(Long topicId, String roleName, Integer membershipType);
-  	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(List<Long> topicIds, String roleName, Integer membershipType);
+  	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(Long topicId, String permName, Integer membershipType);
+  	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(Long topicId, List<String> permNames, Integer membershipType);
+  	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(List<Long> topicIds, List<String> permNames, Integer membershipType);
   	public void deleteMembershipItems(Set<DBMembershipItem> membershipSet);
   	
 }

@@ -1131,9 +1131,11 @@ public class DiscussionTopicBean
 
 	}
 
+  // TODO: this is very expensive
 	public List<DecoratedAttachment> getAttachList()
 	{
 		List<DecoratedAttachment> decoAttachList = new ArrayList<DecoratedAttachment>();
+    /*
 		List<Attachment> attachList = forumManager.getTopicAttachments(topic.getId());  
 		if(attachList != null)
 		{
@@ -1143,6 +1145,7 @@ public class DiscussionTopicBean
 				decoAttachList.add(decoAttach);
 			}
 		}
+    */
 		return decoAttachList;
 	}
 

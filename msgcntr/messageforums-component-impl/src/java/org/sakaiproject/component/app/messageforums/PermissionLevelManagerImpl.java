@@ -74,6 +74,7 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 	private static final String QUERY_BY_AREA_ALL_FORUMS_MEMBERSHIP = "findAllMembershipItemsForForumsForSite";
 	private static final String QUERY_GET_ALL_TOPICS = "findAllTopicsForSite";
 	private static final String QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP = "findAllMembershipItemsForTopicsForSite";
+	private static final String QUERY_BY_FORUM_IDS_AND_TYPE_FOR_MEMBERSHIPS = "findSpecificMembershipItemsForForums";
 	private static final String QUERY_BY_TOPIC_IDS_AND_TYPE_FOR_MEMBERSHIPS = "findSpecificMembershipItemsForTopics";
 	
 	private Boolean autoDdl;
@@ -685,22 +686,49 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 	private List<DBMembershipItem> getAllMembershipItemsForTopics(final List<Long> topicIds) {
 		HibernateCallback<List> hcb1 = session -> {
             Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP);
+            q.setCacheable(true);
             return queryWithParameterList(q, "topicIdList", topicIds);
         };
 		return getHibernateTemplate().execute(hcb1);
 	}
 
-	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final Long topicId, final String roleName, final Integer membershipType) {
-		return getSpecificMembershipItemsForTopics(Arrays.asList(topicId), roleName, membershipType);
+	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final Long topicId, final String permName, final Integer membershipType) {
+		return getSpecificMembershipItemsForTopics(Arrays.asList(topicId), Arrays.asList(permName), membershipType);
+	}
+
+	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final Long topicId, final List<String> permNames, final Integer membershipType) {
+		return getSpecificMembershipItemsForTopics(Arrays.asList(topicId), permNames, membershipType);
 	}
 
 	// This query will return (number of topics) * (roles + sections + groups) rows
-	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final List<Long> topicIds, final String roleName, final Integer membershipType) {
+	public List<DBMembershipItem> getSpecificMembershipItemsForTopics(final List<Long> topicIds, final List<String> permNames, final Integer membershipType) {
 		HibernateCallback<List> hcb1 = session -> {
             org.hibernate.Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_AND_TYPE_FOR_MEMBERSHIPS);
             q.setParameterList("topicIdList", topicIds);
-            q.setString("roleName", roleName);
+            q.setParameterList("permNames", permNames);
             q.setInteger("membershipType", membershipType);
+            q.setCacheable(true);
+            return q.list();
+        };
+		return getHibernateTemplate().execute(hcb1);
+	}
+
+	public List<DBMembershipItem> getSpecificMembershipItemsForForums(final Long forumId, final String permName, final Integer membershipType) {
+		return getSpecificMembershipItemsForForums(Arrays.asList(forumId), Arrays.asList(permName), membershipType);
+	}
+
+	public List<DBMembershipItem> getSpecificMembershipItemsForForums(final Long forumId, final List<String> permNames, final Integer membershipType) {
+		return getSpecificMembershipItemsForForums(Arrays.asList(forumId), permNames, membershipType);
+	}
+
+	// This query will return (number of forums) * (roles + sections + groups) rows
+	public List<DBMembershipItem> getSpecificMembershipItemsForForums(final List<Long> forumIds, final List<String> permNames, final Integer membershipType) {
+		HibernateCallback<List> hcb1 = session -> {
+            org.hibernate.Query q = session.getNamedQuery(QUERY_BY_FORUM_IDS_AND_TYPE_FOR_MEMBERSHIPS);
+            q.setParameterList("forumIdList", forumIds);
+            q.setParameterList("permNames", permNames);
+            q.setInteger("membershipType", membershipType);
+            q.setCacheable(true);
             return q.list();
         };
 		return getHibernateTemplate().execute(hcb1);

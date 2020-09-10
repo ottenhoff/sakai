@@ -1021,10 +1021,11 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private Iterator getForumItemsByCurrentUser(DiscussionForum forum)
   {
     List<DBMembershipItem> forumItems = new ArrayList<>();
+    final String userRoleName = getCurrentUserRole();
 
-		Set thisForumItemSet = forum.getMembershipItemSet();
-
-		if(getAnonRole() == true && ".anon".equals(forum.getCreatedBy()) && forum.getTopicsSet() == null && thisForumItemSet.isEmpty()) {
+    	// TODO: just query for this one item instead of iterating
+		if(getAnonRole() == true && ".anon".equals(forum.getCreatedBy()) && forum.getTopicsSet() == null) {
+			Set thisForumItemSet = forum.getMembershipItemSet();
 	        Iterator iterNewForum = thisForumItemSet.iterator();
 	        while (iterNewForum.hasNext())
 	        {
@@ -1036,24 +1037,27 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 	        }			
 		}
 
-		DBMembershipItem item = forumManager.getDBMember(thisForumItemSet, getCurrentUserRole(),
-			DBMembershipItem.TYPE_ROLE);
+	// Query for just the membership item for this role
+	List<DBMembershipItem> roleMembership = permissionLevelManager.getSpecificMembershipItemsForForums(forum.getId(), userRoleName, DBMembershipItem.TYPE_ROLE);
+	DBMembershipItem item = forumManager.getDBMember(new HashSet<DBMembershipItem>(roleMembership), userRoleName, DBMembershipItem.TYPE_ROLE);
     
     if (item != null){
       forumItems.add(item);
     }
-    
+
+    // TODO: cant we skip group awareness if we have max permissions with our role?
 	//  for group awareness
     try {
     	Site currentSite = siteService.getSite(getContextId());
     	Set<String> groups = getGroupsWithMember(currentSite, getCurrentUserId());
 
-    	if(groups != null) {
-    		// TODO make this more efficient
+    	if (groups != null && !groups.isEmpty()) {
+    		List<String> groupNames = new ArrayList<>();
             groups.stream().map(currentSite::getGroup)
-                    .map(g -> forumManager.getDBMember(thisForumItemSet, g.getTitle(), DBMembershipItem.TYPE_GROUP))
+                    .map(g -> g.getTitle())
                     .filter(Objects::nonNull)
-                    .forEach(forumItems::add);
+                    .forEach(groupNames::add);
+            forumItems.addAll(permissionLevelManager.getSpecificMembershipItemsForForums(forum.getId(), groupNames, DBMembershipItem.TYPE_GROUP));
     	}
     }
     catch(Exception iue)
@@ -1085,7 +1089,6 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 	// Query for just the membership item for this role
 	final String userRoleName = getUserRole(siteId, userId);
 	List<DBMembershipItem> roleMembership = permissionLevelManager.getSpecificMembershipItemsForTopics(topic.getId(),userRoleName, DBMembershipItem.TYPE_ROLE);
-	System.out.println("zz01: found " + roleMembership.size());
     DBMembershipItem item = forumManager.getDBMember(new HashSet<DBMembershipItem>(roleMembership), userRoleName, DBMembershipItem.TYPE_ROLE, "/site/" + siteId);
 
     if (item != null){
@@ -1094,14 +1097,16 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
     //for group awareness
     try {
-    	// TODO only retrieve for necessary groups. Do we need to do this for instructors? 
+    	// TODO bypass this group filtering if we have lots of permissions
     	Site currentSite = siteService.getSite(siteId);
     	Set<String> groups = getGroupsWithMember(currentSite, userId);
     	if (groups != null) {
+    		List<String> groupNames = new ArrayList<>();
             groups.stream().map(currentSite::getGroup)
-                    .map(g -> forumManager.getDBMember(new HashSet<DBMembershipItem>(roleMembership), g.getTitle(), DBMembershipItem.TYPE_GROUP, "/site/" + siteId))
+                    .map(g -> g.getTitle())
                     .filter(Objects::nonNull)
-                    .forEach(topicItems::add);
+                    .forEach(groupNames::add);
+            topicItems.addAll(permissionLevelManager.getSpecificMembershipItemsForTopics(topic.getId(), groupNames, DBMembershipItem.TYPE_GROUP));
     	}
     }
     catch(Exception iue)
@@ -1183,10 +1188,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private String getCurrentUserRole(String siteId)
   {
 	  log.debug("getCurrentUserRole()");
-	  if(authzGroupService.getUserRole(getCurrentUserId(), "/site/" + siteId)==null&&sessionManager.getCurrentSessionUserId()==null&&getAnonRole(siteId)==true){
-		  return ".anon";
-	  }
-	  return authzGroupService.getUserRole(getCurrentUserId(), "/site/" + siteId);
+	  return getUserRole(siteId, getCurrentUserId());
   }
 
   private String getUserRole(String siteId, String userId)
