@@ -121,9 +121,8 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
   private boolean usingHelper = false; // just a flag until moved to database from helper
   private ContentHostingService contentHostingService;
   private MemoryService memoryService;
-  private Cache<String, Set<?>> allowedFunctionsCache;
+  private Cache<String, Set<String>> allowedFunctionsCache;
   private EventTrackingService eventTrackingService;
-  private ThreadLocalManager threadLocalManager;
   private ToolManager toolManager;
   private LearningResourceStoreService learningResourceStoreService;
   
@@ -149,10 +148,6 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
 
   public void setLearningResourceStoreService(LearningResourceStoreService service) {
 	learningResourceStoreService = service;
-  }
-
-  public void setThreadLocalManager(ThreadLocalManager threadLocalManager) {
-	this.threadLocalManager = threadLocalManager;
   }
 
   public void setToolManager(ToolManager toolManager) {
@@ -1145,9 +1140,8 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
     forum.setDraft(draft);
 
     final DiscussionForum forumReturn = forumManager.saveDiscussionForum(forum, draft, logEvent, currentUser);
-    //set flag to false since permissions could have changed.  This will force a clearing and resetting
+    // TODO: set flag to false since permissions could have changed.  This will force a clearing and resetting
     //of the permissions cache.
-    threadLocalManager.set("message_center_permission_set", Boolean.FALSE);
     if (saveArea)
     {
       String dfType = typeManager.getDiscussionForumType();
@@ -2246,14 +2240,11 @@ public class DiscussionForumManagerImpl extends HibernateDaoSupport implements
         	  level = permissionLevelManager.getDefaultNonePermissionLevel();
         	}else{
         		//check cache first:
-        		Set allowedFunctions = null;
-        		String cacheId = contextSiteId + "/" + name;
-        		Object el = allowedFunctionsCache.get(cacheId);
-        		if(el == null){
+        		final String cacheId = contextSiteId + "/" + name;
+        		Set<String> allowedFunctions = allowedFunctionsCache.get(cacheId);
+        		if (allowedFunctions == null) {
         			allowedFunctions = authzGroupService.getAllowedFunctions(name, siteIds);
         			allowedFunctionsCache.put(cacheId, allowedFunctions);
-        		}else{
-        			allowedFunctions = (Set) el;
         		}
         		if (allowedFunctions.contains(SiteService.SECURE_UPDATE_SITE)){        			        	        	
         			level = permissionLevelManager.getDefaultOwnerPermissionLevel();

@@ -70,11 +70,10 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 	private Map<String, PermissionLevel> defaultPermissionsMap;
 	
 	private static final String QUERY_BY_TYPE_UUID = "findPermissionLevelByTypeUuid";
-	private static final String QUERY_ORDERED_LEVEL_NAMES = "findOrderedPermissionLevelNames";
 	private static final String QUERY_BY_AREA_ALL_FORUMS_MEMBERSHIP = "findAllMembershipItemsForForumsForSite";
 	private static final String QUERY_GET_ALL_TOPICS = "findAllTopicsForSite";
 	private static final String QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP = "findAllMembershipItemsForTopicsForSite";
-	private static final String QUERY_BY_AREA_ID_ALL_MEMBERSHIP =	"findAllMembershipItemsForSite";
+	private static final String QUERY_BY_TOPIC_ID_FOR_TOPIC_MEMBERSHIP = "findMembershipItemsByTopic";
 	
 	private Boolean autoDdl;
 	
@@ -623,7 +622,7 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
     return getHibernateTemplate().execute(hcb);
 	}
 
-	private List getAllTopicsForSite(final Long areaId)
+	private List<Long> getAllTopicsForSite(final Long areaId)
 	{
 		if (log.isDebugEnabled())
 		{
@@ -668,20 +667,24 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
     return ids;
 	}
     
-	public List getAllMembershipItemsForTopicsForSite(final Long areaId)
+	public List<DBMembershipItem> getAllMembershipItemsForTopicsForSite(final Long areaId)
 	{
-		final List topicIds = this.getAllTopicsForSite(areaId);
+		final List<Long> topicIds = this.getAllTopicsForSite(areaId);
 		
 		if(topicIds != null && topicIds.size() >0)
 		{
-			HibernateCallback<List> hcb1 = session -> {
-                Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP);
-                return queryWithParameterList(q, "topicIdList", topicIds);
-            };
-			return getHibernateTemplate().execute(hcb1);
+			return getAllMembershipItemsForTopics(topicIds);
 		}
-		else
-			return new ArrayList();
+
+		return new ArrayList<DBMembershipItem>();
+	}
+
+	public List<DBMembershipItem> getAllMembershipItemsForTopics(final List<Long> topicIds) {
+		HibernateCallback<List> hcb1 = session -> {
+            Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP);
+            return queryWithParameterList(q, "topicIdList", topicIds);
+        };
+		return getHibernateTemplate().execute(hcb1);
 	}
 	
 	private void initializePermissionLevelData()

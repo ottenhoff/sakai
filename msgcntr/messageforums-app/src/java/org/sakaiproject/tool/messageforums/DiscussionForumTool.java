@@ -422,8 +422,6 @@ public class DiscussionForumTool {
   private SessionManager sessionManager;
   @ManagedProperty(value="#{Components[\"org.sakaiproject.tool.api.ToolManager\"]}")
   private ToolManager toolManager;
-  @ManagedProperty(value="#{Components[\"org.sakaiproject.thread_local.api.ThreadLocalManager\"]}")
-  private ThreadLocalManager threadLocalManager;
   @ManagedProperty(value="#{Components[\"org.sakaiproject.rubrics.logic.RubricsService\"]}")
   private RubricsService rubricsService;
 
@@ -1943,8 +1941,7 @@ public class DiscussionForumTool {
         if(!isNew){
         	if(beforeChangeHM != null){
         		if(permissionsUpdated){
-        			//need to reset permissions cache to get the correct counts:
-        			threadLocalManager.set("message_center_permission_set", false);
+        			//TODO need to reset permissions cache to get the correct counts:
         		}
         		updateSynopticMessagesForForumComparingOldMessagesCount(getSiteId(), topic.getBaseForum().getId(), topic.getId(), beforeChangeHM, SynopticMsgcntrManager.NUM_OF_ATTEMPTS);
         	}

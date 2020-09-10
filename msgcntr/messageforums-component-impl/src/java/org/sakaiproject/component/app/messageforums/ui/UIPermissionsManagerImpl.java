@@ -78,14 +78,17 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private DiscussionForumManager forumManager;
   private AreaManager areaManager;
   private MemoryService memoryService;
+  private Cache<String, String> roleMapCache;
   private Cache<String, Set<String>> userGroupMembershipCache;
+  private Cache<String, Set<Long>> siteTopicsCache;
   private UserDirectoryService userDirectoryService;
   private SiteService siteService;
-  private ThreadLocalManager threadLocalManager;
   
   public void init()
   {
      log.info("init()");
+     roleMapCache = memoryService.getCache("org.sakaiproject.component.app.messageforums.ui.UIPermissionsManagerImpl.roleMapCache");
+     siteTopicsCache = memoryService.getCache("org.sakaiproject.component.app.messageforums.ui.UIPermissionsManagerImpl.siteTopicsCache");
      userGroupMembershipCache = memoryService.getCache("org.sakaiproject.component.app.messageforums.ui.UIPermissionsManagerImpl.userGroupMembershipCache");
   }
 
@@ -123,10 +126,6 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
   public void setSiteService(SiteService siteService) {
     this.siteService = siteService;
-  }
-
-  public void setThreadLocalManager(ThreadLocalManager threadLocalManager) {
-    this.threadLocalManager = threadLocalManager;
   }
 
 /**
@@ -952,69 +951,18 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 	  
 	  return userMemberships;
   }
-
-  
-  private Iterator<String> getGroupsByCurrentUser()
-  {
-    List<String> memberof = new ArrayList<>();
-    try
-    {
-      Site site = siteService.getSite(toolManager.getCurrentPlacement().getContext());
-	  memberof.addAll(getGroupsWithMember(site, getCurrentUserId()));
-    }
-    catch (IdUnusedException e)
-    {
-      log.debug("Group not found");
-    }
-    return memberof.iterator();
-  }
-  
-  /**
-   * Returns a list of names of the groups/sections
-   * the current user is a member of
-   * @return
-   */
-  private Iterator<String> getGroupNamesByCurrentUser(String siteId)
-  {
-    List<String> memberof = new ArrayList<>();
-    try
-    {
-    	Site site = siteService.getSite(siteId);
-    	getGroupsWithMember(site, getCurrentUserId()).stream()
-                .map(site::getGroup).map(Group::getTitle).forEach(memberof::add);
-    }
-    catch (IdUnusedException e)
-    {
-      log.debug("Group not found");
-    }
-    return memberof.iterator();
-  }
-
-  private DBMembershipItem getAreaItemByUserRole()
-  { 
-  	if (log.isDebugEnabled())
-    {
-      log.debug("getAreaItemByUserRole()");
-    }	 
-    Set membershipItems = forumManager.getDiscussionForumArea()
-      .getMembershipItemSet();
-    return forumManager.getDBMember(membershipItems, getCurrentUserRole(),
-      DBMembershipItem.TYPE_ROLE);
-  }
   
   private Iterator<DBMembershipItem> getAreaItemsByCurrentUser()
   { 
     log.debug("getAreaItemsByCurrentUser()");
 
   	List<DBMembershipItem> areaItems = new ArrayList<>();
-  	
-		if (threadLocalManager.get("message_center_permission_set") == null || !((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
-		}
 
-	Set areaItemsInThread = (Set) threadLocalManager.get("message_center_membership_area");
-	DBMembershipItem item = forumManager.getDBMember(areaItemsInThread, getCurrentUserRole(),
+  	final String siteId = getContextId();
+  	final Area dfa = forumManager.getDiscussionForumArea(siteId);
+  	final Set dfaMembershipItems = dfa.getMembershipItemSet();
+
+	DBMembershipItem item = forumManager.getDBMember(dfaMembershipItems, getCurrentUserRole(),
 			DBMembershipItem.TYPE_ROLE);
     
     if (item != null){
@@ -1027,7 +975,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     	Set<String> groups = getGroupsWithMember(currentSite, getCurrentUserId());
     	if (groups != null) {
     	    groups.stream().map(currentSite::getGroup)
-                    .map(g -> forumManager.getDBMember(areaItemsInThread, g.getTitle(), DBMembershipItem.TYPE_GROUP))
+                    .map(g -> forumManager.getDBMember(dfaMembershipItems, g.getTitle(), DBMembershipItem.TYPE_GROUP))
                     .filter(Objects::nonNull)
                     .forEach(areaItems::add);
     	}
@@ -1041,11 +989,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
   public Set getAreaItemsSet(Area area)
   {
-		if (threadLocalManager.get("message_center_permission_set") == null || !((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
-		}
-		Set allAreaSet = (Set) threadLocalManager.get("message_center_membership_area");
+		Set allAreaSet = area.getMembershipItemSet();
 		Set returnSet = new HashSet();
 		if(allAreaSet != null)
 		{
@@ -1066,25 +1010,9 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private Iterator getForumItemsByCurrentUser(DiscussionForum forum)
   {
     List<DBMembershipItem> forumItems = new ArrayList<>();
-    //Set membershipItems = forum.getMembershipItemSet();
 
+		Set thisForumItemSet = forum.getMembershipItemSet();
 
-		if (threadLocalManager.get("message_center_permission_set") == null || !((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
-		}
-
-		Set forumItemsInThread = (Set) threadLocalManager.get("message_center_membership_forum");
-		Set thisForumItemSet = new HashSet();
-		Iterator iter = forumItemsInThread.iterator();
-		while(iter.hasNext())
-		{
-			DBMembershipItemImpl thisItem = (DBMembershipItemImpl)iter.next();
-			if(thisItem.getForum() != null && forum.getId()!=null&&forum.getId().equals(thisItem.getForum().getId()))
-			{
-				thisForumItemSet.add((DBMembershipItem)thisItem);
-			}
-		}
 		if(thisForumItemSet.size()==0&&getAnonRole()==true&&".anon".equals(forum.getCreatedBy())&&forum.getTopicsSet()==null){
 			Set newForumMembershipset=forum.getMembershipItemSet();
 	        Iterator iterNewForum = newForumMembershipset.iterator();
@@ -1097,9 +1025,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 	          }       
 	        }			
 		}
-    
-//    DBMembershipItem item = forumManager.getDBMember(membershipItems, getCurrentUserRole(),
-//        DBMembershipItem.TYPE_ROLE);
+
 		DBMembershipItem item = forumManager.getDBMember(thisForumItemSet, getCurrentUserRole(),
 			DBMembershipItem.TYPE_ROLE);
     
@@ -1124,44 +1050,12 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     	log.error(iue.getMessage(), iue);
     }
 
-//    Iterator iter = membershipItems.iterator();
-//    while (iter.hasNext())
-//    {
-//      DBMembershipItem membershipItem = (DBMembershipItem) iter.next();
-//      if (membershipItem.getType().equals(DBMembershipItem.TYPE_ROLE)
-//          && membershipItem.getName().equals(getCurrentUserRole()))
-//      {
-//        forumItems.add(membershipItem);
-//      }
-//      if (membershipItem.getType().equals(DBMembershipItem.TYPE_GROUP)
-//          && isGroupMember(membershipItem.getName()))
-//      {
-//        forumItems.add(membershipItem);
-//      }
-//    }
     return forumItems.iterator();
   }
 
   public Set getForumItemsSet(DiscussionForum forum)
   {
-		if (threadLocalManager.get("message_center_permission_set") == null || !((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
-		}
-
-		Set allForumSet = (Set) threadLocalManager.get("message_center_membership_forum");
-		Set returnSet = new HashSet();
-		Iterator iter = allForumSet.iterator();
-		while(iter.hasNext())
-		{
-			DBMembershipItemImpl thisItem = (DBMembershipItemImpl)iter.next();
-			if(thisItem.getForum() != null && forum.getId() != null && forum.getId().equals(thisItem.getForum().getId()))
-			{
-				returnSet.add((DBMembershipItem)thisItem);
-			}
-		}
-
-		return returnSet;
+		return forum.getMembershipItemSet();
   }
   
   private Iterator getTopicItemsByCurrentUser(DiscussionTopic topic){
@@ -1179,26 +1073,9 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   
   private Iterator<DBMembershipItem> getTopicItemsByUser(Long topicId, String userId, String siteId)
   {
-	  List<DBMembershipItem> topicItems = new ArrayList<>();
-    
-		if (threadLocalManager.get("message_center_permission_set") == null || !((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite(siteId, userId);
-		}
+	List<DBMembershipItem> topicItems = new ArrayList<>();
+	Set<DBMembershipItem> thisTopicItemSet = new HashSet<>(permissionLevelManager.getAllMembershipItemsForTopics(topicId));
 
-		Set topicItemsInThread = (Set) threadLocalManager.get("message_center_membership_topic");
-		Set thisTopicItemSet = new HashSet();
-		Iterator iter = topicItemsInThread.iterator();
-		while(iter.hasNext())
-		{
-			DBMembershipItemImpl thisItem = (DBMembershipItemImpl)iter.next();
-			if(thisItem.getTopic() != null && topicId.equals(thisItem.getTopic().getId()))
-			{
-				thisTopicItemSet.add((DBMembershipItem)thisItem);
-			}
-		}
-    
-//    Set membershipItems = topic.getMembershipItemSet();
     DBMembershipItem item = forumManager.getDBMember(thisTopicItemSet, getUserRole(siteId, userId),
         DBMembershipItem.TYPE_ROLE, "/site/" + siteId);
 
@@ -1221,45 +1098,13 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     {
     	log.error(iue.getMessage(), iue);
     }
-    
-//    Iterator iter = membershipItems.iterator();
-//    while (iter.hasNext())
-//    {
-//      DBMembershipItem membershipItem = (DBMembershipItem) iter.next();
-//      if (membershipItem.getType().equals(DBMembershipItem.TYPE_ROLE)
-//          && membershipItem.getName().equals(getCurrentUserRole()))
-//      {
-//        topicItems.add(membershipItem);
-//      }
-//      if (membershipItem.getType().equals(DBMembershipItem.TYPE_GROUP)
-//          && isGroupMember(membershipItem.getName()))
-//      {
-//        topicItems.add(membershipItem);
-//      }
-//    }
+
     return topicItems.iterator();
   }
   
-  public Set getTopicItemsSet(DiscussionTopic topic)
+  public Set<DBMembershipItem> getTopicItemsSet(DiscussionTopic topic)
   {
-		if (threadLocalManager.get("message_center_permission_set") == null || !((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			initMembershipForSite();
-		}
-
-		Set allTopicSet = (Set) threadLocalManager.get("message_center_membership_topic");
-		Set returnSet = new HashSet();
-		Iterator iter = allTopicSet.iterator();
-		while(iter.hasNext())
-		{
-			DBMembershipItemImpl thisItem = (DBMembershipItemImpl)iter.next();
-			if(thisItem.getTopic() != null && topic.getId() != null && topic.getId().equals(thisItem.getTopic().getId()))
-			{
-				returnSet.add((DBMembershipItem)thisItem);
-			}
-		}
-		
-		return returnSet;
+		return new HashSet<>(permissionLevelManager.getAllMembershipItemsForTopics(topic.getId()));
   }
   
   /**
@@ -1337,15 +1182,10 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private String getUserRole(String siteId, String userId)
   {
     log.debug("getCurrentUserRole()");
-    Map roleMap = (Map) threadLocalManager.get("message_center_user_role_map");
-    if(roleMap == null){
-    	roleMap = new HashMap();
-    }
-    String userRole = (String) roleMap.get(siteId + "-" + userId);
+    String userRole = roleMapCache.get(siteId + "-" + userId);
     if(userRole == null){
     	userRole = authzGroupService.getUserRole(userId, "/site/" + siteId);
-    	roleMap.put(siteId + "-" + userId, userRole);
-    	threadLocalManager.set("message_center_user_role_map", roleMap);
+    	roleMapCache.put(siteId + "-" + userId, userRole);
     }
     
     // if user role is still null at this point, check for .anon
@@ -1449,56 +1289,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
       return false;
     }
   }
-  
-  private void initMembershipForSite(){
-	  initMembershipForSite(getContextId());
-  }
-  
-  
-  private void initMembershipForSite(String contextSiteId){
-	  initMembershipForSite(contextSiteId, getCurrentUserId());
-  }
-  
-  private void initMembershipForSite(String siteId, String userId)
-  {
-		if (threadLocalManager.get("message_center_permission_set") != null && ((Boolean)threadLocalManager.get("message_center_permission_set")).booleanValue())
-		{
-			return;
-		}
-		Area dfa = forumManager.getDiscussionForumArea(siteId);
-    Set areaItems = dfa.getMembershipItemSet();
-  	List forumItemsList = permissionLevelManager.getAllMembershipItemsForForumsForSite(dfa.getId());
-  	List topicItemsList = permissionLevelManager.getAllMembershipItemsForTopicsForSite(dfa.getId());
 
-  	Set forumItems = new HashSet();
-  	for(Iterator i = forumItemsList.iterator(); i.hasNext();) {
-  		DBMembershipItem forumItem = (DBMembershipItemImpl)i.next();
-  		forumItems.add(forumItem);
-  	}
-  	
-  	Set topicItems = new HashSet();
-  	for(Iterator i = topicItemsList.iterator(); i.hasNext();) {
-  		DBMembershipItem topicItem = (DBMembershipItemImpl)i.next();
-  		topicItems.add(topicItem);
-  	}
-  
-  	Set<String> groups = null;
-  	try
-  	{
-  		Site currentSite = siteService.getSite(siteId);
-  		groups = getGroupsWithMember(currentSite, userId);
-  	}
-    catch(IdUnusedException iue)
-    {
-    	log.error(iue.getMessage(), iue);
-    }
-
-   	threadLocalManager.set("message_center_current_member_groups", groups);
-  	threadLocalManager.set("message_center_membership_area", areaItems);
-  	threadLocalManager.set("message_center_membership_forum", forumItems);
-  	threadLocalManager.set("message_center_membership_topic", topicItems);
-	threadLocalManager.set("message_center_permission_set", Boolean.valueOf(true));
-  }
   
   public Set<String> getGroupsWithMember(Site site, String userId){
 	  String id = site.getReference() + "/" + userId;

@@ -104,5 +104,6 @@ public interface PermissionLevelManager {
   	public List getAllMembershipItemsForForumsForSite(final Long areaId);
   	public List getAllMembershipItemsForTopicsForSite(final Long areaId);
   	public void deleteMembershipItems(Set<DBMembershipItem> membershipSet);
+	public List<DBMembershipItem> getAllMembershipItemsForTopics(Long topicId);
   	
 }
