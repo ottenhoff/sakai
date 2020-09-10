@@ -1000,22 +1000,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
   public Set getAreaItemsSet(Area area)
   {
-		Set allAreaSet = area.getMembershipItemSet();
-		Set returnSet = new HashSet();
-		if(allAreaSet != null)
-		{
-			Iterator iter = allAreaSet.iterator();
-			while(iter.hasNext())
-			{
-				DBMembershipItemImpl thisItem = (DBMembershipItemImpl)iter.next();
-				if(thisItem.getArea() != null && area.getId() != null && area.getId().equals(thisItem.getArea().getId()))
-				{
-					returnSet.add((DBMembershipItem)thisItem);
-				}
-			}
-		}
-
-		return returnSet;
+		return area.getMembershipItemSet();
   }
   
   private Iterator getForumItemsByCurrentUser(DiscussionForum forum)
@@ -1045,24 +1030,26 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
       forumItems.add(item);
     }
 
-    // TODO: cant we skip group awareness if we have max permissions with our role?
+    // TODO: cant we skip group awareness if we have max permissions with our role? e.g., AUTHOR perm ?
 	//  for group awareness
-    try {
-    	Site currentSite = siteService.getSite(getContextId());
-    	Set<String> groups = getGroupsWithMember(currentSite, getCurrentUserId());
-
-    	if (groups != null && !groups.isEmpty()) {
-    		List<String> groupNames = new ArrayList<>();
-            groups.stream().map(currentSite::getGroup)
-                    .map(g -> g.getTitle())
-                    .filter(Objects::nonNull)
-                    .forEach(groupNames::add);
-            forumItems.addAll(permissionLevelManager.getSpecificMembershipItemsForForums(forum.getId(), groupNames, DBMembershipItem.TYPE_GROUP));
-    	}
-    }
-    catch(Exception iue)
-    {
-    	log.error(iue.getMessage(), iue);
+    if (forum.getRestrictPermissionsForGroups()) {
+	    try {
+	    	Site currentSite = siteService.getSite(getContextId());
+	    	Set<String> groups = getGroupsWithMember(currentSite, getCurrentUserId());
+	
+	    	if (groups != null && !groups.isEmpty()) {
+	    		List<String> groupNames = new ArrayList<>();
+	            groups.stream().map(currentSite::getGroup)
+	                    .map(g -> g.getTitle())
+	                    .filter(Objects::nonNull)
+	                    .forEach(groupNames::add);
+	            forumItems.addAll(permissionLevelManager.getSpecificMembershipItemsForForums(forum.getId(), groupNames, DBMembershipItem.TYPE_GROUP));
+	    	}
+	    }
+	    catch(Exception iue)
+	    {
+	    	log.error(iue.getMessage(), iue);
+	    }
     }
 
     return forumItems.iterator();
@@ -1084,7 +1071,6 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private Iterator<DBMembershipItem> getTopicItemsByUser(DiscussionTopic topic, String userId, String siteId)
   {
 	List<DBMembershipItem> topicItems = new ArrayList<>();
-	// Set<DBMembershipItem> thisTopicItemSet = topic.getMembershipItemSet();
 
 	// Query for just the membership item for this role
 	final String userRoleName = getUserRole(siteId, userId);
@@ -1096,22 +1082,24 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     }
 
     //for group awareness
-    try {
-    	// TODO bypass this group filtering if we have lots of permissions
-    	Site currentSite = siteService.getSite(siteId);
-    	Set<String> groups = getGroupsWithMember(currentSite, userId);
-    	if (groups != null) {
-    		List<String> groupNames = new ArrayList<>();
-            groups.stream().map(currentSite::getGroup)
-                    .map(g -> g.getTitle())
-                    .filter(Objects::nonNull)
-                    .forEach(groupNames::add);
-            topicItems.addAll(permissionLevelManager.getSpecificMembershipItemsForTopics(topic.getId(), groupNames, DBMembershipItem.TYPE_GROUP));
-    	}
-    }
-    catch(Exception iue)
-    {
-    	log.error("Attempted to stream groups and find user's membership items", iue);
+    if (topic.getRestrictPermissionsForGroups()) {
+	    try {
+	    	// TODO bypass this group filtering if we have lots of permissions
+	    	Site currentSite = siteService.getSite(siteId);
+	    	Set<String> groups = getGroupsWithMember(currentSite, userId);
+	    	if (groups != null) {
+	    		List<String> groupNames = new ArrayList<>();
+	            groups.stream().map(currentSite::getGroup)
+	                    .map(g -> g.getTitle())
+	                    .filter(Objects::nonNull)
+	                    .forEach(groupNames::add);
+	            topicItems.addAll(permissionLevelManager.getSpecificMembershipItemsForTopics(topic.getId(), groupNames, DBMembershipItem.TYPE_GROUP));
+	    	}
+	    }
+	    catch(Exception iue)
+	    {
+	    	log.error("Attempted to stream groups and find user's membership items", iue);
+	    }
     }
 
     return topicItems.iterator();
