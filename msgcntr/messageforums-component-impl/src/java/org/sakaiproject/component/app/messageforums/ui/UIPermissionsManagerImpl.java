@@ -582,15 +582,18 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
       {
         return true;
       }
+
+      // No point in fetching all the permissions if it's a draft
+      if (isForumDraft.equals(Boolean.TRUE) || isTopicDraft.equals(Boolean.TRUE))
+      {
+    	  return false;
+      }
+
       Iterator iter = getTopicItemsByUser(topic, userId, siteId);
       while (iter.hasNext())
       {
         DBMembershipItem item = (DBMembershipItem) iter.next();
-        if (item.getPermissionLevel().getRead().booleanValue()
-            && isForumDraft.equals(Boolean.FALSE)
-//            && forum.getLocked().equals(Boolean.FALSE)
-            && isTopicDraft.equals(Boolean.FALSE))
-//            && topic.getLocked().equals(Boolean.FALSE))
+        if (item.getPermissionLevel().getRead().booleanValue())
         {
           return true;
         }
@@ -630,6 +633,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     if (topic.getDraft() == null || topic.getDraft().equals(Boolean.TRUE))
     {
       log.debug("This topic is at draft stage {}", topic);
+      return false;
     }
       Iterator iter = getTopicItemsByUser(topic, userId, contextId);
       while (iter.hasNext())
