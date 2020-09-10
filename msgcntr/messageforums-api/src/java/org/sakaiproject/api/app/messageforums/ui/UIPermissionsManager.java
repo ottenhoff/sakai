@@ -120,6 +120,7 @@ public interface UIPermissionsManager
   public boolean isRead(DiscussionTopic topic, DiscussionForum forum, String userId);
   public boolean isRead(DiscussionTopic topic, DiscussionForum forum, String userId, String siteContextId);
   public boolean isRead(Long topicId, Boolean isTopicDraft, Boolean isForumDraft, String userId, String siteContextId);
+  public boolean isRead(DiscussionTopic topic, Boolean isTopicDraft, Boolean isForumDraft, String userId, String siteContextId);
 
   /**
    * @param topic
@@ -198,6 +199,7 @@ public interface UIPermissionsManager
    * @return
    */
   public boolean isModeratePostings(Long topicId, Boolean isForumLocked, Boolean isForumDraft, Boolean isTopicLocked, Boolean isTopicDraft, String userId, String siteId);
+  public boolean isModeratePostings(DiscussionTopic topic, Boolean isForumLocked, Boolean isForumDraft, Boolean isTopicLocked, Boolean isTopicDraft, String userId, String siteId);
   public boolean isModeratePostings(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId);
   public boolean isModeratePostings(DiscussionTopic topic, DiscussionForum forum, String userId);
   public boolean isModeratePostings(DiscussionTopic topic, DiscussionForum forum);

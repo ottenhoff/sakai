@@ -564,10 +564,16 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   public boolean isRead(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId)
   {
       log.debug("isRead(DiscussionTopic {}, DiscussionForum {})", topic, forum);
-	  return isRead(topic.getId(), topic.getDraft(), forum.getDraft(), userId, siteId);
+	  return isRead(topic, topic.getDraft(), forum.getDraft(), userId, siteId);
   }
-  
+
   public boolean isRead(Long topicId, Boolean isTopicDraft, Boolean isForumDraft, String userId, String siteId)
+  {
+	  DiscussionTopic topic = forumManager.getTopicById(topicId);
+	  return isRead(topic, isTopicDraft, isForumDraft, userId, siteId);
+  }
+
+  public boolean isRead(DiscussionTopic topic, Boolean isTopicDraft, Boolean isForumDraft, String userId, String siteId)
   {
     
     try
@@ -576,7 +582,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
       {
         return true;
       }
-      Iterator iter = getTopicItemsByUser(topicId, userId, siteId);
+      Iterator iter = getTopicItemsByUser(topic, userId, siteId);
       while (iter.hasNext())
       {
         DBMembershipItem item = (DBMembershipItem) iter.next();
@@ -857,10 +863,15 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   
   public boolean isModeratePostings(DiscussionTopic topic, DiscussionForum forum, String userId, String siteId)
   {
-	  return isModeratePostings(topic.getId(), forum.getLocked(), forum.getDraft(), topic.getLocked(), topic.getDraft(), userId, siteId);
+	  return isModeratePostings(topic, forum.getLocked(), forum.getDraft(), topic.getLocked(), topic.getDraft(), userId, siteId);
   }
   
-  public boolean isModeratePostings(Long topicId, Boolean isForumLocked, Boolean isForumDraft, Boolean isTopicLocked, Boolean isTopicDraft, String userId, String siteId)
+  public boolean isModeratePostings(Long topicId, Boolean isForumLocked, Boolean isForumDraft, Boolean isTopicLocked, Boolean isTopicDraft, String userId, String siteId) {
+	  DiscussionTopic topic = forumManager.getTopicById(topicId);
+	  return isModeratePostings(topic, isForumLocked, isForumDraft, isTopicLocked, isTopicDraft, userId, siteId);
+  }
+  
+  public boolean isModeratePostings(DiscussionTopic topic, Boolean isForumLocked, Boolean isForumDraft, Boolean isTopicLocked, Boolean isTopicDraft, String userId, String siteId)
   {
     // NOTE: the forum or topic being locked should not affect a user's ability to moderate,
     // so logic related to the locked status was removed
@@ -873,9 +884,9 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
       
     if (isTopicDraft == null || isTopicDraft.equals(Boolean.TRUE))
     {
-      log.debug("This topic is at draft stage {}", topicId);
+      log.debug("This topic is at draft stage {}", topic.getId());
     }
-      Iterator iter = getTopicItemsByUser(topicId, userId, siteId);
+      Iterator iter = getTopicItemsByUser(topic, userId, siteId);
       while (iter.hasNext())
       {
         DBMembershipItem item = (DBMembershipItem) iter.next();
@@ -906,7 +917,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 
     try
     {
-      Iterator iter = getTopicItemsByUser(topic.getId(), currentUserId, getContextId());
+      Iterator iter = getTopicItemsByUser((DiscussionTopic)topic, currentUserId, getContextId());
       while (iter.hasNext())
       {
         DBMembershipItem item = (DBMembershipItem) iter.next();
@@ -1065,16 +1076,11 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
   private Iterator getTopicItemsByUser(DiscussionTopic topic, String userId){
 	  return getTopicItemsByUser(topic, userId, getContextId());
   }
-  
-  private Iterator getTopicItemsByUser(DiscussionTopic topic, String userId, String siteId)
-  {
-	  return getTopicItemsByUser(topic.getId(), userId, siteId);
-  }
-  
-  private Iterator<DBMembershipItem> getTopicItemsByUser(Long topicId, String userId, String siteId)
+
+  private Iterator<DBMembershipItem> getTopicItemsByUser(DiscussionTopic topic, String userId, String siteId)
   {
 	List<DBMembershipItem> topicItems = new ArrayList<>();
-	Set<DBMembershipItem> thisTopicItemSet = new HashSet<>(permissionLevelManager.getAllMembershipItemsForTopics(topicId));
+	Set<DBMembershipItem> thisTopicItemSet = topic.getMembershipItemSet();
 
     DBMembershipItem item = forumManager.getDBMember(thisTopicItemSet, getUserRole(siteId, userId),
         DBMembershipItem.TYPE_ROLE, "/site/" + siteId);
@@ -1102,9 +1108,9 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     return topicItems.iterator();
   }
   
-  public Set<DBMembershipItem> getTopicItemsSet(DiscussionTopic topic)
+  public Set getTopicItemsSet(DiscussionTopic topic)
   {
-		return new HashSet<>(permissionLevelManager.getAllMembershipItemsForTopics(topic.getId()));
+		return topic.getMembershipItemSet();
   }
   
   /**

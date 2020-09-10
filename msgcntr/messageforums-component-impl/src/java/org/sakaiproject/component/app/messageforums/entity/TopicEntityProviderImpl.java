@@ -427,7 +427,7 @@ AutoRegisterEntityProvider, PropertyProvideable, RESTful, RequestStorable, Reque
 									int totalMessages = 0;
 									if (!topic.getModerated().booleanValue()
 											|| (topic.getModerated().booleanValue() && 
-													getUiPermissionsManager().isModeratePostings(topic.getId(), forum.getLocked(), forum.getDraft(), topic.getLocked(), topic.getDraft(), userId, siteId))){
+													getUiPermissionsManager().isModeratePostings(topic, forum.getLocked(), forum.getDraft(), topic.getLocked(), topic.getDraft(), userId, siteId))){
 
 										unreadMessages = getMessageManager().findUnreadMessageCountByTopicIdByUserId(topic.getId(), userId);										
 									}

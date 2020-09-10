@@ -679,7 +679,7 @@ public class PermissionLevelManagerImpl extends HibernateDaoSupport implements P
 		return new ArrayList<DBMembershipItem>();
 	}
 
-	public List<DBMembershipItem> getAllMembershipItemsForTopics(final List<Long> topicIds) {
+	private List<DBMembershipItem> getAllMembershipItemsForTopics(final List<Long> topicIds) {
 		HibernateCallback<List> hcb1 = session -> {
             Query q = session.getNamedQuery(QUERY_BY_TOPIC_IDS_ALL_TOPIC_MEMBERSHIP);
             return queryWithParameterList(q, "topicIdList", topicIds);
