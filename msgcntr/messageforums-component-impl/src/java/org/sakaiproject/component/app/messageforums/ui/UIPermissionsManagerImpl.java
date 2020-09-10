@@ -1025,8 +1025,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
 		Set thisForumItemSet = forum.getMembershipItemSet();
 
 		if(getAnonRole() == true && ".anon".equals(forum.getCreatedBy()) && forum.getTopicsSet() == null && thisForumItemSet.isEmpty()) {
-			Set newForumMembershipset=forum.getMembershipItemSet();
-	        Iterator iterNewForum = newForumMembershipset.iterator();
+	        Iterator iterNewForum = thisForumItemSet.iterator();
 	        while (iterNewForum.hasNext())
 	        {
 	          DBMembershipItem item = (DBMembershipItem)iterNewForum.next();
@@ -1050,6 +1049,7 @@ public class UIPermissionsManagerImpl implements UIPermissionsManager {
     	Set<String> groups = getGroupsWithMember(currentSite, getCurrentUserId());
 
     	if(groups != null) {
+    		// TODO make this more efficient
             groups.stream().map(currentSite::getGroup)
                     .map(g -> forumManager.getDBMember(thisForumItemSet, g.getTitle(), DBMembershipItem.TYPE_GROUP))
                     .filter(Objects::nonNull)
