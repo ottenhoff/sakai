@@ -24,8 +24,11 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.component.cover.ComponentManager;
+import org.sakaiproject.exception.IdUnusedException;
 import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.MemoryService;
+import org.sakaiproject.site.api.Site;
+import org.sakaiproject.site.api.SiteService;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
@@ -52,6 +55,9 @@ import lombok.extern.slf4j.Slf4j;
 public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	final private static String ENCODING = java.nio.charset.StandardCharsets.US_ASCII.toString();
+	final private static String SITE_PROPERTY = "proctorio";
+	final private static String DEFAULT_OPTIONS = "recordvideo,linksonly";
+
 	private static String proctorioKey;
 	private static String proctorioSecret;
 	private static String proctorioUrl;
@@ -62,6 +68,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	private UserDirectoryService userDirectoryService = ComponentManager.get(UserDirectoryService.class);
 	private ServerConfigurationService serverConfigurationService = ComponentManager.get(ServerConfigurationService.class);
 	private MemoryService memoryService = ComponentManager.get(MemoryService.class);
+	private SiteService siteService = ComponentManager.get(SiteService.class);
 
 	@Override
 	public boolean initialize() {
@@ -192,12 +199,27 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 			log.warn("ProctorIO secure delivery could not find user ({})", userId);
 			return null;
 		}
-		
+
+		// Lookup the site properties to see what settings are allowed
+		final String siteId = assessment.getOwnerSiteId();
+		String proctorioOptions = null;
+		try {
+			Site site = siteService.getSite(siteId);
+			proctorioOptions = site.getProperties().getProperty(SITE_PROPERTY);
+		} catch (IdUnusedException e1) {
+			// Ignoring
+		}
+
+		// No site override so we will use system-wide defaults
+		if (StringUtils.isBlank(proctorioOptions)) {
+			proctorioOptions = serverConfigurationService.getString("proctorio.options", DEFAULT_OPTIONS);
+		}
+
 		final String assessmentPath = serverConfigurationService.getServerUrl() + 
 				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
 		
 		try {
-			return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath);
+			return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath, proctorioOptions);
 		} catch (IOException e) {
 			log.warn("ProctorIO could not build the URL", e);
 			return null;
@@ -249,7 +271,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		return normalizedString.substring(1); // remove the leading ampersand
 	}
 
-	private String[] buildURL(String eid, String fullname, Long assessmentId, String launchUrl) throws ClientProtocolException, IOException {
+	private String[] buildURL(String eid, String fullname, Long assessmentId, String launchUrl, String options) throws ClientProtocolException, IOException {
         Map<String, String> parameters = new LinkedHashMap<>();
         parameters.put("launch_url", launchUrl);
         parameters.put("user_id", eid);
@@ -257,7 +279,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         parameters.put("exam_start", "(.)*\\/samigo-app\\/servlet\\/Login.*");
         parameters.put("exam_take", "(.*)\\/samigo-app\\/jsf\\/delivery.*");
         parameters.put("exam_end", "(.*)confirmSubmit.*");
-        parameters.put("exam_settings", "recordvideo");
+        parameters.put("exam_settings", options);
         parameters.put("fullname", fullname);
         parameters.put("exam_tag", assessmentId + "");
         parameters.put("oauth_signature_method", "HMAC-SHA1");
