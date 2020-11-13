@@ -382,42 +382,52 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 	 * @param secureDeliveryPlugin the path to the plugin JAR file
 	 */
 	private void handlePlugin( String secureDeliveryPlugin ) {
-		ApplicationContext ctx = new AnnotationConfigApplicationContext(SecureDeliveryProctorio.class);
-		SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc) ctx.getBean("secureDeliveryProctorio");
-		System.out.println("handlePlugin Proctorio: " + secureDeliveryModuleBean.toString());
-		if ( secureDeliveryModuleBean.initialize() ) {
-			secureDeliveryModules.put( "Proctorio", secureDeliveryModuleBean );
+		try
+		{
+			// This is a built-in integration with no additional JAR file
+			if (secureDeliveryPlugin.equalsIgnoreCase("proctorio")) {
+				ApplicationContext appCtx = new AnnotationConfigApplicationContext(SecureDeliveryProctorio.class);
+				SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc) appCtx.getBean("secureDeliveryProctorio");
+				log.info("handlePlugin Proctorio: {}", secureDeliveryModuleBean.toString());
+				if ( secureDeliveryModuleBean.initialize() ) {
+					secureDeliveryModules.put( "Proctorio", secureDeliveryModuleBean );
+				}
+				return;
+			}
+
+			// This is the JAR method where the vendor sends a custom file
+			File file = new File( secureDeliveryPlugin );
+			if ( !file.exists() ) {
+				log.warn( "Secure delivery plugin " + secureDeliveryPlugin + " not found" );
+				return;
+			}
+
+			URL pluginUrl = new URL( "file:" + secureDeliveryPlugin );
+			URLClassLoader classLoader = new URLClassLoader( new URL[] { pluginUrl },  this.getClass().getClassLoader() );
+			GenericApplicationContext ctx = new GenericApplicationContext();
+			ctx.setClassLoader( classLoader );
+			Resource resource = ctx.getResource( "jar:file:" + secureDeliveryPlugin + "!/spring-context.xml" );
+
+			XmlBeanDefinitionReader xmlReader = new XmlBeanDefinitionReader(ctx);
+			xmlReader.loadBeanDefinitions( resource );
+			ctx.refresh();
+			
+			String[] secureDeliveryModuleBeanNames = ctx.getBeanNamesForType( SecureDeliveryModuleIfc.class );
+			if ( secureDeliveryModuleBeanNames.length == 0 )
+				log.warn( "Secure delivery plugin doesn't define any beans of type SecureDeliveryModuleIfc" );
+			for ( String name : secureDeliveryModuleBeanNames ) {
+				
+				SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc) ctx.getBean( name );				
+				log.info( "Loaded secure delivery module: " + secureDeliveryModuleBean + " (" + secureDeliveryModuleBean.getModuleName( Locale.getDefault() ) + ")"  );				
+				if ( secureDeliveryModuleBean.initialize() ) {
+				
+					secureDeliveryModules.put( secureDeliveryModuleBean.getClass().getName(), secureDeliveryModuleBean );
+				}
+			}				
 		}
-		/*
-		 * try { File file = new File( secureDeliveryPlugin ); if ( !file.exists() ) {
-		 * log.warn( "Secure delivery plugin " + secureDeliveryPlugin + " not found" );
-		 * return; }
-		 * 
-		 * URL pluginUrl = new URL( "file:" + secureDeliveryPlugin ); URLClassLoader
-		 * classLoader = new URLClassLoader( new URL[] { pluginUrl },
-		 * this.getClass().getClassLoader() );
-		 * 
-		 * ctx.setClassLoader( classLoader ); Resource resource = ctx.getResource(
-		 * "jar:file:" + secureDeliveryPlugin + "!/spring-context.xml" );
-		 * 
-		 * XmlBeanDefinitionReader xmlReader = new XmlBeanDefinitionReader(ctx);
-		 * xmlReader.loadBeanDefinitions( resource ); ctx.refresh();
-		 * 
-		 * String[] secureDeliveryModuleBeanNames = ctx.getBeanNamesForType(
-		 * SecureDeliveryModuleIfc.class ); if ( secureDeliveryModuleBeanNames.length ==
-		 * 0 ) log.warn(
-		 * "Secure delivery plugin doesn't define any beans of type SecureDeliveryModuleIfc"
-		 * ); for ( String name : secureDeliveryModuleBeanNames ) {
-		 * 
-		 * SecureDeliveryModuleIfc secureDeliveryModuleBean = (SecureDeliveryModuleIfc)
-		 * ctx.getBean( name ); log.info( "Loaded secure delivery module: " +
-		 * secureDeliveryModuleBean + " (" + secureDeliveryModuleBean.getModuleName(
-		 * Locale.getDefault() ) + ")" ); if ( secureDeliveryModuleBean.initialize() ) {
-		 * 
-		 * secureDeliveryModules.put( secureDeliveryModuleBean.getClass().getName(),
-		 * secureDeliveryModuleBean ); } } } catch ( Exception e ) { log.error(
-		 * "Unable to load secure delivery plugin " + secureDeliveryPlugin, e ); }
-		 */
+		catch ( Exception e ) {
+			log.error( "Unable to load secure delivery plugin " + secureDeliveryPlugin, e );
+		}
 	}
 
 }

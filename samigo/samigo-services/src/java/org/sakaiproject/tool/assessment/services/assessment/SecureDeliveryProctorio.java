@@ -11,7 +11,6 @@ import java.util.Map;
 import javax.crypto.Mac;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.commons.codec.digest.HmacAlgorithms;
 import org.apache.commons.codec.digest.HmacUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -34,6 +33,7 @@ import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.PublishedAssessmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.SecureDeliveryModuleIfc;
+import org.sakaiproject.tool.assessment.facade.AgentFacade;
 import org.sakaiproject.tool.assessment.facade.PublishedAssessmentFacade;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI.Phase;
@@ -46,8 +46,6 @@ import org.springframework.web.util.UriUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Configuration
@@ -61,6 +59,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	private static String proctorioKey;
 	private static String proctorioSecret;
 	private static String proctorioUrl;
+	private static String proctorioEnabled;
 	private Cache<String, String> urlCache;
 	private Cache<String, String> instructorUrlCache;
 
@@ -75,6 +74,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		proctorioKey = serverConfigurationService.getString("proctorio.key", null);
 		proctorioSecret = serverConfigurationService.getString("proctorio.secret", null);
 		proctorioUrl = serverConfigurationService.getString("proctorio.url", null);
+		proctorioEnabled = serverConfigurationService.getString("proctorio.enabled", "always");
 		
 		// Init the caches to hold the URLs
 		urlCache = memoryService.getCache("proctorio.urlCache");
@@ -86,6 +86,21 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public boolean isEnabled() {
+		if (!StringUtils.equals(proctorioEnabled, "always")) {
+			String siteId = AgentFacade.getCurrentSiteId();
+			Site site;
+			try {
+				site = siteService.getSite(siteId);
+				String proctorioOptions = site.getProperties().getProperty(SITE_PROPERTY);
+				return StringUtils.isNotBlank(proctorioOptions);
+			} catch (IdUnusedException e) {
+				// Ignore missing site
+			}
+
+			// Not site property, so don't enable it
+			return false;
+		}
+
 		return true;
 	}
 
