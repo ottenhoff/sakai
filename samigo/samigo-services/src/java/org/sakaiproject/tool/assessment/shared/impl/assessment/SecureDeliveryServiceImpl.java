@@ -109,8 +109,13 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 	 * @returns true if at least one secure delivery module implementation is available.
 	 */
 	public boolean isSecureDeliveryAvaliable() {
-		
-		return secureDeliveryModules.size() > 0;
+		for ( Map.Entry<String, SecureDeliveryModuleIfc> entry : secureDeliveryModules.entrySet() ) {
+			if (entry.getValue().isEnabled()) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 	
 	/**
