@@ -2,6 +2,7 @@ package org.sakaiproject.tool.assessment.services.assessment;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,16 +53,26 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
+	// Encode as ASCII when communicating with Proctorio API
 	final private static String ENCODING = java.nio.charset.StandardCharsets.US_ASCII.toString();
+	// The property added to a site to enable and override options
 	final private static String SITE_PROPERTY = "proctorio";
+	// Default options if institution does not set
 	final private static String DEFAULT_OPTIONS = "recordvideo,linksonly";
+	// These are the options pulled from Proctorio API documentation. May need to be updated as their API changes over time.
+	final private static String[] VALID_OPTIONS = {
+			"recordvideo", "recordaudio", "recordscreen", "recordwebtraffic", "recordroomstart", 
+			"verifyvideo", "verifyaudio", "verifydesktop", "verifyidauto", "verifyidlive", "verifysignature",
+			"fullscreenlenient", "fullscreenmoderate", "fullscreensevere", "clipboard", "notabs", "linksonly",
+			"closetabs", "onescreen", "print", "downloads", "cache", "rightclick", "noreentry", "agentreentry", 
+			"calculatorbasic", "calculatorsci", "whiteboard"
+	};
 
 	private static String proctorioKey;
 	private static String proctorioSecret;
 	private static String proctorioUrl;
 	private static String proctorioEnabled;
 	private Cache<String, String> urlCache;
-	private Cache<String, String> instructorUrlCache;
 
 	private SessionManager sessionManager = ComponentManager.get(SessionManager.class);
 	private UserDirectoryService userDirectoryService = ComponentManager.get(UserDirectoryService.class);
@@ -222,7 +233,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 			Site site = siteService.getSite(siteId);
 			proctorioOptions = site.getProperties().getProperty(SITE_PROPERTY);
 		} catch (IdUnusedException e1) {
-			// Ignoring
+			// Ignoring to use defaults instead
 		}
 
 		// No site override so we will use system-wide defaults
@@ -294,7 +305,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         parameters.put("exam_start", "(.)*\\/samigo-app\\/servlet\\/Login.*");
         parameters.put("exam_take", "(.*)\\/samigo-app\\/jsf\\/delivery.*");
         parameters.put("exam_end", "(.*)confirmSubmit.*");
-        parameters.put("exam_settings", options);
+        parameters.put("exam_settings", validateOptions(options));
         parameters.put("fullname", fullname);
         parameters.put("exam_tag", assessmentId + "");
         parameters.put("oauth_signature_method", "HMAC-SHA1");
@@ -373,6 +384,31 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         }
 
         return null;
+	}
+
+	// Proctorio has a set of valid API options
+	private String validateOptions(String options) {
+		StringBuilder sb = new StringBuilder();
+
+		String[] splitOptions = StringUtils.split(options, ",");
+		for (String splitOption : splitOptions) {
+			if (StringUtils.isBlank(splitOption)) continue;
+
+			final String o = splitOption.trim().toLowerCase();
+			if (Arrays.stream(VALID_OPTIONS).anyMatch(o::equals)) {
+				if (sb.length() > 1) {
+					sb.append(",");
+				}
+				sb.append(o);
+			}
+		}
+
+		final String validatedOptions = sb.toString();
+		if (!validatedOptions.equals(options)) {
+			log.warn("Proctorio validated options from={} to={}", options, validatedOptions);
+		}
+
+		return validatedOptions;
 	}
 
 }
