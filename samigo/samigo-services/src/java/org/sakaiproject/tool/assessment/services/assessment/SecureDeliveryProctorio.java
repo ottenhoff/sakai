@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.annotation.Resource;
 import javax.crypto.Mac;
 import javax.servlet.http.HttpServletRequest;
 
@@ -22,6 +24,9 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.hibernate.Query;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.exception.IdUnusedException;
@@ -29,13 +34,13 @@ import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SiteService;
-import org.sakaiproject.tool.api.Session;
-import org.sakaiproject.tool.api.SessionManager;
+import org.sakaiproject.tool.assessment.data.dao.grading.SecureDeliveryData;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.PublishedAssessmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.SecureDeliveryModuleIfc;
 import org.sakaiproject.tool.assessment.facade.AgentFacade;
 import org.sakaiproject.tool.assessment.facade.PublishedAssessmentFacade;
+import org.sakaiproject.tool.assessment.services.PersistenceService;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI.Phase;
 import org.sakaiproject.tool.assessment.shared.api.assessment.SecureDeliveryServiceAPI.PhaseStatus;
@@ -43,6 +48,9 @@ import org.sakaiproject.user.api.User;
 import org.sakaiproject.user.api.UserDirectoryService;
 import org.sakaiproject.user.api.UserNotDefinedException;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.dao.DataAccessException;
+import org.springframework.orm.hibernate4.HibernateCallback;
+import org.springframework.orm.hibernate4.support.HibernateDaoSupport;
 import org.springframework.web.util.UriUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -74,11 +82,11 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	private static String proctorioEnabled;
 	private Cache<String, String> urlCache;
 
-	private SessionManager sessionManager = ComponentManager.get(SessionManager.class);
 	private UserDirectoryService userDirectoryService = ComponentManager.get(UserDirectoryService.class);
 	private ServerConfigurationService serverConfigurationService = ComponentManager.get(ServerConfigurationService.class);
 	private MemoryService memoryService = ComponentManager.get(MemoryService.class);
 	private SiteService siteService = ComponentManager.get(SiteService.class);
+
 
 	@Override
 	public boolean initialize() {
@@ -197,7 +205,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		
 	@Override
 	public String getInstructorReviewUrl (Long assessmentId, String studentId) {
-		// Check cache first
+		// Check cache first to avoid DB and API
 		final String cacheKey = "instructor-" + assessmentId + "-" + studentId;
 		final String cacheRet = urlCache.get(cacheKey);
 		
@@ -210,19 +218,26 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		return urls[1];
 	}
 
-	private String[] getProctorioUrls(Long assessmentId, String uid) {
+	private String[] getProctorioUrls(final Long assessmentId, final String studentUid) {
 		
+		// First check database
+		List<SecureDeliveryData> sds = PersistenceService.getInstance().getSecureDeliveryFacadeQueries().getUrlsForAssessmentAndUser(assessmentId, studentUid);
+		if (!sds.isEmpty()) {
+			for (SecureDeliveryData sd : sds) {
+				return new String[] {sd.getStudentUrl(), sd.getInstructorUrl()};
+			}
+		}
+
+		// Not in database, so build an API call up
 		PublishedAssessmentService pubService = new PublishedAssessmentService();
 		PublishedAssessmentFacade assessment = pubService.getPublishedAssessment(assessmentId.toString());
-
-		final Session sakaiSession = sessionManager.getCurrentSession();
-		final String userId = sakaiSession.getUserId();
+		
+		// We need the user's full name to send over to Proctorio
 		User user = null;
-
 		try {
-			user = userDirectoryService.getUser(userId);
+			user = userDirectoryService.getUser(studentUid);
 		} catch (UserNotDefinedException e) {
-			log.warn("ProctorIO secure delivery could not find user ({})", userId);
+			log.warn("ProctorIO secure delivery could not find user ({})", studentUid);
 			return null;
 		}
 
@@ -245,12 +260,17 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
 		
 		try {
-			return buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath, proctorioOptions);
+			String[] urls = buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath, proctorioOptions);
+
+			// Persist to database via Hibernate
+			PersistenceService.getInstance().getSecureDeliveryFacadeQueries().saveUrlsForAssessmentAndUser(assessment.getAssessmentId(), user.getId(), urls[1], urls[0]);
+
+			return urls;
 		} catch (IOException e) {
 			log.warn("ProctorIO could not build the URL", e);
-			return null;
 		}
 
+		return null;
 	}
 
 	/*
