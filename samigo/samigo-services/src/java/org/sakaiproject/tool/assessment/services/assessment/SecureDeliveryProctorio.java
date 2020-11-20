@@ -4,13 +4,11 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.annotation.Resource;
 import javax.crypto.Mac;
 import javax.servlet.http.HttpServletRequest;
 
@@ -24,9 +22,6 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.hibernate.Query;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.exception.IdUnusedException;
@@ -48,9 +43,6 @@ import org.sakaiproject.user.api.User;
 import org.sakaiproject.user.api.UserDirectoryService;
 import org.sakaiproject.user.api.UserNotDefinedException;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.DataAccessException;
-import org.springframework.orm.hibernate4.HibernateCallback;
-import org.springframework.orm.hibernate4.support.HibernateDaoSupport;
 import org.springframework.web.util.UriUtils;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -222,7 +214,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		
 		// First check database
 		List<SecureDeliveryData> sds = PersistenceService.getInstance().getSecureDeliveryFacadeQueries().getUrlsForAssessmentAndUser(assessmentId, studentUid);
-		if (!sds.isEmpty()) {
+		if (sds != null) {
 			for (SecureDeliveryData sd : sds) {
 				return new String[] {sd.getStudentUrl(), sd.getInstructorUrl()};
 			}
