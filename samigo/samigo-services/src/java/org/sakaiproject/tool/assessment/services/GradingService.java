@@ -1223,7 +1223,8 @@ public class GradingService
     		  iter = itemGradingSet.iterator();
     		  while(iter.hasNext()){
     			  ItemGradingData itemGrading = (ItemGradingData) iter.next();
-    			  if(itemGrading.getPublishedItemId().equals(entry.getKey())){
+    			  AnswerIfc answer = (AnswerIfc) publishedAnswerHash.get(itemGrading.getPublishedAnswerId());
+    			  if (answer != null && itemGrading.getPublishedItemId().equals(entry.getKey())) {
     				  itemGrading.setAutoScore(entry.getValue()[1]/entry.getValue()[2]);
     			  }
     		  }
@@ -1566,11 +1567,13 @@ public class GradingService
     {
     	// return (double) 0;
     	// Para que descuente (For discount)
+    	double score = (double) 0;
     	if ((TypeIfc.EXTENDED_MATCHING_ITEMS).equals(itemType)||(TypeIfc.MULTIPLE_CHOICE).equals(itemType)||(TypeIfc.TRUE_FALSE).equals(itemType)||(TypeIfc.MULTIPLE_CORRECT_SINGLE_SELECTION).equals(itemType)){
-    		return (Math.abs(answer.getDiscount()) * ((double) -1));
-    	}else{
-    		return (double) 0;
+    		score = Math.abs(answer.getDiscount()) * ((double) -1);
     	}
+
+    	answer.setPartialCredit(score);
+    	return score;
     }
     return answer.getScore();
   }
