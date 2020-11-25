@@ -384,7 +384,7 @@ $(document).ready(function(){
          <h:outputText value="<span class=\"fa fa-envelope\" aria-hidden=\"true\"></span><span class=\"sr-only\">#{evaluationMessages.email}</span></a> " escape="false" />
        </h:panelGroup>
        <h:panelGroup rendered="#{not empty description.alternativeInstructorReviewUrl}">
-         <h:outputText value="<a href=\"#{description.alternativeInstructorReviewUrl}\"><span class=\"fa fa-video-camera\" aria-hidden=\"true\"></span><span class=\"sr-only\">#{evaluationMessages.email}</span></a>" escape="false" />
+         <h:outputText value="<a taget=\"blank\" href=\"#{description.alternativeInstructorReviewUrl}\"><span class=\"fa fa-video-camera\" aria-hidden=\"true\"></span><span class=\"sr-only\">#{evaluationMessages.email}</span></a>" escape="false" />
        </h:panelGroup>
      </span>
     </span>
