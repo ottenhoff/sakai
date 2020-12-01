@@ -252,12 +252,15 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
 		
 		try {
-			String[] urls = buildURL(user.getEid(), user.getDisplayName(), assessment.getAssessmentId(), assessmentPath, proctorioOptions);
+			String[] urls = buildURL(user.getEid(), user.getDisplayName(), assessmentId, assessmentPath, proctorioOptions);
 
-			// Persist to database via Hibernate
-			PersistenceService.getInstance().getSecureDeliveryFacadeQueries().saveUrlsForAssessmentAndUser(assessment.getAssessmentId(), user.getId(), urls[1], urls[0]);
-
-			return urls;
+			// We expect two URLs: one for student and one for instructor
+			if (urls != null && urls.length == 2) {
+				// Persist to database via Hibernate
+				PersistenceService.getInstance().getSecureDeliveryFacadeQueries().saveUrlsForAssessmentAndUser(assessmentId, user.getId(), urls[1], urls[0]);
+	
+				return urls;
+			}
 		} catch (IOException e) {
 			log.warn("ProctorIO could not build the URL", e);
 		}
@@ -367,7 +370,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
         log.debug("Proctorio return status={}, text={}", statusCode, r);
         
         // Good return now take the JSON and unsplit it
-        if (statusCode == 200) {
+        if (statusCode == 200 && r.length() > 100) {
           try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(r);
