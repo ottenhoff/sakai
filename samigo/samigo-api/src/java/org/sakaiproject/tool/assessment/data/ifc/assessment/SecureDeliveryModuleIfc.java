@@ -134,4 +134,14 @@ public interface SecureDeliveryModuleIfc {
 		return "";
 	}
 
+	/**
+	 * Returns whether the SecureDelivery service is implemented for this one assessment
+	 * Some institutions may want to limit what assessments or sites are allowed to use the service.
+	 * @param assessment
+	 * @return
+	 */
+	default boolean isEnabled(Long assessmentId) {
+		return isEnabled();
+	}
+
 }

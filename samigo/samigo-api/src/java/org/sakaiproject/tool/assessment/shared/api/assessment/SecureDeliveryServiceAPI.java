@@ -154,4 +154,6 @@ public interface SecureDeliveryServiceAPI {
 
 	public String getInstructorReviewUrl( String moduleId, Long assessmentId, String studentId );
 
+	public boolean isSecureDeliveryAvaliable(Long publishedAssessmentId);
+
 }

@@ -98,21 +98,37 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	@Override
 	public boolean isEnabled() {
 		if (!StringUtils.equals(proctorioEnabled, "always")) {
+			// This will come back null if from an assessment URL
 			String siteId = AgentFacade.getCurrentSiteId();
-			Site site;
-			try {
-				site = siteService.getSite(siteId);
-				String proctorioOptions = site.getProperties().getProperty(SITE_PROPERTY);
-				return StringUtils.isNotBlank(proctorioOptions);
-			} catch (IdUnusedException e) {
-				// Ignore missing site
-			}
-
-			// Not site property, so don't enable it
-			return false;
+			return isSiteProctorioEnabled(siteId);
 		}
 
 		return true;
+	}
+	
+	@Override
+	public boolean isEnabled(Long assessmentId) {
+		if (!StringUtils.equals(proctorioEnabled, "always")) {
+			PublishedAssessmentService pubService = new PublishedAssessmentService();
+			PublishedAssessmentFacade pub = pubService.getPublishedAssessment(assessmentId.toString());
+			String siteId = pub.getOwnerSiteId();
+			return isSiteProctorioEnabled(siteId);
+		}
+
+		return true;
+	}
+
+	private boolean isSiteProctorioEnabled(final String siteId) {
+		try {
+			Site site = siteService.getSite(siteId);
+			String proctorioOptions = site.getProperties().getProperty(SITE_PROPERTY);
+			return StringUtils.isNotBlank(proctorioOptions);
+		} catch (IdUnusedException e) {
+			// Ignore missing site
+			log.warn("Proctorio could not find siteId={}", siteId);
+		}
+
+		return false;
 	}
 
 	@Override

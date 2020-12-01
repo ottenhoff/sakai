@@ -117,7 +117,21 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 
 		return false;
 	}
-	
+
+	/**
+	 * @param publishedAssessmentId
+	 * @return true if the module with publishedAssessmentId is using SecureDelivery.
+	 */
+	public boolean isSecureDeliveryAvaliable(Long publishedAssessmentId) {
+		for ( Map.Entry<String, SecureDeliveryModuleIfc> entry : secureDeliveryModules.entrySet() ) {
+			if (entry.getValue().isEnabled(publishedAssessmentId)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	/**
 	 * @param moduleId
 	 * @return true if the module with moduleId is availabe.
@@ -128,6 +142,7 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 			return true;
 		return secureDeliveryModules.get( moduleId ) != null;
 	}
+
 
 	/**
 	 * @return A set of RegisteredSecureDeliveryModuleIfc entries with the module name internationalized 
@@ -250,7 +265,7 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 		
 		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
 		
-		if ( moduleId == null || NONE_ID.equals( moduleId ) || module == null  || !module.isEnabled() )
+		if ( moduleId == null || NONE_ID.equals( moduleId ) || module == null  || !module.isEnabled(assessment.getPublishedAssessmentId()) )
 			return "";
 		
 		try {
