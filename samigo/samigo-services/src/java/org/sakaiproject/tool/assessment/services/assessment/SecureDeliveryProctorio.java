@@ -268,7 +268,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 				"/samigo-app/servlet/Login?id=" + assessment.getAssessmentMetaDataByLabel(AssessmentMetaDataIfc.ALIAS);
 		
 		try {
-			String[] urls = buildURL(user.getEid(), user.getDisplayName(), assessmentId, assessmentPath, proctorioOptions);
+			String[] urls = buildURL(user.getId(), user.getDisplayName(), assessmentId, assessmentPath, proctorioOptions);
 
 			// We expect two URLs: one for student and one for instructor
 			if (urls != null && urls.length == 2) {
@@ -328,10 +328,10 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		return normalizedString.substring(1); // remove the leading ampersand
 	}
 
-	private String[] buildURL(String eid, String fullname, Long assessmentId, String launchUrl, String options) throws ClientProtocolException, IOException {
+	private String[] buildURL(String uid, String fullname, Long assessmentId, String launchUrl, String options) throws ClientProtocolException, IOException {
         Map<String, String> parameters = new LinkedHashMap<>();
         parameters.put("launch_url", launchUrl);
-        parameters.put("user_id", eid);
+        parameters.put("user_id", uid);
         parameters.put("oauth_consumer_key", proctorioKey);
         parameters.put("exam_start", "(.)*\\/samigo-app\\/servlet\\/Login.*");
         parameters.put("exam_take", "(.*)\\/samigo-app\\/jsf\\/delivery.*");
