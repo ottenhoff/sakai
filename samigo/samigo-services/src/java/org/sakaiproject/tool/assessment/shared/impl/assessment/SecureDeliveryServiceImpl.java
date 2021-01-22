@@ -210,7 +210,7 @@ public class SecureDeliveryServiceImpl implements SecureDeliveryServiceAPI {
 		
 		SecureDeliveryModuleIfc module = secureDeliveryModules.get( moduleId );
 		
-		if ( moduleId == null || NONE_ID.equals( moduleId ) || module == null || !module.isEnabled() )
+		if ( moduleId == null || NONE_ID.equals( moduleId ) || module == null || !module.isEnabled(assessment.getPublishedAssessmentId()) )
 			return PhaseStatus.SUCCESS;
 		
 		try {

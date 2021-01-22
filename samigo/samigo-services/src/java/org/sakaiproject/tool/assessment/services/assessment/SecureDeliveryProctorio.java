@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -143,7 +144,20 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 
 	@Override
 	public PhaseStatus validatePhase(Phase phase, PublishedAssessmentIfc assessment, HttpServletRequest request) {
-		return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
+		log.debug("validatePhase: {}", phase);
+		switch (phase) {
+			case ASSESSMENT_START:
+				List<String> headerNames = Collections.list(request.getHeaderNames());
+				log.debug("validatePhase: {}, headers={}", phase, java.util.Arrays.toString(headerNames.toArray()));
+				for (String headerName : headerNames) {
+					if (StringUtils.containsIgnoreCase(headerName, "proctor")) {
+						return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
+					}
+				}
+				return SecureDeliveryServiceAPI.PhaseStatus.FAILURE;
+			default:
+				return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
+		}
 	}
 
 	@Override
