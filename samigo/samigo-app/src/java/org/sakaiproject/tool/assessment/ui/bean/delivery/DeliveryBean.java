@@ -3412,7 +3412,26 @@ public class DeliveryBean
     if (isTimeRunning() && getTimeExpired() && !turnIntoTimedAssessment){ 
       return "timeExpired";
     }
-    
+
+    // TODO: special case for Proctorio
+    if (isViaUrlLogin) {
+        SecureDeliveryServiceAPI secureDelivery = SamigoApiFactory.getInstance().getSecureDeliveryServiceAPI();
+        if ( secureDelivery.isSecureDeliveryAvaliable(publishedAssessment.getPublishedAssessmentId()) ) {
+     
+      	  String moduleId = publishedAssessment.getAssessmentMetaDataByLabel( SecureDeliveryServiceAPI.MODULE_KEY );
+      	  if ( moduleId != null && ! SecureDeliveryServiceAPI.NONE_ID.equals( moduleId ) ) {
+      		  HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
+      		  PhaseStatus status = secureDelivery.validatePhase(moduleId, Phase.ASSESSMENT_START, publishedAssessment, request );
+      		  setBlockDelivery( PhaseStatus.FAILURE == status );
+      		  if ( PhaseStatus.FAILURE == status ) {
+      			  setSecureDeliveryHTMLFragment(secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale()));
+      			  return "secureDeliveryError";
+                }
+      	  }    	  
+        }
+    	
+    }
+
     return "safeToProceed";
   }
   

@@ -30,6 +30,8 @@ import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SiteService;
+import org.sakaiproject.tool.api.Session;
+import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.assessment.data.dao.grading.SecureDeliveryData;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.PublishedAssessmentIfc;
@@ -58,6 +60,8 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	final private static String ENCODING = java.nio.charset.StandardCharsets.US_ASCII.toString();
 	// The property added to a site to enable and override options
 	final private static String SITE_PROPERTY = "proctorio";
+	// The header set by Proctorio
+	final private static String SESSION_PROPERTY = "x-proctorio";
 	// Default options if institution does not set
 	final private static String DEFAULT_OPTIONS = "recordvideo,linksonly";
 	// These are the options pulled from Proctorio API documentation. May need to be updated as their API changes over time.
@@ -79,6 +83,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 	private ServerConfigurationService serverConfigurationService = ComponentManager.get(ServerConfigurationService.class);
 	private MemoryService memoryService = ComponentManager.get(MemoryService.class);
 	private SiteService siteService = ComponentManager.get(SiteService.class);
+	private SessionManager sessionManager = ComponentManager.get(SessionManager.class);
 
 
 	@Override
@@ -147,13 +152,31 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		log.debug("validatePhase: {}", phase);
 		switch (phase) {
 			case ASSESSMENT_START:
+				Session session = sessionManager.getCurrentSession();
+
+				// Check the headers from Proctorio
 				List<String> headerNames = Collections.list(request.getHeaderNames());
-				log.debug("validatePhase: {}, headers={}", phase, java.util.Arrays.toString(headerNames.toArray()));
+				log.debug("validatePhase: {}, headers={}, reqest={}", phase, java.util.Arrays.toString(headerNames.toArray()), request.getRequestURI());
 				for (String headerName : headerNames) {
-					if (StringUtils.containsIgnoreCase(headerName, "proctor")) {
+					if (StringUtils.containsIgnoreCase(headerName, SESSION_PROPERTY)) {
+						log.debug("validatePhase SUCCESS");
+						// The next redirect will not contain the header so place it in session						
+						session.setAttribute(SESSION_PROPERTY, System.currentTimeMillis());
 						return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
 					}
 				}
+
+				// see if we've been pre-cleared
+				Object sessionAttribute = session.getAttribute(SESSION_PROPERTY);
+				if (sessionAttribute != null) {
+					long timeDiff = System.currentTimeMillis() - (long) sessionAttribute;
+					log.debug("validatePhase: {}", timeDiff);
+					if (timeDiff < 15 * 1000) {
+						return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
+					}
+				}
+
+				log.debug("validatePhase FAILURE");
 				return SecureDeliveryServiceAPI.PhaseStatus.FAILURE;
 			default:
 				return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
