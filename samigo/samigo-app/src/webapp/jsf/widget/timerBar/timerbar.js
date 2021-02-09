@@ -308,9 +308,10 @@
               $.getJSON(routePrefix + "getTimerProgress" + routeSuffix, ajaxQuery, function(data) {
                   elapsedTime = data[1];
                   if (totalTime === elapsedTime) {
-                      $("[id$=\\:save]")[0].click();
                       clearInterval(localCount);
                       clearInterval(ajaxCount);
+                      $("#timeoutWarning").hide();
+                      $("[id$=\\:submitNoCheck]")[0].click();
                       return;
                   }
                   remain = data[0] - data[1];
