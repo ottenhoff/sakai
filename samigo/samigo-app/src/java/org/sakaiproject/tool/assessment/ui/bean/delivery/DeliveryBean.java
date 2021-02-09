@@ -3071,20 +3071,12 @@ public class DeliveryBean
 	         }
 	         return;
 	      }
-	      TimedAssessmentQueue queue = TimedAssessmentQueue.getInstance();
-	      TimedAssessmentGradingModel timedAG = queue.get(adata.getAssessmentGradingId());
-	      if (timedAG != null){
 	        int timeElapsed  = Math.round((new Date().getTime() - adata.getAttemptDate().getTime())/1000.0f);
 	        log.debug("***setTimeElapsed={}", timeElapsed);
-		adata.setTimeElapsed(timeElapsed);
+	        adata.setTimeElapsed(timeElapsed);
 	        setTimeElapse(adata.getTimeElapsed().toString());
-	      }
 	    }
-	    else{ 
-	      // if we are in other mode, timer need not be accurate
-	      // Anyway, we don't have adata, so we haven't been using the TimerTask to keep track of it.
-	    }
-	  } 
+	  }
 	  
 	  public void syncTimeElapsedWithServerLinear(){
 		    if (("takeAssessment").equals(actionString) || ("takeAssessmentViaUrl").equals(actionString)){
@@ -3094,19 +3086,11 @@ public class DeliveryBean
 		          }
 		          return;
 		      }
-		      TimedAssessmentQueue queue = TimedAssessmentQueue.getInstance();
-		      TimedAssessmentGradingModel timedAG = queue.get(adata.getAssessmentGradingId());
-		      if (timedAG != null){
 		    	int timeElapsed  = Math.round((new Date().getTime() - adata.getAttemptDate().getTime())/1000.0f);
 		        adata.setTimeElapsed(timeElapsed);
 		        GradingService gradingService = new GradingService();
 		        gradingService.saveOrUpdateAssessmentGradingOnly(adata);
 		        setTimeElapse(adata.getTimeElapsed().toString());
-		      }
-		    }
-		    else{ 
-		      // if we are in other mode, timer need not be accurate
-		      // Anyway, we don't have adata, so we haven't been using the TimerTask to keep track of it.
 		    }
 	  }
 
