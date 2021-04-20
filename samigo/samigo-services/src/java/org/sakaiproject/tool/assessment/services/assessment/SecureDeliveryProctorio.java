@@ -171,7 +171,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 				if (sessionAttribute != null) {
 					long timeDiff = System.currentTimeMillis() - (long) sessionAttribute;
 					log.debug("validatePhase: {}", timeDiff);
-					if (timeDiff < 15 * 1000) {
+					if (timeDiff < 86400 * 1000) {
 						return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
 					}
 				}
@@ -203,12 +203,12 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 						"        // event.data.active should be true if Proctorio is running\n" + 
 						"        console.log(\"Proctorio is running: \" + event.data.active)\n" + 
 						"    } else {\n" +
-						"        window.location.href='" + url + "'; \n" +
+						"        fetch('/samigo-app/jsf/delivery/stopTimerProgress.jsp').then(data => { window.location.href='" + url + "' }); \n" +
 						"    }\n" +
 						"});" +
-						" if (window.top.location.origin != 'https://getproctorio.com') window.top.location.replace('" + url + "'); \n" +
+						" if (window.top.location.origin != 'https://getproctorio.com') fetch('/samigo-app/jsf/delivery/stopTimerProgress.jsp').then(data => {window.top.location.replace('" + url + "')}); \n" +
 						"try { window.top.postMessage([10, \"proctorio_status\"], \"https://getproctorio.com\"); } " +
-						" catch(e) { jQuery('#takeAssessmentForm input.active').prop('disabled', true); window.location.href='" + url + "'; }" +
+						" catch(e) { jQuery('#takeAssessmentForm input.active').prop('disabled', true); fetch('/samigo-app/jsf/delivery/stopTimerProgress.jsp').then(data => { window.location.href='" + url + "'; }); }" +
 						" </script>";
 			case ASSESSMENT_FINISH:
 			case ASSESSMENT_REVIEW:

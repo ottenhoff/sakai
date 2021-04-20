@@ -625,6 +625,17 @@ public class DeliveryBean
     return timeElapse;
   }
 
+  public String stopCurrentTimeElapse() {
+    if (adata != null) {
+      TimedAssessmentQueue queue = TimedAssessmentQueue.getInstance();
+      TimedAssessmentGradingModel timedAG = queue.get(adata.getAssessmentGradingId());
+      if (timedAG != null) {
+        queue.remove(adata.getAssessmentGradingId());
+      }
+    }
+    return timeElapse;
+  }
+
   /**
    *
    *
