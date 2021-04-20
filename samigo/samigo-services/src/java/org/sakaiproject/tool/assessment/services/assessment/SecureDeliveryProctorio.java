@@ -152,32 +152,7 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 		log.debug("validatePhase: {}", phase);
 		switch (phase) {
 			case ASSESSMENT_START:
-				Session session = sessionManager.getCurrentSession();
-
-				// Check the headers from Proctorio
-				List<String> headerNames = Collections.list(request.getHeaderNames());
-				log.debug("validatePhase: {}, headers={}, reqest={}", phase, java.util.Arrays.toString(headerNames.toArray()), request.getRequestURI());
-				for (String headerName : headerNames) {
-					if (StringUtils.containsIgnoreCase(headerName, SESSION_PROPERTY)) {
-						log.debug("validatePhase SUCCESS");
-						// The next redirect will not contain the header so place it in session						
-						session.setAttribute(SESSION_PROPERTY, System.currentTimeMillis());
-						return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
-					}
-				}
-
-				// see if we've been pre-cleared
-				Object sessionAttribute = session.getAttribute(SESSION_PROPERTY);
-				if (sessionAttribute != null) {
-					long timeDiff = System.currentTimeMillis() - (long) sessionAttribute;
-					log.debug("validatePhase: {}", timeDiff);
-					if (timeDiff < 86400 * 1000) {
-						return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
-					}
-				}
-
-				log.debug("validatePhase FAILURE");
-				return SecureDeliveryServiceAPI.PhaseStatus.FAILURE;
+				return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
 			default:
 				return SecureDeliveryServiceAPI.PhaseStatus.SUCCESS;
 		}
@@ -203,12 +178,12 @@ public class SecureDeliveryProctorio implements SecureDeliveryModuleIfc {
 						"        // event.data.active should be true if Proctorio is running\n" + 
 						"        console.log(\"Proctorio is running: \" + event.data.active)\n" + 
 						"    } else {\n" +
-						"        fetch('/samigo-app/jsf/delivery/stopTimerProgress.jsp').then(data => { window.location.href='" + url + "' }); \n" +
+						"        fetch('/samigo-app/jsf/delivery/stopTimerProgress.faces').then(data => { window.location.href='" + url + "' }); \n" +
 						"    }\n" +
 						"});" +
-						" if (window.top.location.origin != 'https://getproctorio.com') fetch('/samigo-app/jsf/delivery/stopTimerProgress.jsp').then(data => {window.top.location.replace('" + url + "')}); \n" +
+						" if (window.top.location.origin != 'https://getproctorio.com') fetch('/samigo-app/jsf/delivery/stopTimerProgress.faces').then(data => {window.top.location.replace('" + url + "')}); \n" +
 						"try { window.top.postMessage([10, \"proctorio_status\"], \"https://getproctorio.com\"); } " +
-						" catch(e) { jQuery('#takeAssessmentForm input.active').prop('disabled', true); fetch('/samigo-app/jsf/delivery/stopTimerProgress.jsp').then(data => { window.location.href='" + url + "'; }); }" +
+						" catch(e) { jQuery('#takeAssessmentForm input.active').prop('disabled', true); fetch('/samigo-app/jsf/delivery/stopTimerProgress.faces').then(data => { window.location.href='" + url + "'; }); }" +
 						" </script>";
 			case ASSESSMENT_FINISH:
 			case ASSESSMENT_REVIEW:

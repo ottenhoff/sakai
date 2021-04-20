@@ -625,17 +625,6 @@ public class DeliveryBean
     return timeElapse;
   }
 
-  public String stopCurrentTimeElapse() {
-    if (adata != null) {
-      TimedAssessmentQueue queue = TimedAssessmentQueue.getInstance();
-      TimedAssessmentGradingModel timedAG = queue.get(adata.getAssessmentGradingId());
-      if (timedAG != null) {
-        queue.remove(adata.getAssessmentGradingId());
-      }
-    }
-    return timeElapse;
-  }
-
   /**
    *
    *
@@ -3061,7 +3050,7 @@ public class DeliveryBean
 	  this.timeExpired = timeExpired;
   }
 
-  private void removeTimedAssessmentFromQueue(){
+  public void removeTimedAssessmentFromQueue(){
     if (adata==null) {
       return;
     }
@@ -3434,8 +3423,8 @@ public class DeliveryBean
       		  HttpServletRequest request = (HttpServletRequest) FacesContext.getCurrentInstance().getExternalContext().getRequest();
       		  PhaseStatus status = secureDelivery.validatePhase(moduleId, Phase.ASSESSMENT_START, publishedAssessment, request );
       		  setBlockDelivery( PhaseStatus.FAILURE == status );
+      		  setSecureDeliveryHTMLFragment(secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale()));
       		  if ( PhaseStatus.FAILURE == status ) {
-      			  setSecureDeliveryHTMLFragment(secureDelivery.getHTMLFragment(moduleId, publishedAssessment, request, Phase.ASSESSMENT_START, status, new ResourceLoader().getLocale()));
       			  return "secureDeliveryError";
                 }
       	  }    	  
