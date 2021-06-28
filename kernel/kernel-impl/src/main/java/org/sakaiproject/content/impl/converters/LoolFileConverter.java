@@ -55,6 +55,10 @@ public class LoolFileConverter {
 
         httpPost.setEntity(multipart);
         CloseableHttpResponse response = client.execute(httpPost);
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != 200) {
+            throw new IOException("Conversion returned HTTP status " + statusCode);
+        }
         byte[] convertedFileBytes = EntityUtils.toByteArray(response.getEntity());
         client.close();
         return convertedFileBytes;
