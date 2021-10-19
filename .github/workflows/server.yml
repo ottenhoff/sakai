@@ -82,8 +82,8 @@ jobs:
       - name: Check number of MySQL statements
         if: ${{ always() }}
         run: |
-          grep ProtocolLoggingProxy tomcat/logs/catalina.out|grep -v ROLLBACK|grep -v COMMIT | wc -l >> $QUERIES
+          grep ProtocolLoggingProxy tomcat/logs/catalina.out|grep -v ROLLBACK|grep -v COMMIT | wc -l > $QUERIES
           echo "::notice title={MySQL Queries}::$QUERIES"
       - name: Sleep two hours
         if: ${{ failure() }}
-        run: sleep 2h
+        run: sleep 8h
