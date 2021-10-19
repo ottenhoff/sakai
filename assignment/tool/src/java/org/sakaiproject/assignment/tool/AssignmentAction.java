@@ -1706,8 +1706,8 @@ public class AssignmentAction extends PagedResourceActionII {
                 context.put("nonElectronicType", Boolean.TRUE);
             }
             if (assignment.getTypeOfSubmission() == Assignment.SubmissionType.EXTERNAL_TOOL_SUBMISSION) {
-                context.put("externalTool", Boolean.TRUE);
                 putExternalToolIntoContext(context, assignment, state);
+                context.put("externalTool", Boolean.TRUE);
             }
 
             User submitter = (User) state.getAttribute("student");
@@ -4919,12 +4919,22 @@ public class AssignmentAction extends PagedResourceActionII {
     }
 
     private void putExternalToolIntoContext(Context context, Assignment assignment, SessionState state) {
+        context.put("value_ContentId", null);
+        context.put("value_ContentTitle", null);
+        context.put("value_ContentLaunchURL", null);
         try {
             if ( assignment == null || assignment.getContentId() == null) return;
             Site site = siteService.getSite((String) state.getAttribute(STATE_CONTEXT_STRING));
             Long contentKey = assignment.getContentId().longValue();
-            if ( contentKey < 1 ) return;
+            if ( contentKey < 1 ) {
+				log.warn("putExternalToolIntoContext contentId not set {} ", assignment);
+				return;
+			}
             Map<String, Object> content = ltiService.getContent(contentKey, site.getId());
+			if ( content == null ) {
+				log.warn("putExternalToolIntoContext contentId not loaded {} ", contentKey);
+				return;
+			}
             context.put("value_ContentId", contentKey);
             String content_launch = ltiService.getContentLaunch(content);
             context.put("value_ContentLaunchURL", content_launch);
@@ -4934,10 +4944,8 @@ public class AssignmentAction extends PagedResourceActionII {
                 String toolTitle = (String) tool.get(LTIService.LTI_TITLE);
                 context.put("value_ContentTitle", toolTitle);
             }
-
         } catch(org.sakaiproject.exception.IdUnusedException e ) {
-            context.put("value_ContentTitle", null);
-            context.put("value_ContentLaunchURL", null);
+            log.warn("putExternalToolIntoContext could not find site {} ", e);
         }
     }
 
@@ -6535,11 +6543,6 @@ public class AssignmentAction extends PagedResourceActionII {
 
                 if (submission != null) {
                     // the submission already exists, change the text and honor pledge value, post it
-                    submission.setUserSubmission(true);
-                    submission.setSubmittedText(text);
-                    submission.setDateSubmitted(Instant.now());
-                    submission.setSubmitted(post);
-
                     Map<String, String> properties = submission.getProperties();
 
                     if (a.getIsGroup()) {
@@ -6555,9 +6558,8 @@ public class AssignmentAction extends PagedResourceActionII {
                     }
 
                     if (NumberUtils.isParsable(properties.get(AssignmentConstants.ALLOW_RESUBMIT_NUMBER))) {
-                        // if this submission has been already been submitted previously.
-                        boolean isResub = properties.entrySet().stream().anyMatch(e -> e.getKey().startsWith("log") && e.getValue().contains("submitted"));
-                        if (submission.getSubmitted() && isResub) {
+                        // if this submission has been already been submitted previously
+                        if (post && submission.getDateSubmitted() != null) {
                             // decrease the allow_resubmit_number,
                             int number = Integer.parseInt(properties.get(AssignmentConstants.ALLOW_RESUBMIT_NUMBER));
                             // minus 1 from the submit number, if the number is not -1 (not unlimited)
@@ -6567,6 +6569,15 @@ public class AssignmentAction extends PagedResourceActionII {
                         }
                     } else {
                         setResubmissionProperties(a, submission);
+                    }
+
+                    // update submission info after resubmission which prevents updating resubmission count for the first submission
+                    submission.setUserSubmission(true);
+                    submission.setSubmittedText(text);
+                    submission.setSubmitted(post);
+                    // post differentiates a submission from saving a draft
+                    if (post) {
+                        submission.setDateSubmitted(Instant.now());
                     }
 
                     String currentUser = sessionManager.getCurrentSessionUserId();

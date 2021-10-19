@@ -35,23 +35,23 @@
     <sakai.ehcache.groupId>net.sf.ehcache</sakai.ehcache.groupId>
     <sakai.ehcache.artifactId>ehcache-core</sakai.ehcache.artifactId>
     <sakai.ehcache.version>2.6.11</sakai.ehcache.version>
-    <sakai.elasticsearch.version>6.8.18</sakai.elasticsearch.version>
+    <sakai.elasticsearch.version>6.8.19</sakai.elasticsearch.version>
     <sakai.hibernate.version>5.3.20.Final</sakai.hibernate.version>
     <sakai.hikaricp.version>4.0.3</sakai.hikaricp.version>
     <sakai.httpclient.version>4.5.13</sakai.httpclient.version>
     <sakai.httpcore.version>4.4.14</sakai.httpcore.version>
     <sakai.httpmime.version>4.5.13</sakai.httpmime.version>
     <sakai.httpclient5.version>5.1</sakai.httpclient5.version>
-    <sakai.httpcore5.version>5.1.1</sakai.httpcore5.version>
+    <sakai.httpcore5.version>5.1.2</sakai.httpcore5.version>
     <sakai.ignite.version>2.10.0</sakai.ignite.version>
     <sakai.gridgain.version>8.8.7</sakai.gridgain.version>
-    <sakai.jackson.version>2.12.5</sakai.jackson.version>
+    <sakai.jackson.version>2.13.0</sakai.jackson.version>
     <sakai.jsoup.version>1.14.2</sakai.jsoup.version>
     <sakai.woodstox.version>6.2.6</sakai.woodstox.version>
     <sakai.stax2.version>4.2.1</sakai.stax2.version>
     <sakai.java.jwt.version>3.1.0</sakai.java.jwt.version>
     <sakai.jstl.version>1.2</sakai.jstl.version>
-    <sakai.lombok.version>1.18.20</sakai.lombok.version>
+    <sakai.lombok.version>1.18.22</sakai.lombok.version>
     <sakai.lucene.version>7.7.3</sakai.lucene.version>
     <sakai.netty.version>4.1.68.Final</sakai.netty.version>
     <sakai.org.json.version>20210307</sakai.org.json.version>
@@ -893,6 +893,12 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${sakai.slf4j.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-1.2-api</artifactId>
+        <version>${sakai.log4j.version}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -2500,7 +2506,7 @@
         <plugin>
           <groupId>com.github.spotbugs</groupId>
           <artifactId>spotbugs-maven-plugin</artifactId>
-          <version>4.2.2</version>
+          <version>4.4.2</version>
          <configuration>
             <spotbugsXmlOutput>true</spotbugsXmlOutput>
             <xmlOutput>true</xmlOutput>
@@ -2511,7 +2517,7 @@
             <dependency>
               <groupId>com.github.spotbugs</groupId>
               <artifactId>spotbugs</artifactId>
-               <version>4.2.2</version>
+               <version>4.4.2</version>
              </dependency>
           </dependencies>
         </plugin>
@@ -2551,7 +2557,7 @@
         <plugin>
             <groupId>com.mycila</groupId>
             <artifactId>license-maven-plugin</artifactId>
-            <version>4.0</version>
+            <version>4.1</version>
             <configuration>
                 <header>https://raw.githubusercontent.com/sakaiproject/sakai/master/ECLv2-header-template.txt</header>
                 <includes>
@@ -2563,6 +2569,7 @@
                     <!-- Columbia header -->
                     <exclude>**/delegatedaccess/**</exclude>
                     <exclude>**/jsf/**</exclude>
+                    <exclude>**/gradebookng/**</exclude>
                 </excludes>
                 <properties>
                     <holder>The Apereo Foundation</holder>
@@ -2575,7 +2582,7 @@
                     <groupId>com.mycila</groupId>
                     <artifactId>license-maven-plugin-git</artifactId>
                     <!-- make sure you use the same version as license-maven-plugin -->
-                    <version>4.0</version>
+                    <version>4.1</version>
                 </dependency>
             </dependencies>
         </plugin>
