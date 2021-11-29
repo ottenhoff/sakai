@@ -160,7 +160,7 @@ public abstract class BaseSiteService implements SiteService, Observer
 	protected static final String USER_SITE_CACHE = "org.sakaiproject.site.api.SiteService.userSiteCache";
 
 	/** Cache for sites accessible to a given user. */
-	protected Cache m_userSiteCache = null;
+	protected Cache<String, List<String>> m_userSiteCache = null;
 
 	/** A set of observers watching site removals **/
 	protected Set<SiteRemovalAdvisor> siteRemovalAdvisors;
