@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -2225,7 +2226,8 @@ public abstract class BaseSiteService implements SiteService, Observer
 			}
 			else
 			{
-				m_userSiteCache.put(userId, sites);
+				final List<String> siteIds = sites.stream().map(s -> s.getId()).collect(Collectors.toList());
+				m_userSiteCache.put(userId, siteIds);
 			}
 		}
 	}
@@ -2277,7 +2279,13 @@ public abstract class BaseSiteService implements SiteService, Observer
 		List<Site> userSites = null;
 		if (m_userSiteCache != null && userId != null)
 		{
-			userSites = (List<Site>) m_userSiteCache.get(userId);
+			List<String> siteIds = (List<String>) m_userSiteCache.get(userId);
+
+			if (siteIds != null) {
+				for (String siteId : siteIds) {
+					userSites.add(getCachedSite(siteId));
+				}
+			}
 		}
 		return userSites;
 	}
