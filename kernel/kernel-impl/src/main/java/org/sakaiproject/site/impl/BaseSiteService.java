@@ -2283,7 +2283,12 @@ public abstract class BaseSiteService implements SiteService, Observer
 
 			if (siteIds != null) {
 				for (String siteId : siteIds) {
-					userSites.add(getCachedSite(siteId));
+					try {
+						userSites.add(getDefinedSite(siteId));
+					}
+					catch (IdUnusedException iue) {
+						log.warn("Could not getDefinedSite: {}", siteId);
+					}
 				}
 			}
 		}
