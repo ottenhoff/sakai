@@ -2276,7 +2276,7 @@ public abstract class BaseSiteService implements SiteService, Observer
 	@SuppressWarnings("unchecked")
 	protected List<Site> getCachedUserSites(String userId)
 	{
-		List<Site> userSites = null;
+		List<Site> userSites = new ArrayList<>();
 		if (m_userSiteCache != null && userId != null)
 		{
 			List<String> siteIds = (List<String>) m_userSiteCache.get(userId);
