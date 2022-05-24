@@ -552,9 +552,11 @@ div.layout-option > div {
     margin-top: 10px;
     margin-bottom: 10px;
 } 
+.mainList div.question .matchingAnswer,
 .mainList div.question .multipleChoiceAnswer {
     padding: .5em 0;
 }
+.matchingAnswer label,
 .multipleChoiceAnswer label {
   margin-left: 5px;
 }
@@ -1188,7 +1190,7 @@ img {
 .edit-twitter-div{
 float:left;
 }
-#question-text-input {
+#question-text-area-evolved\:\:input {
 	width: 400px;
 }
 .question-multiplechoice-answer, .question-shortanswer-answer {
