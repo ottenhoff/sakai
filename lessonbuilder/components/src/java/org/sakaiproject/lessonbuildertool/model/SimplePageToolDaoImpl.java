@@ -1151,15 +1151,17 @@ public class SimplePageToolDaoImpl extends HibernateDaoSupport implements Simple
 		if (answers == null) {
 		    answers = new JSONArray();
 		    question.setJsonAttribute("answers", answers);
-		    if (id <= 0L)
-			id = 1L;
+		    if (id <= 0L) {
+				id = 1L;
+			}
 		} else if (id <= 0L) {
 		    Long max = 0L;
 		    for (Object a: answers) {
-			Map answer = (Map) a;
-			Long i = (Long)answer.get("id");
-			if (i > max)
-			    max = i;
+				Map answer = (Map) a;
+				Long i = (Long)answer.get("id");
+				if (i > max) {
+					max = i;
+				}
 		    }
 		    id = max + 1;
 		}

@@ -7758,37 +7758,57 @@ public class SimplePageBean {
 			questionAnswer = "";
 			for (String shortAnswer : shortAnswers) {
 				String a = shortAnswer.trim();
-				if (! a.equals(""))
+				if (StringUtils.isNotBlank(a)) {
 					questionAnswer = questionAnswer + a + "\n";
+				}
 			}
 			item.setAttribute("questionAnswer", questionAnswer);
-		}else if(questionType.equals("multipleChoice")) {
+		} else if(questionType.equals("multipleChoice")) {
 			Long max = simplePageToolDao.maxQuestionAnswer(item);
 			simplePageToolDao.clearQuestionAnswers(item);
 
-			for(int i = 0; questionAnswers.get(i) != null; i++) {
-				// get data sent from post operation for this answer
-				String data = questionAnswers.get(i);
-				
+			for (String data : questionAnswers.values()) {
 				// split the data into the actual fields
 				String[] fields = data.split(":", 3);
-				Long answerId;
-				if (fields[0].equals(""))
-				    answerId = -1L;
-				else
-				    answerId = Long.valueOf(fields[0]);
-				if (answerId <= 0L)
-				    answerId = ++max;
-				Boolean correct = fields[1].equals("true");
-				String text = fields[2];
-				if (text != null && !text.trim().equals(""))
-				    simplePageToolDao.addQuestionAnswer(item, answerId, text, correct);
+				Long answerId = -1L;
+				if (StringUtils.isNotBlank(fields[0])) {
+					answerId = Long.valueOf(fields[0]);
+				}
 
+				if (answerId <= 0L) {
+					answerId = ++max;
+				}
+				Boolean correct = StringUtils.equalsIgnoreCase(fields[1], "true");
+				String text = fields[2];
+				if (StringUtils.isNotBlank(text)) {
+					simplePageToolDao.addQuestionAnswer(item, answerId, text, correct);
+				}
 			}
 			
 			item.setAttribute("questionShowPoll", String.valueOf(questionShowPoll));
+		} else if(questionType.equals("matching")) {
+			Long max = simplePageToolDao.maxQuestionAnswer(item);
+			simplePageToolDao.clearQuestionAnswers(item);
 
+			for (String data : questionAnswers.values()) {
+				// split the data into the actual fields
+				String[] fields = data.split(":", 3);
+				Long answerId = -1L;
+				if (StringUtils.isNotBlank(fields[0])) {
+					answerId = Long.valueOf(fields[0]);
+				}
 
+				if (answerId <= 0L) {
+					answerId = ++max;
+				}
+				Boolean correct = StringUtils.equalsIgnoreCase(fields[1], "true");
+				String text = fields[2];
+				if (StringUtils.isNotBlank(text)) {
+					simplePageToolDao.addQuestionAnswer(item, answerId, text, correct);
+				}
+			}
+
+			item.setAttribute("questionShowPoll", String.valueOf(questionShowPoll));
 		}
 		
 		int pointsInt = 10;
