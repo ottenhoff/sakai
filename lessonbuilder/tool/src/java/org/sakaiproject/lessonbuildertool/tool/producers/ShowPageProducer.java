@@ -5346,7 +5346,7 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		UIBoundBoolean.make(form, "question-graded", "#{simplePageBean.graded}");
 		UIInput.make(form, "question-gradebook-title", "#{simplePageBean.gradebookTitle}");
 		UIInput.make(form, "question-max", "#{simplePageBean.maxPoints}");
-		
+
 		UIInput.make(form, "question-multiplechoice-answer-complete", "#{simplePageBean.addAnswerData}");
 		UIInput.make(form, "question-multiplechoice-answer-id", null);
 		UIBoundBoolean.make(form, "question-multiplechoice-answer-correct");
@@ -5354,6 +5354,8 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		UIBoundBoolean.make(form, "question-show-poll", "#{simplePageBean.questionShowPoll}");
 
 		// Matching question type
+		UIInput.make(form, "question-matching-complete", "#{simplePageBean.addAnswerData}");
+		UIInput.make(form, "question-matching-id", null);
 		UIInput.make(form, "question-matching-prompt", null);
 		UIInput.make(form, "question-matching-response", null);
 		

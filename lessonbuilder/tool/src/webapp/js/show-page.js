@@ -1370,6 +1370,7 @@ $(document).ready(function() {
 			$("#multipleChoiceSelect").click();
 			$("#multipleChoiceSelect").prop('checked',true);	//the Click above will trigger the right hide/show of things itself, but it will not actually display multipleChoiceSelect as Checked, so we do it explicitly here.
 			resetMultipleChoiceAnswers();
+			resetMatchingAnswers();
 			resetShortanswers();
 			
 			$("#multipleChoiceSelect").prop("disabled", false);
@@ -1417,6 +1418,7 @@ $(document).ready(function() {
 			CKEDITOR.instances["question-text-area-evolved::input"].setData(questionText);
 			
 			resetMultipleChoiceAnswers();
+			resetMatchingAnswers();
 			resetShortanswers();
 			
 			// We can't have these disabled when trying to select them (which we do to set the type
@@ -3614,10 +3616,18 @@ function addMatchingAnswer() {
 	clonedAnswer.attr("id", "matchingAnswerDiv" + num);
 
 	// Each input has to be renamed so that RSF will recognize them as distinct
+	clonedAnswer.find("[name='question-matching-complete']")
+		.attr("name", "question-matching-complete" + num);
+	clonedAnswer.find("[name='question-matching-complete-fossil']")
+		.attr("name", "question-matching-complete" + num + "-fossil");
 	clonedAnswer.find("[name='question-matching-id']")
 		.attr("name", "question-matching-id" + num);
 	clonedAnswer.find("[for='question-matching-prompt']")
 		.attr("for", "question-matching-prompt" + num);
+	clonedAnswer.find("[name='question-matching-prompt']")
+		.attr("name", "question-matching-prompt" + num);
+	clonedAnswer.find("[for='question-matching-response']")
+		.attr("for", "question-matching-response" + num);
 	clonedAnswer.find("[name='question-matching-response']")
 		.attr("name", "question-matching-response" + num);
 
@@ -3676,6 +3686,13 @@ function updateMultipleChoiceAnswers() {
 }
 
 function updateMatchingAnswers() {
+	$(".question-matching-complete").each(function(index, el) {
+		const id = $(el).parent().find(".question-matching-id").val();
+		const prompt = $(el).parent().find(".question-matching-prompt").val();
+		const resp = $(el).parent().find(".question-matching-response").val();
+		
+		$(el).val(index + ":" + id + ":" + prompt + ":" + resp);
+	});
 }
 
 function updateShortanswers() {
@@ -3752,6 +3769,14 @@ function resetMultipleChoiceAnswers() {
 	firstMultipleChoice.find(".question-multiplechoice-answer-id").val("-1");
 	firstMultipleChoice.find(".question-multiplechoice-answer").val("");
 	firstMultipleChoice.find(".question-multiplechoice-answer-correct").prop("checked", false);
+}
+
+// Reset the matching prompts to prevent problems when submitting a shortanswer
+function resetMatchingAnswers() {
+	const firstMatching = $("#copyableMatchingAnswer");
+	firstMatching.find(".question-matching-id").val("-1");
+	firstMatching.find(".question-matching-prompt").val("");
+	firstMatching.find(".question-matching-response").val("");
 }
 
 //Reset the shortanswers to prevent problems when submitting a multiple choice
