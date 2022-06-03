@@ -7701,11 +7701,8 @@ public class SimplePageBean {
 			return;
 		}
 
-		int separator = data.indexOf(":");
-		String indexString = data.substring(0, separator);
-		Integer index = Integer.valueOf(indexString);
-		data = data.substring(separator+1);
-
+		String[] splitPieces = StringUtils.split(data, ":");
+		Integer index = Integer.valueOf(splitPieces[0]);
 
 		// I think this method should only be called from one thread
 		// so this should be safe.
@@ -7716,7 +7713,11 @@ public class SimplePageBean {
 
 		// We store with the index so that we can maintain the order
 		// in which the instructor inputted the answers
-		questionAnswers.put(index, data);
+		// We need to ignore blank data from a different question type
+		// (e.g., blank multiple choice data when doing a matching question)
+		if (splitPieces.length == 4) {
+			questionAnswers.put(index, splitPieces[1] + ":" + splitPieces[2] + ":" + splitPieces[3]);
+		}
 	}
 	
 	/** Used for both adding and updating questions on a page. */
