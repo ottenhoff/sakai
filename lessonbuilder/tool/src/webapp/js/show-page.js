@@ -1433,7 +1433,7 @@ $(document).ready(function() {
 				$("#shortanswerSelect").click();
 				
 				const questionAnswers = row.find(".questionAnswer").text().split("\n");
-				for(var index = 0; index < questionAnswers.length - 1; index++) {
+				for(let index = 0; index < questionAnswers.length - 1; index++) {
 					let answerSlot;
 					if(index === 0) {
 						answerSlot = $("#copyableShortanswer").first();

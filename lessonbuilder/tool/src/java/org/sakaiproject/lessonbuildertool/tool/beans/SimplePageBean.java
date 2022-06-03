@@ -119,7 +119,6 @@ import org.sakaiproject.util.api.FormattedText;
 import org.sakaiproject.util.comparator.AlphaNumericComparator;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
-import org.tsugi.basiclti.ContentItem;
 import uk.org.ponder.messageutil.MessageLocator;
 import uk.org.ponder.rsf.components.UIContainer;
 import uk.org.ponder.rsf.components.UIInternalLink;
@@ -7696,25 +7695,25 @@ public class SimplePageBean {
 			securityService.popAdvisor(sa);
 		}
 	}
-	
+
 	public void setAddAnswerData(String data) {
 		if(StringUtils.isBlank(data)) {
 			return;
 		}
-		
+
 		int separator = data.indexOf(":");
 		String indexString = data.substring(0, separator);
 		Integer index = Integer.valueOf(indexString);
 		data = data.substring(separator+1);
-		
-		
+
+
 		// I think this method should only be called from one thread
 		// so this should be safe.
 		if(questionAnswers == null) {
 			questionAnswers = new HashMap<>();
 			log.info("setAddAnswer: it was null");
 		}
-		
+
 		// We store with the index so that we can maintain the order
 		// in which the instructor inputted the answers
 		questionAnswers.put(index, data);
@@ -7781,7 +7780,7 @@ public class SimplePageBean {
 				Boolean correct = StringUtils.equalsIgnoreCase(fields[1], "true");
 				String text = fields[2];
 				if (StringUtils.isNotBlank(text)) {
-					simplePageToolDao.addQuestionAnswer(item, answerId, text, correct);
+					simplePageToolDao.addMultipleChoiceQuestionAnswer(item, answerId, text, correct);
 				}
 			}
 			
@@ -7801,10 +7800,10 @@ public class SimplePageBean {
 				if (answerId <= 0L) {
 					answerId = ++max;
 				}
-				Boolean correct = StringUtils.equalsIgnoreCase(fields[1], "true");
-				String text = fields[2];
-				if (StringUtils.isNotBlank(text)) {
-					simplePageToolDao.addQuestionAnswer(item, answerId, text, correct);
+				String prompt = fields[1];
+				String response = fields[2];
+				if (StringUtils.isNotBlank(prompt)) {
+					simplePageToolDao.addMatchingQuestionAnswer(item, answerId, prompt, response);
 				}
 			}
 
@@ -7965,6 +7964,8 @@ public class SimplePageBean {
 				correct = !theirResponse.isEmpty(); // any non-empty answer is considered "correct" for this question type
 				gradebookPoints = null;
 			}
+		}else if(question.getAttribute("questionType") != null && question.getAttribute("questionType").equals("matching")) {
+			throw new RuntimeException("TODO implement");
 		}else {
 			log.warn("Invalid question type for question {}", question.getId());
 			correct = false;

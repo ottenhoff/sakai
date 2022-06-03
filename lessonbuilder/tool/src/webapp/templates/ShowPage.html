@@ -979,8 +979,10 @@
                                         <input type="hidden" rsf:id="matchingId" />
                                         <span rsf:id="matchingSelect:"></span>
                                         <div rsf:id="matchingAnswer:" class="matchingAnswer">
-                                            <input type="radio" rsf:id="matchingAnswerPrompt" name="matchingAnswerPrompt" />
-                                            <label rsf:id="matchingAnswerText" />
+                                            <label rsf:id="matchingAnswerPrompt" class="matchingAnswerPrompt"/>
+                                            <select rsf:id="matchingAnswerResponse" name="matchingAnswerResponse">
+                                                <option rsf:id="matchingAnswerPossibleResponse:"></option>
+                                            </select>
                                         </div>
                                         <input class="question-submit" type="submit" value="Answer!" rsf:id="answerMatching" />
                                         <input class="showPollGraph question-submit" type="submit" rsf:id="showPollGraph" onclick="return false;"/>
@@ -1023,6 +1025,11 @@
                             <span rsf:id="questionMultipleChoiceAnswerCorrect" class="questionMultipleChoiceAnswerCorrect"></span>
                             <!-- SAK-46296 -->
                             <input type="hidden" class="raw-questionAnswer-text" rsf:id="raw-questionAnswer-text" />
+                        </div>
+                        <div style="display:none" rsf:id="questionMatchingAnswer:" class="questionMatchingAnswer">
+                            <span rsf:id="questionMatchingAnswerId" class="questionMatchingAnswerId"></span>
+                            <span rsf:id="questionMatchingPrompt" class="questionMatchingPrompt"></span>
+                            <span rsf:id="questionMatchingResponse" class="questionMatchingResponse"></span>
                         </div>
                         <span style="display:none" rsf:id="questionShowPoll" class="questionShowPoll"></span>
                         <span style="display:none" rsf:id="questionGrade" class="questionGrade"></span>

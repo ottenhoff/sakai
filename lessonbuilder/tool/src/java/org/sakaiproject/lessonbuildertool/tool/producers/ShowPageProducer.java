@@ -3279,12 +3279,14 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 							}
 						}
 
+						String[] possibleResponses = answers.stream().map(possibleAnswer -> possibleAnswer.getResponse()).toArray(String[]::new);
+
 						for (int j = 0; j < answers.size(); j++) {
 							UIBranchContainer answerContainer = UIBranchContainer.make(questionForm, "matchingAnswer:", String.valueOf(j));
-							UISelectChoice matchingInput = UISelectChoice.make(answerContainer, "matchingAnswerPrompt", matchingSelect.getFullID(), j);
+							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponses, possibleResponses, matchingSelect.getFullID(), String.valueOf(j));
 							matchingInput.decorate(new UIFreeAttributeDecorator("id", matchingInput.getFullID()));
-							UIOutput.make(answerContainer, "matchingAnswerText", answers.get(j).getText())
-									.decorate(new UIFreeAttributeDecorator("for", matchingInput.getFullID()));
+							UIOutput.make(answerContainer, "matchingAnswerPrompt", answers.get(j).getPrompt());
+							//UIOutput.make(answerContainer, "matchingAnswerResponse", answers.get(j).getResponse());
 
 							if (!isAvailable || response != null) {
 								if (canSeeAll) {
@@ -3404,7 +3406,18 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 						if("shortanswer".equals(i.getAttribute("questionType"))) {
 							UIOutput.make(tableRow, "questionType", "shortanswer");
 							UIOutput.make(tableRow, "questionAnswer", i.getAttribute("questionAnswer"));
-						}else {
+						} else if("matching".equals(i.getAttribute("questionType"))) {
+							UIOutput.make(tableRow, "questionType", "matching");
+
+							for (int j = 0; j < answers.size(); j++) {
+								UIBranchContainer answerContainer = UIBranchContainer.make(tableRow, "questionMatchingAnswer:", String.valueOf(j));
+								UIOutput.make(answerContainer, "questionMatchingAnswerId", String.valueOf(answers.get(j).getId()));
+								UIOutput.make(answerContainer, "questionMatchingPrompt", answers.get(j).getPrompt());
+								UIOutput.make(answerContainer, "questionMatchingResponse", answers.get(j).getResponse());
+								//SAK-46296
+								UIInput.make(answerContainer, "raw-questionAnswer-text",  null, answers.get(j).getText());
+							}
+						} else {
 							UIOutput.make(tableRow, "questionType", "multipleChoice");
 							
 							for(int j = 0; j < answers.size(); j++) {
