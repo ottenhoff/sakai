@@ -129,6 +129,8 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import org.sakaiproject.authz.api.SecurityAdvisor;
 import org.sakaiproject.lessonbuildertool.service.AssignmentEntity;
 import org.sakaiproject.site.api.Group;
@@ -3279,14 +3281,21 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 							}
 						}
 
-						String[] possibleResponses = answers.stream().map(possibleAnswer -> possibleAnswer.getResponse()).toArray(String[]::new);
+						List<String> possibleResponseArray = answers
+								.stream()
+								.map(possibleAnswer -> possibleAnswer.getResponse())
+								.collect(Collectors.toList());
+
+						// Randomize the matching possibilities
+						Collections.shuffle(possibleResponseArray);
+
+						String[] possibleResponses = possibleResponseArray.toArray(new String[0]);
 
 						for (int j = 0; j < answers.size(); j++) {
 							UIBranchContainer answerContainer = UIBranchContainer.make(questionForm, "matchingAnswer:", String.valueOf(j));
 							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponses, possibleResponses, matchingSelect.getFullID(), String.valueOf(j));
 							matchingInput.decorate(new UIFreeAttributeDecorator("id", matchingInput.getFullID()));
 							UIOutput.make(answerContainer, "matchingAnswerPrompt", answers.get(j).getPrompt());
-							//UIOutput.make(answerContainer, "matchingAnswerResponse", answers.get(j).getResponse());
 
 							if (!isAvailable || response != null) {
 								if (canSeeAll) {
@@ -3297,7 +3306,7 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 							}
 						}
 
-						UICommand answerButton = UICommand.make(questionForm, "answerMatching", messageLocator.getMessage("simplepage.answer_question"), "#{simplePageBean.answermatchingQuestion}");
+						UICommand answerButton = UICommand.make(questionForm, "answerMatching", messageLocator.getMessage("simplepage.answer_question"), "#{simplePageBean.answerMatchingQuestion}");
 						if (!isAvailable || response != null) {
 							if (canSeeAll) {
 								fakeDisableLink(answerButton, messageLocator);

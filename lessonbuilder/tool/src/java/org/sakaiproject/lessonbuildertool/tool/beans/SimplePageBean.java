@@ -7807,8 +7807,6 @@ public class SimplePageBean {
 					simplePageToolDao.addMatchingQuestionAnswer(item, answerId, prompt, response);
 				}
 			}
-
-			item.setAttribute("questionShowPoll", String.valueOf(questionShowPoll));
 		}
 		
 		int pointsInt = 10;
@@ -8022,7 +8020,42 @@ public class SimplePageBean {
 		
 		return "success";
 	}
-	
+
+	public String answerMatchingQuestion() {
+		final String userId = getCurrentUserId();
+
+		if (!itemOk(questionId) || !canReadPage()) return "permission-failed";
+		if (!checkCsrf()) return "permission-failed";
+
+		final SimplePageItem question = findItem(questionId);
+
+		SimplePageQuestionResponse response = simplePageToolDao.findQuestionResponse(questionId, userId);
+		if (response != null && !canEditPage()) {
+			// Don't let students re-answer questions.
+			setErrMessage(messageLocator.getMessage("simplepage.permissions-question"));
+			return "failure";
+		} else if (response == null) {
+			response = simplePageToolDao.makeQuestionResponse(userId, questionId);
+		}
+
+		final String userResponse = questionResponse.trim();
+		//response.setMultipleChoiceId(responseId);
+		response.setOriginalText(userResponse);
+		//simplePageToolDao.incrementQRCount(questionId, responseId);
+
+		//SimplePageQuestionAnswer answer = simplePageToolDao.findAnswerChoice(question, response.getMultipleChoiceId());
+		//response.setOriginalText(answer.getText());
+
+		gradeQuestionResponse(response);
+
+		// Complete user task
+		this.completeUserTask(questionId, userId);
+
+		saveItem(response);
+
+		return "success";
+	}
+
 	public String answerShortanswerQuestion() {
 		String userId = getCurrentUserId();
 		
