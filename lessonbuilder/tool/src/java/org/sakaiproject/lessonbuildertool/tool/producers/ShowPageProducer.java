@@ -3270,16 +3270,6 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 							}
 						}
 
-						UISelect matchingSelect = UISelect.make(questionForm, "matchingSelect:", options, "#{simplePageBean.questionResponse}", initValue);
-
-						// allow instructor to answer again, for testing
-						if (!isAvailable || response != null) {
-							if (canSeeAll) {
-								fakeDisableLink(matchingSelect, messageLocator);
-							} else {
-								matchingSelect.decorate(new UIDisabledDecorator());
-							}
-						}
 
 						List<String> possibleResponseArray = answers
 								.stream()
@@ -3293,7 +3283,7 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 
 						for (int j = 0; j < answers.size(); j++) {
 							UIBranchContainer answerContainer = UIBranchContainer.make(questionForm, "matchingAnswer:", String.valueOf(j));
-							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponses, possibleResponses, matchingSelect.getFullID(), String.valueOf(j));
+							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponses, possibleResponses, "#{simplePageBean.matchingQuestionResponse}", null);
 							matchingInput.decorate(new UIFreeAttributeDecorator("id", matchingInput.getFullID()));
 							UIOutput.make(answerContainer, "matchingAnswerPrompt", answers.get(j).getPrompt());
 

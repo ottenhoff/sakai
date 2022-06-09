@@ -277,6 +277,8 @@ public class SimplePageBean {
     
     public Long questionId;
     public String questionResponse;
+	public String matchingQuestionResponse;
+	public List<String> matchingQuestionResponses = new ArrayList<>();
 	
 	public boolean isWebsite = false;
 	public boolean isCaption = false;
@@ -7696,6 +7698,10 @@ public class SimplePageBean {
 		}
 	}
 
+	public void setMatchingQuestionResponse(final String s) {
+		matchingQuestionResponses.add(s);
+	}
+
 	public void setAddAnswerData(String data) {
 		if(StringUtils.isBlank(data)) {
 			return;
@@ -7964,7 +7970,25 @@ public class SimplePageBean {
 				gradebookPoints = null;
 			}
 		}else if(question.getAttribute("questionType") != null && question.getAttribute("questionType").equals("matching")) {
-			throw new RuntimeException("TODO implement");
+			int wrongResponses = 0;
+			int correctResponses = 0;
+
+			for (SimplePageQuestionAnswer answer : simplePageToolDao.findAnswerChoices(question)) {
+				final String p = answer.getPrompt();
+				final String r = answer.getResponse();
+				final String s = response.getUserResponses().remove(0);
+
+				if (StringUtils.equalsIgnoreCase(r, s)) {
+					correctResponses++;
+				} else {
+					wrongResponses++;
+				}
+			}
+
+			correct = wrongResponses == 0 && correctResponses > 0;
+			response.setCorrect(correct);
+			gradebookPoints = Double.valueOf(correctResponses / (correctResponses + wrongResponses));
+			response.setPoints(gradebookPoints);
 		}else {
 			log.warn("Invalid question type for question {}", question.getId());
 			correct = false;
@@ -8038,13 +8062,8 @@ public class SimplePageBean {
 			response = simplePageToolDao.makeQuestionResponse(userId, questionId);
 		}
 
-		final String userResponse = questionResponse.trim();
-		//response.setMultipleChoiceId(responseId);
-		response.setOriginalText(userResponse);
-		//simplePageToolDao.incrementQRCount(questionId, responseId);
-
-		//SimplePageQuestionAnswer answer = simplePageToolDao.findAnswerChoice(question, response.getMultipleChoiceId());
-		//response.setOriginalText(answer.getText());
+		response.setOriginalText(StringUtils.join(matchingQuestionResponses));
+		response.setUserResponses(matchingQuestionResponses);
 
 		gradeQuestionResponse(response);
 
