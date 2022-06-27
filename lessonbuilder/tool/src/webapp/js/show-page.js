@@ -1445,9 +1445,23 @@ $(document).ready(function() {
 				}
 			} else if (questionType === "matching") {
 				$("#matchingSelect").click();
-        // TODO: finish this 
-				const questionAnswers = row.find(".questionAnswer").text().split("\n");
-        console.log(questionAnswers);
+
+				row.find(".questionMatchingAnswer").each(function(index, el) {
+					const qId = $(el).find(".questionMatchingAnswerId").text();
+					const qPrompt = $(el).find(".questionMatchingPrompt").text();
+					const qResponse = $(el).find(".questionMatchingResponse").text();
+					
+					let answerSlot;
+					if (index === 0) {
+						answerSlot = $("#copyableMatchingAnswer").first();
+					} else {
+						answerSlot = addMatchingAnswer();
+					}
+					
+					answerSlot.find(".questionMatchingAnswerId").val(qId);
+					answerSlot.find(".questionMatchingPrompt").val(qPrompt);
+					answerSlot.find(".questionMatchingResponse").val(qResponse);
+				});
 			} else {
 				$("#multipleChoiceSelect").click();
 				
