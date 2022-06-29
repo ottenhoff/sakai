@@ -3282,8 +3282,13 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 						String[] possibleResponses = possibleResponseArray.toArray(new String[0]);
 
 						for (int j = 0; j < answers.size(); j++) {
+							final String optionPrefix = j + "||";
+							final String[] possibleResponseValues = possibleResponseArray.stream()
+									.map(s -> optionPrefix + s)
+									.toArray(String[]::new);
+
 							UIBranchContainer answerContainer = UIBranchContainer.make(questionForm, "matchingAnswer:", String.valueOf(j));
-							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponses, possibleResponses, "#{simplePageBean.matchingQuestionResponse}", null);
+							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponseValues, possibleResponses, "#{simplePageBean.matchingQuestionResponse}", null);
 							matchingInput.decorate(new UIFreeAttributeDecorator("id", matchingInput.getFullID()));
 							UIOutput.make(answerContainer, "matchingAnswerPrompt", answers.get(j).getPrompt());
 

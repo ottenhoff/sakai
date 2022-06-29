@@ -141,6 +141,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Backing bean for Simple pages
@@ -278,7 +279,7 @@ public class SimplePageBean {
     public Long questionId;
     public String questionResponse;
 	public String matchingQuestionResponse;
-	public List<String> matchingQuestionResponses = new ArrayList<>();
+	public String[] matchingQuestionResponses = new String[30];
 	
 	public boolean isWebsite = false;
 	public boolean isCaption = false;
@@ -7699,7 +7700,11 @@ public class SimplePageBean {
 	}
 
 	public void setMatchingQuestionResponse(final String s) {
-		matchingQuestionResponses.add(s);
+		final String[] splitString = StringUtils.split(s,"||", 2);
+		if (splitString != null && splitString.length == 2) {
+			final int index = Integer.parseInt(splitString[0]);
+			matchingQuestionResponses[index] = splitString[1];
+		}
 	}
 
 	public void setAddAnswerData(String data) {
@@ -7970,8 +7975,8 @@ public class SimplePageBean {
 				gradebookPoints = null;
 			}
 		}else if(question.getAttribute("questionType") != null && question.getAttribute("questionType").equals("matching")) {
-			int wrongResponses = 0;
-			int correctResponses = 0;
+			double wrongResponses = 0;
+			double correctResponses = 0;
 
 			for (SimplePageQuestionAnswer answer : simplePageToolDao.findAnswerChoices(question)) {
 				final String p = answer.getPrompt();
@@ -7986,9 +7991,8 @@ public class SimplePageBean {
 			}
 
 			correct = wrongResponses == 0 && correctResponses > 0;
-			response.setCorrect(correct);
-			gradebookPoints = Double.valueOf(correctResponses / (correctResponses + wrongResponses));
-			response.setPoints(gradebookPoints);
+			double percentageCorrect = correctResponses / (correctResponses + wrongResponses);
+			gradebookPoints = Math.round( (percentageCorrect * gradebookPoints * 100.0) ) / 100.0;
 		}else {
 			log.warn("Invalid question type for question {}", question.getId());
 			correct = false;
@@ -8062,8 +8066,13 @@ public class SimplePageBean {
 			response = simplePageToolDao.makeQuestionResponse(userId, questionId);
 		}
 
-		response.setOriginalText(StringUtils.join(matchingQuestionResponses));
-		response.setUserResponses(matchingQuestionResponses);
+		// Remove the empty values from the pre-initialized response array
+		List<String> cleanedResponses = Arrays.asList(matchingQuestionResponses)
+				.stream()
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+		response.setOriginalText(StringUtils.join(cleanedResponses, "||"));
+		response.setUserResponses(cleanedResponses);
 
 		gradeQuestionResponse(response);
 
