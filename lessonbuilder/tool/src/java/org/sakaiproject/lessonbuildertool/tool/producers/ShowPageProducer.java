@@ -3258,18 +3258,9 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 						UIOutput.make(tableRow, "matchingDiv");
 						UIForm questionForm = UIForm.make(tableRow, "matchingForm");
 						makeCsrf(questionForm, "csrf6");
+						String[] userResponses = StringUtils.split(response.getOriginalText(), "||");
 
 						UIInput.make(questionForm, "matchingId", "#{simplePageBean.questionId}", String.valueOf(i.getId()));
-
-						String[] options = new String[answers.size()];
-						String initValue = null;
-						for (int j = 0; j < answers.size(); j++) {
-							options[j] = String.valueOf(answers.get(j).getId());
-							if (response != null && answers.get(j).getId() == response.getMultipleChoiceId()) {
-								initValue = String.valueOf(answers.get(j).getId());
-							}
-						}
-
 
 						List<String> possibleResponseArray = answers
 								.stream()
@@ -3282,13 +3273,14 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 						String[] possibleResponses = possibleResponseArray.toArray(new String[0]);
 
 						for (int j = 0; j < answers.size(); j++) {
+							final String initValue = userResponses.length > j ? j + "||" + userResponses[j] : null;
 							final String optionPrefix = j + "||";
 							final String[] possibleResponseValues = possibleResponseArray.stream()
 									.map(s -> optionPrefix + s)
 									.toArray(String[]::new);
 
 							UIBranchContainer answerContainer = UIBranchContainer.make(questionForm, "matchingAnswer:", String.valueOf(j));
-							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponseValues, possibleResponses, "#{simplePageBean.matchingQuestionResponse}", null);
+							UISelect matchingInput = UISelect.make(answerContainer, "matchingAnswerResponse", possibleResponseValues, possibleResponses, "#{simplePageBean.matchingQuestionResponse}", initValue);
 							matchingInput.decorate(new UIFreeAttributeDecorator("id", matchingInput.getFullID()));
 							UIOutput.make(answerContainer, "matchingAnswerPrompt", answers.get(j).getPrompt());
 
