@@ -3258,7 +3258,7 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 						UIOutput.make(tableRow, "matchingDiv");
 						UIForm questionForm = UIForm.make(tableRow, "matchingForm");
 						makeCsrf(questionForm, "csrf6");
-						String[] userResponses = StringUtils.split(response.getOriginalText(), "||");
+						String[] userResponses = StringUtils.split(response != null ? response.getOriginalText() : "", "||");
 
 						UIInput.make(questionForm, "matchingId", "#{simplePageBean.questionId}", String.valueOf(i.getId()));
 
