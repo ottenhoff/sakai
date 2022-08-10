@@ -61,7 +61,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.osid.shared.SharedException;
 import org.sakaiproject.event.api.Event;
 import org.sakaiproject.event.api.NotificationService;
