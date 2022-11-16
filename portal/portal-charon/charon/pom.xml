@@ -5,7 +5,7 @@
     <parent>
         <artifactId>portal</artifactId>
         <groupId>org.sakaiproject.portal</groupId>
-        <version>23-SNAPSHOT</version>
+        <version>24-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -18,6 +18,10 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sakai-portal-impl</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sakai-portal-util</artifactId>
         </dependency>
     </dependencies>
 

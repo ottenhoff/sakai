@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.sakaiproject</groupId>
     <artifactId>master</artifactId>
-    <version>23-SNAPSHOT</version>
+    <version>24-SNAPSHOT</version>
     <relativePath>../master/pom.xml</relativePath>
   </parent>
   <name>Sakai TextArea Project</name>
@@ -12,6 +12,7 @@
   <artifactId>textarea-base</artifactId>
   <packaging>pom</packaging>
   <modules>
+    <module>FCKeditor/connector</module>
     <module>calendar</module>
     <module>elfinder-sakai</module>
   </modules>

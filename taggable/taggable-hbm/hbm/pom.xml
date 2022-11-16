@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.sakaiproject.taggable</groupId>
         <artifactId>taggable</artifactId>
-        <version>23-SNAPSHOT</version>
+        <version>24-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -71,14 +71,6 @@
                         <outputfilename>taggable.sql</outputfilename>
                     </componentProperties>
                 </configuration>
-                <dependencies>
-                    <dependency>
-                        <!-- Needed for ID generation -->
-                        <groupId>org.sakaiproject.kernel</groupId>
-                        <artifactId>sakai-kernel-private</artifactId>
-                        <version>${sakai.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
         </plugins>
     </build>

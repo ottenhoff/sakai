@@ -220,6 +220,61 @@ public class AssignmentServiceTest extends AbstractTransactionalJUnit4SpringCont
     }
 
     @Test
+    public void getAssignmentsForContextStudentsCantViewFutureAssignments() {
+    	String context = UUID.randomUUID().toString();
+    	
+    	Site site = mock(Site.class);
+    	Collection<Group> siteGroups = new HashSet<>();
+    	Set<String> groupARef = new HashSet<>();
+    	Group groupA = mock(Group.class);
+    	String groupAId = UUID.randomUUID().toString();
+    	when(groupA.getId()).thenReturn(groupAId);
+    	when(groupA.getReference()).thenReturn("/site/" + context + "/group/" + groupAId);
+    	siteGroups.add(groupA);
+    	groupARef.add(groupA.getReference());
+    	when(site.getGroups()).thenReturn(siteGroups);
+    	try {
+    		when(siteService.getSite(context)).thenReturn(site);
+    	} catch (IdUnusedException e) {
+    		Assert.fail("missing mock site\n" + e.toString());
+    	}
+    	
+    	createNewFutureAssignment(context);
+        
+		when(securityService.unlock(AssignmentServiceConstants.SECURE_ADD_ASSIGNMENT, AssignmentReferenceReckoner.reckoner().context(context).reckon().getReference())).thenReturn(false);
+        Collection assignments = assignmentService.getAssignmentsForContext(context);
+        Assert.assertNotNull(assignments);
+        Assert.assertEquals(0, assignments.size());
+    }
+
+    @Test
+    public void getAssignmentsForContextInstructorsCanViewFutureAssignments() {
+    	String context = UUID.randomUUID().toString();
+    	
+    	Site site = mock(Site.class);
+    	Collection<Group> siteGroups = new HashSet<>();
+    	Set<String> groupARef = new HashSet<>();
+    	Group groupA = mock(Group.class);
+    	String groupAId = UUID.randomUUID().toString();
+    	when(groupA.getId()).thenReturn(groupAId);
+    	when(groupA.getReference()).thenReturn("/site/" + context + "/group/" + groupAId);
+    	siteGroups.add(groupA);
+    	groupARef.add(groupA.getReference());
+    	when(site.getGroups()).thenReturn(siteGroups);
+    	try {
+    		when(siteService.getSite(context)).thenReturn(site);
+    	} catch (IdUnusedException e) {
+    		Assert.fail("missing mock site\n" + e.toString());
+    	}
+    	
+    	createNewFutureAssignment(context);
+
+        Collection assignments = assignmentService.getAssignmentsForContext(context);
+        Assert.assertNotNull(assignments);
+        Assert.assertEquals(1, assignments.size());
+    }
+
+    @Test
     public void getAssignmentsForContext() {
         String context = UUID.randomUUID().toString();
         createNewAssignment(context);
@@ -1078,12 +1133,12 @@ public class AssignmentServiceTest extends AbstractTransactionalJUnit4SpringCont
 
         Assert.assertEquals("Pass", assignmentService.getGradeDisplay("pass", Assignment.GradeType.PASS_FAIL_GRADE_TYPE, null));
         Assert.assertEquals("Fail", assignmentService.getGradeDisplay("fail", Assignment.GradeType.PASS_FAIL_GRADE_TYPE, null));
-        Assert.assertEquals("Ungraded", assignmentService.getGradeDisplay("any", Assignment.GradeType.PASS_FAIL_GRADE_TYPE, null));
+        Assert.assertEquals("", assignmentService.getGradeDisplay("any", Assignment.GradeType.PASS_FAIL_GRADE_TYPE, null));
 
-        Assert.assertEquals("Ungraded", assignmentService.getGradeDisplay("any", Assignment.GradeType.CHECK_GRADE_TYPE, null));
+        Assert.assertEquals("", assignmentService.getGradeDisplay("any", Assignment.GradeType.CHECK_GRADE_TYPE, null));
         Assert.assertEquals("Checked", assignmentService.getGradeDisplay("checked", Assignment.GradeType.CHECK_GRADE_TYPE, null));
 
-        Assert.assertEquals("Ungraded", assignmentService.getGradeDisplay("", Assignment.GradeType.GRADE_TYPE_NONE, null));
+        Assert.assertEquals("", assignmentService.getGradeDisplay("", Assignment.GradeType.GRADE_TYPE_NONE, null));
         Assert.assertEquals("self", assignmentService.getGradeDisplay("self", Assignment.GradeType.GRADE_TYPE_NONE, null));
     }
 
@@ -1481,6 +1536,22 @@ public class AssignmentServiceTest extends AbstractTransactionalJUnit4SpringCont
             Assert.fail(e.toString());
         }
         return null;
+    }
+
+    private Assignment createNewFutureAssignment(String context) {
+        String contextReference = AssignmentReferenceReckoner.reckoner().context(context).reckon().getReference();
+        when(securityService.unlock(AssignmentServiceConstants.SECURE_ADD_ASSIGNMENT, contextReference)).thenReturn(true);
+        when(securityService.unlock(AssignmentServiceConstants.SECURE_ACCESS_ASSIGNMENT, contextReference)).thenReturn(true);
+        when(sessionManager.getCurrentSessionUserId()).thenReturn(UUID.randomUUID().toString());
+        Assignment assignment = null;
+        try {
+            assignment = assignmentService.addAssignment(context);
+            assignment.setOpenDate(Instant.now().plusSeconds(300));
+            assignment.setVisibleDate(Instant.now().plusSeconds(300));
+        } catch (PermissionException e) {
+            Assert.fail(e.toString());
+        }
+        return assignment;
     }
 
     private Assignment createNewAssignment(String context) {

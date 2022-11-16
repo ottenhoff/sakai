@@ -8,7 +8,7 @@
     <parent>
         <artifactId>entitybroker</artifactId>
         <groupId>org.sakaiproject</groupId>
-        <version>23-SNAPSHOT</version>
+        <version>24-SNAPSHOT</version>
     </parent>
     <dependencies>
         <!-- internal dependencies -->
@@ -59,7 +59,6 @@
         <dependency>
             <groupId>commons-httpclient</groupId>
             <artifactId>commons-httpclient</artifactId>
-            <version>3.1</version>
         </dependency>
         <dependency>
             <!--TODO Move to javax.servlet-api version of master-->

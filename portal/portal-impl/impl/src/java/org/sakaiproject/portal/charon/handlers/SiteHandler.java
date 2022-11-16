@@ -22,8 +22,11 @@
 package org.sakaiproject.portal.charon.handlers;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -41,6 +45,7 @@ import org.sakaiproject.authz.api.Role;
 import org.sakaiproject.authz.cover.SecurityService;
 import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.component.cover.ServerConfigurationService;
+import org.sakaiproject.coursemanagement.api.exception.IdNotFoundException;
 import org.sakaiproject.entity.api.ResourceProperties;
 import org.sakaiproject.event.api.Event;
 import org.sakaiproject.event.cover.EventTrackingService;
@@ -64,6 +69,7 @@ import org.sakaiproject.site.api.SitePage;
 import org.sakaiproject.site.api.ToolConfiguration;
 import org.sakaiproject.site.cover.SiteService;
 import org.sakaiproject.thread_local.cover.ThreadLocalManager;
+import org.sakaiproject.time.api.UserTimeService;
 import org.sakaiproject.tool.api.ActiveTool;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.Tool;
@@ -99,8 +105,9 @@ public class SiteHandler extends WorksiteHandler
 
 	private static final String INCLUDE_TABS = "include-tabs";
 
-	private static final String URL_FRAGMENT = "site";
-	
+	// Cannot be static to allow for this class to be extended at a different fragment
+	protected String URL_FRAGMENT = "site";
+
 	private static ResourceLoader rb = new ResourceLoader("sitenav");
 	
 	// When these strings appear in the URL they will be replaced by a calculated value based on the context.
@@ -139,20 +146,28 @@ public class SiteHandler extends WorksiteHandler
 	private static final long AUTO_FAVORITES_REFRESH_INTERVAL_MS = 30000;
 
 	protected ProfileImageLogic imageLogic;
+	private org.sakaiproject.coursemanagement.api.CourseManagementService cms = (org.sakaiproject.coursemanagement.api.CourseManagementService) ComponentManager.get(org.sakaiproject.coursemanagement.api.CourseManagementService.class);
+
+	private UserTimeService userTimeService;
 
 	public SiteHandler()
 	{
-		setUrlFragment(SiteHandler.URL_FRAGMENT);
+		// Allow any sub-classes to register their own URL_FRAGMENT
+		// https://stackoverflow.com/questions/41566202/possible-to-avoid-default-call-to-super-in-java
+		if(this.getClass() == SiteHandler.class) {
+			setUrlFragment(URL_FRAGMENT);
+		}
 		mutableSitename =  ServerConfigurationService.getString("portal.mutable.sitename", "-");
 		mutablePagename =  ServerConfigurationService.getString("portal.mutable.pagename", "-");
 		imageLogic = ComponentManager.get(ProfileImageLogic.class);
+		userTimeService = ComponentManager.get(UserTimeService.class);
 	}
 
 	@Override
 	public int doGet(String[] parts, HttpServletRequest req, HttpServletResponse res,
 			Session session) throws PortalHandlerException
 	{
-		if ((parts.length >= 2) && (parts[1].equals(SiteHandler.URL_FRAGMENT)))
+		if ((parts.length >= 2) && (parts[1].equals(URL_FRAGMENT)))
 		{
 			// This is part of the main portal so we simply remove the attribute
 			session.setAttribute(PortalService.SAKAI_CONTROLLING_PORTAL, null);
@@ -593,7 +608,39 @@ public class SiteHandler extends WorksiteHandler
 
 		//Show a confirm dialog when publishing an unpublished site.
 		rcontext.put("publishSiteDialogEnabled", ServerConfigurationService.getBoolean("portal.publish.site.confirm.enabled", false));
+		for (SitePage pageNow: site.getPages()){	//build Manage link for site access
+			if(pageNow.getTools().get(0).getToolId().equals("sakai.siteinfo")){
+				rcontext.put("manageurl", pageNow.getUrl() + "?sakai_action=doMenu_edit_access");
+				break;
+			}
+		}
 
+		if (StringUtils.equals(site.getProperties().getProperty("publish_type"), "scheduled")) {	// custom-scheduled availability date
+			Date scheduledDate = userTimeService.parseISODateInUserTimezone(site.getProperties().getProperty("publish_date"));
+			if (scheduledDate.toInstant().isAfter(Instant.now())) {
+				rcontext.put("scheduledate", userTimeService.dateTimeFormat(scheduledDate, rb.getLocale(), DateFormat.SHORT));
+			} else {
+				// schedule date is in the past so set to false
+				rcontext.put("scheduledate", false);
+			}
+		} else if (StringUtils.equals(site.getProperties().getProperty("publish_type"), "auto")) {	// automatically-managed publishing
+			try {
+				if (cms.getAcademicSession(site.getProperties().getProperty("term_eid")).getStartDate() != null) {
+					long leadtime = ServerConfigurationService.getInt("course_site_publish_service.num_days_before_term_starts", 0) * 1000L * 60L * 60L * 24L;
+					Date publishDate = new Date(cms.getAcademicSession(site.getProperties().getProperty("term_eid")).getStartDate().getTime() - leadtime);
+					if (publishDate.toInstant().isAfter(Instant.now())) {
+						rcontext.put("scheduledate", userTimeService.dateFormat(publishDate, rb.getLocale(), DateFormat.LONG));
+					} else {
+						rcontext.put("scheduledate", false);
+					}
+				} else {
+					rcontext.put("scheduledate", false);
+				}
+			} catch(IdNotFoundException ignored) {
+				log.debug("Error getting term for auto start term date.");
+				rcontext.put("scheduledate", false);
+			}
+		}
 		//Find any quick links ready for display in the top navigation bar,
 		//they can be set per site or for the whole portal.
 		if (userId != null) {
@@ -685,6 +732,13 @@ public class SiteHandler extends WorksiteHandler
 			rcontext.put("siteNavTopLogin", Boolean.valueOf(topLogin));
 			rcontext.put("siteNavLoggedIn", Boolean.valueOf(loggedIn));
 
+			ResourceProperties resourceProperties = PreferencesService.getPreferences(session.getUserId())
+				.getProperties(org.sakaiproject.user.api.PreferencesService.SITENAV_PREFS_KEY);
+			
+
+			rcontext.put("currentSiteId", siteId);
+			rcontext.put("sidebarSites", portal.getSiteHelper().getContextSitesWithPages(req, siteId, null, null, loggedIn));
+
 			try
 			{
 				if (loggedIn)
@@ -739,10 +793,6 @@ public class SiteHandler extends WorksiteHandler
 			String skinRepo = ServerConfigurationService.getString("skin.repo");
 			rcontext.put("logoSkin", skin);
 			rcontext.put("logoSkinRepo", skinRepo);
-			String siteType = portal.calcSiteType(siteId);
-			String cssClass = (siteType != null) ? siteType : "undeterminedSiteType";
-			rcontext.put("logoSiteType", siteType);
-			rcontext.put("logoSiteClass", cssClass);
 			portal.includeLogin(rcontext, req, session);
 		}
 	}
@@ -898,6 +948,7 @@ public class SiteHandler extends WorksiteHandler
 			
 			int tabDisplayLabel = 1;
 			boolean toolsCollapsed = false;
+			String selectedPage = "";
 			boolean toolMaximised = false;
 
 			if (loggedIn) 
@@ -916,7 +967,10 @@ public class SiteHandler extends WorksiteHandler
 
 				try {
 					toolsCollapsed = props.getBooleanProperty("toolsCollapsed");
-				} catch (Exception any) {}
+					selectedPage = props.getProperty("selectedPage");
+				} catch (Exception any) {
+					log.warn("Exception caught whilst getting toolsCollapsed and selectedPage properties: {}", any.toString());
+				}
 
 				try {
 					toolMaximised = props.getBooleanProperty("toolMaximised");
@@ -924,7 +978,8 @@ public class SiteHandler extends WorksiteHandler
 			}
 
 			rcontext.put("tabDisplayLabel", tabDisplayLabel);
-			rcontext.put("toolsCollapsed", Boolean.valueOf(toolsCollapsed));
+			rcontext.put("sidebarCollapsed", Boolean.valueOf(toolsCollapsed));
+			rcontext.put("selectedPage", selectedPage);
 			rcontext.put("toolMaximised", Boolean.valueOf(toolMaximised));
 			
 			SiteView siteView = portal.getSiteHelper().getSitesView(

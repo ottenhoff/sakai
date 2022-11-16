@@ -108,5 +108,3 @@ window.top.rubrics.utils = window.top.rubrics.utils || {
     }, { once: true });
   }
 };
-
-//export {rubricsUtils};

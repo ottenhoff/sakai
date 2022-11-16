@@ -17,10 +17,14 @@ export class SakaiRubricCriteria extends RubricsElement {
     return {
       rubricId: { attribute: "rubric-id", type: String },
       siteId: { attribute: "site-id", type: String },
+      criteria: { type: Array },
       weighted: { type: Boolean },
       totalWeight: { attribute: "total-weight", type: String },
       validWeight: { attribute: "valid-weight", type: Boolean },
-      criteria: { type: Array }
+      maxPoints: { attribute: "max-points", type: String },
+      minPoints: { attribute: "min-points", type: String },
+      isLocked: { attribute: "is-locked", type: Boolean },
+      isDraft: { attribute: "is-draft", type: Boolean },
     };
   }
 
@@ -69,7 +73,7 @@ export class SakaiRubricCriteria extends RubricsElement {
           <div id="criterion_row_${c.id}" data-criterion-id="${c.id}" class="criterion-row criterion-group">
             <div class="criterion-detail criterion-title">
               <h4 class="criterion-title">
-                <span @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" title="${tr("drag_order")}" class="reorder-icon fa fa-bars"></span>
+                <span @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" title="${tr("drag_order")}" aria-label="${tr("drag_order")}" class="reorder-icon fa fa-bars"></span>
                 ${c.title}
                 <sakai-rubric-criterion-edit
                     @criterion-edited="${this.criterionEdited}"
@@ -82,15 +86,18 @@ export class SakaiRubricCriteria extends RubricsElement {
               <p>${unsafeHTML(c.description)}</p>
             </div>
             <div class="criterion-actions">
-              <a @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" data-criterion-id="${c.id}" title="${tr("copy")} ${c.title}" class="linkStyle clone fa fa-copy" @click="${this.cloneCriterion}" href="#"></a>
-              <sakai-item-delete criterion-id="${c.id}" criterion="${JSON.stringify(c)}" rubric-id="${this.rubricId}" @delete-item="${this.deleteCriterion}" token="${this.token}"></sakai-item-delete>
+              ${!this.isLocked ? html`
+                <a @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" data-criterion-id="${c.id}" title="${tr("copy")} ${c.title}" aria-label="${tr("copy")} ${c.title}" class="linkStyle clone fa fa-copy" @click="${this.cloneCriterion}" href="#"></a>
+                <sakai-item-delete criterion-id="${c.id}" site-id="${this.siteId}" criterion="${JSON.stringify(c)}" rubric-id="${this.rubricId}" @delete-item="${this.deleteCriterion}" token="${this.token}"></sakai-item-delete>`
+                : ""
+              }
             </div>
           </div>
         ` : html`
           <div id="criterion_row_${c.id}" data-criterion-id="${c.id}" class="criterion-row">
             <div class="criterion-detail">
               <h4 class="criterion-title">
-                <span @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" title="${tr("drag_order")}" class="reorder-icon fa fa-bars"></span>
+                <span @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" title="${tr("drag_order")}" aria-label="${tr("drag_order")}" class="reorder-icon fa fa-bars"></span>
                 ${c.title}
                 <sakai-rubric-criterion-edit
                     @criterion-edited="${this.criterionEdited}"
@@ -104,11 +111,12 @@ export class SakaiRubricCriteria extends RubricsElement {
               </p>
               ${this.weighted ? html`
                   <div class="form-inline weight-field">
-                      <div class="form-group input-group-sm ${this.validWeight ? "" : "has-error"}">
+                    ${!this.isLocked ? html`
+                      <div class="field-item form-group input-group-sm ${this.validWeight ? "" : "has-error"}">
                         <label
-                            for="weight_input_${c.id}"
-                            class="control-label"
-                            title="${!this.validWeight ? tr("total_weight_wrong") : ""}"
+                          for="weight_input_${c.id}"
+                          class="control-label"
+                          title="${!this.validWeight ? tr("total_weight_wrong") : ""}"
                         >
                           <sr-lang key="weight">Weight</sr-lang>
                         </label>
@@ -123,16 +131,25 @@ export class SakaiRubricCriteria extends RubricsElement {
                           title="${!this.validWeight ? tr("total_weight_wrong") : ""}"
                         >
                         <span class="control-label"
-                            title="${!this.validWeight ? tr("total_weight_wrong") : ""}"
+                          title="${!this.validWeight ? tr("total_weight_wrong") : ""}"
                         >
                           <sr-lang key="percent_sign">%</sr-lang>
                         </span>
-                      </div>
-                  </div>` : ""
+                      </div>`
+                      : ""
+                    }
+                    <div class="field-item">
+                      <span>${tr('min_max_points', [this.getCriterionMinPoints(c.id), this.getCriterionMaxPoints(c.id)])}</span>
+                    </div>
+                  </div>`
+                  : ""
                 }
-              <div class="add-criterion-item">
-                ${this.renderAddRatingButton(c)}
-              </div>
+              ${!this.isLocked ? html`
+                <div class="add-criterion-item">
+                  ${this.renderAddRatingButton(c)}
+                </div>`
+                : ""
+              }
             </div>
             <div class="criterion-ratings">
               <div id="cr-table-${c.id}" class="cr-table" data-criterion-id="${c.id}">
@@ -140,7 +157,16 @@ export class SakaiRubricCriteria extends RubricsElement {
                 <div class="rating-item" data-rating-id="${r.id}" id="rating_item_${r.id}">
                   <h5 class="criterion-item-title">
                     ${r.title}
-                    <sakai-rubric-criterion-rating-edit criterion-id="${c.id}" @save-rating="${this.saveRating}" @delete-rating="${this.deleteRating}" minpoints="${c.pointrange ? c.pointrange.low : 0}" maxpoints="${c.pointrange ? c.pointrange.high : 0}" rating="${JSON.stringify(r)}" ?removable="${ this.isRatingRemovable(c) }"></sakai-rubric-criterion-rating-edit>
+                    <sakai-rubric-criterion-rating-edit
+                      criterion-id="${c.id}"
+                      @save-rating="${this.saveRating}"
+                      @delete-rating="${this.deleteRating}"
+                      minpoints="${c.pointrange ? c.pointrange.low : 0}"
+                      maxpoints="${c.pointrange ? c.pointrange.high : 0}"
+                      rating="${JSON.stringify(r)}"
+                      ?removable="${ this.isRatingRemovable(c) }"
+                      ?is-locked="${this.isLocked}">
+                    </sakai-rubric-criterion-rating-edit>
                   </h5>
                   <div class="div-description">
                     <p>
@@ -156,56 +182,86 @@ export class SakaiRubricCriteria extends RubricsElement {
                     }
                     ${parseFloat(r.points).toLocaleString(this.locale)} <sr-lang key="points">Points</sr-lang>
                   </span>
-
-                  <div class="add-criterion-item">
-                    ${this.renderAddRatingButton(c, i + 1)}
-                  </div>
-
-                  <span @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" title="${tr("drag_order")}" class="reorder-icon sideways fa fa-bars"></span>
+                  ${!this.isLocked ? html`
+                    <div class="add-criterion-item">
+                      ${this.renderAddRatingButton(c, i + 1)}
+                    </div>
+                    <span @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" title="${tr("drag_order")}" aria-label="${tr("drag_order")}" class="reorder-icon sideways fa fa-bars"></span>`
+                    : ""
+                  }
                 </div>
               `)}
               </div>
             </div>
-            <div class="criterion-actions">
-              <a @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" data-criterion-id="${c.id}" title="${tr("copy")} ${c.title}" class="linkStyle clone fa fa-copy" @keyup="${this.openEditWithKeyboard}" @click="${this.cloneCriterion}" href="#"></a>
-              <sakai-item-delete criterion-id="${c.id}" site-id="${this.siteId}" criterion="${JSON.stringify(c)}" rubric-id="${this.rubricId}" @delete-item="${this.deleteCriterion}"></sakai-item-delete>
-            </div>
+            ${!this.isLocked ? html`
+              <div class="criterion-actions">
+                <a @focus="${this.onFocus}" @focusout="${this.focusOut}" tabindex="0" role="button" data-criterion-id="${c.id}" title="${tr("copy")} ${c.title}" aria-label="${tr("copy")} ${c.title}" class="linkStyle clone fa fa-copy" @keyup="${this.openEditWithKeyboard}" @click="${this.cloneCriterion}" href="#"></a>
+                <sakai-item-delete criterion-id="${c.id}" site-id="${this.siteId}" criterion="${JSON.stringify(c)}" rubric-id="${this.rubricId}" @delete-item="${this.deleteCriterion}"></sakai-item-delete>
+              </div>`
+              : ""
+            }
           </div>
         `}
       `)}
       </div>
       ${this.weighted ? html`
-        <br>
-        <div class="total-weight ${this.validWeight ? "" : "has-error"}">
-          <span class="control-label">${tr('total_weight', [this.totalWeight])}</span>
+        <div class="weighted-grade-info">
+          <div class="total-data">
+            <div class="${this.validWeight ? "" : "has-error"}">
+              <span class="control-label">
+                <span class="bold-header">${tr("total_weight")}</span>
+                <span>${this.totalWeight}<sr-lang key="percent_sign">%</sr-lang></span>
+              </span>
+            </div>
+            <div>
+              <span class="bold-header">${tr("total_grade")}</span>
+              <span>${tr('min_max_points', [this.minPoints, this.maxPoints])}</span>
+            </div>
+          </div>
+          <div class="banner-container">
+            <div class="sak-banner-success hidden save-success has-success fade">
+              <sr-lang key="saved_successfully">%</sr-lang>
+            </div>
+            <div class="sak-banner-warn ${!this.validWeight && this.isDraft ? "" : "hidden"}">
+            <sr-lang key="draft_save_invalid_weights">%</sr-lang>
+            </div>
+            <div class="sak-banner-error ${!this.validWeight && !this.isDraft ? "" : "hidden"}">
+              <sr-lang key="total_weight_wrong">%</sr-lang>
+            </div>
+          </div>
         </div>`
         : ""
       }
-      <br>
-      <div>
-        ${this.weighted ? html`
-          <button class="save-weights" @click="${this.saveWeights}" ?disabled="${!this.validWeight}">
-            <span tabindex="0" role="button" class="add fa fa-save"></span>
-            <sr-lang key="save_weights">Save Weights</sr-lang>
-          </button>`
+      ${!this.isLocked ? html`
+        <div class="action-butons">
+          ${this.weighted ? html`
+            <button class="save-weights" @click="${this.saveWeights}" ?disabled="${!this.validWeight && !this.isDraft}">
+              <span class="add fa fa-save"></span>
+              <sr-lang key="save_weights">Save Weights</sr-lang>
+            </button>`
+            : ""
+          }
+          <button class="btn-link add-criterion" @click="${this.createCriterion}">
+            <span class="add fa fa-plus"></span>
+            <sr-lang key="add_criterion">Add Criterion</sr-lang>
+          </button>
+          <button class="btn-link add-empty-criterion" @click="${(event) => this.createCriterion(event, true)}">
+            <span class="add fa fa-plus"></span>
+            <sr-lang key="add_criterion_group">Add Criterion Group</sr-lang>
+          </button>
+        </div>
+        ${this.isDraft ? html`
+        <div class="sak-banner-warn margin-bottom">
+          <sr-lang key="draft_info">%</sr-lang>
+        </div>`
           : ""
         }
-        <button class="add-criterion" @click="${this.createCriterion}">
-          <span tabindex="0" role="button" class="add fa fa-plus"></span>
-          <sr-lang key="add_criterion">Add Criterion</sr-lang>
-        </button>
-        <button class="add-empty-criterion" @click="${(event) => this.createCriterion(event, true)}">
-          <span tabindex="0" role="button" class="add fa fa-plus"></span>
-          <sr-lang key="add_criterion_group">Add Criterion Group</sr-lang>
-        </button>
-      </div>
-      ${this.weighted ? html`
-        <br>
-        <div class="save-success has-success fade">
-          <span class="control-label">${tr("saved_successfully")}</span>
+      ` : html`
+        <div class="sak-banner-warn margin-bottom">
+          <sr-lang key="locked_warning">%</sr-lang>
         </div>`
-        : ""
       }
+      <br>
     `;
   }
 
@@ -306,6 +362,7 @@ export class SakaiRubricCriteria extends RubricsElement {
         rating.new = false;
         this.requestUpdate();
         this.letShareKnow();
+        this.dispatchEvent(new CustomEvent('refresh-total-weight', { detail: { criteria: this.criteria } }));
       } else {
         throw new Error("Network error while saving rating");
       }
@@ -404,10 +461,37 @@ export class SakaiRubricCriteria extends RubricsElement {
     })
     .then(c => {
 
+      // The current weight may be lost because comes from DB and the UI can have a different value.
+      c.weight = criterion.weight;
+
       Object.assign(criterion, c);
       this.requestUpdate();
+      this.letShareKnow();
+      this.dispatchEvent(new CustomEvent('refresh-total-weight', { detail: { criteria: this.criteria } }));
     })
     .catch (error => console.error(error));
+  }
+
+  // SAK-47640 - Get the maximum and minimum possible grade of the criterion,
+  // multiplying the max-min rating points of the criterion by the criterion weight
+  getCriterionMaxPoints(criterionId) {
+    return this.getCriterionPoints(criterionId, Math.max);
+  }
+
+  getCriterionMinPoints(criterionId) {
+    return this.getCriterionPoints(criterionId, Math.min);
+  }
+
+  getCriterionPoints(criterionId, minOrMax) {
+
+    let totalPoints = 0;
+    const criterion = this.criteria.find(c => c.id == criterionId);
+
+    totalPoints += minOrMax(...criterion.ratings.map( (rating) => {
+      return rating.points * (criterion.weight / 100);
+    }));
+
+    return parseFloat(totalPoints).toLocaleString(this.locale);
   }
 
   cloneCriterion(e) {

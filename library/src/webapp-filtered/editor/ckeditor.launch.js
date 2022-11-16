@@ -201,6 +201,8 @@ sakai.editor.editors.ckeditor.launch = function(targetId, config, w, h) {
         }
     }
 
+    const directUploadUrl = `/direct/content/direct-upload.json?context=${siteId}`;
+
     var ckconfig = {
     //Some defaults for audio recorder
         audiorecorder : {
@@ -224,22 +226,21 @@ sakai.editor.editors.ckeditor.launch = function(targetId, config, w, h) {
         },
         disallowedContent: 'table[cellspacing,cellpadding,border,summary]',
 
-        contentsCss: [(webJars+'bootstrap/3.3.7/css/bootstrap.min.css')],
+        contentsCss: [(webJars+'bootstrap/5.2.0/css/bootstrap.min.css')],
 
         language: language + (country ? '-' + country.toLowerCase() : ''),
         // This is used for uploading by the autorecorder plugin.
         // TODO Get this to work with elfinder.
-        // TODO May be a problem after SAK-44872
-        fileConnectorUrl : '',
+        fileConnectorUrl : '/sakai-fck-connector/web/editor/filemanager/browser/default/connectors/jsp/connector' + collectionId + '?' + folder,
 
         // These are the general URLs for browsing generally and specifically for images/flash object.
         filebrowserBrowseUrl :      filebrowser.browseUrl,
         filebrowserImageBrowseUrl : filebrowser.imageBrowseUrl,
         filebrowserFlashBrowseUrl : filebrowser.flashBrowseUrl,
 
-        filebrowserUploadUrl: `/direct/content/direct-upload.json?context=${siteId}`,
-        uploadUrl: `/direct/content/direct-upload.json?context=${siteId}`,
-        imageUploadUrl: `/direct/content/direct-upload.json?context=${siteId}`,
+        filebrowserUploadUrl: directUploadUrl,
+        uploadUrl: directUploadUrl,
+        imageUploadUrl: directUploadUrl,
         sakaiDropdownToolbar: true,
         toolbarCanCollapse: true,
         toolbarStartupExpanded: false,
@@ -542,10 +543,6 @@ sakai.editor.editors.ckeditor.launch = function(targetId, config, w, h) {
                 ] 
                 {id} .cke_resizer [
                     border-right-color:{ckeResizer}
-                ] 
-                {id} .cke_wysiwyg_frame,
-                {id} .cke_wysiwyg_div [
-                    background:{defaultBackground}
                 ] 
                 {id} textarea.cke_source [
                     background-color: {lightBackground};

@@ -84,6 +84,15 @@ sakai.setupGroupModalLinks = function (dialogTarget, memberstr, printstr, tables
 			sakai.getGroupInfo(e.target.dataset.groupId, dialogTarget, memberstr, printstr, tablestr1, tablestr2, tablestr3);
 		});
 	});
+
+	[...document.querySelectorAll(".moreInfoGroups")].forEach(el => {
+
+		el.addEventListener("click", e => {
+
+			e.preventDefault();
+			sakai.getGroupInfo(e.target.id, dialogTarget, memberstr, printstr, tablestr1, tablestr2, tablestr3);
+		});
+	});
 };
 
 /*
@@ -432,12 +441,6 @@ sakai.siteTypeSetup = function(){
                         }
                         else {
                             $('#copyUsersWrapper input').prop('disabled', false);
-                        }
-                        if (this.publishSiteVis === true) {
-                            $('#publishSiteWrapper').show();
-                        }
-                        else {
-                            $('#publishSiteWrapper').hide();
                         }
                         if (this.publishSiteChecked === true) {
                             $('#publishSiteWrapper input').prop('checked', true);

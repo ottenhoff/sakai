@@ -39,7 +39,7 @@ class SakaiRubricsManager extends RubricsElement {
 
       <div class="row">
         <div class="col-md-4 form-group">
-          <label for="rubrics-search-bar"><sr-lang key="search_rubrics">Search Rubrics by title or author</sr-lang></label>
+          <label class="label-rubrics" for="rubrics-search-bar"><sr-lang key="search_rubrics">Search Rubrics by title or author</sr-lang></label>
           <input type="text" id="rubrics-search-bar" name="rubrics-search-bar" class="form-control" @keyup="${this.filterRubrics}">
         </div>
       </div>
@@ -134,22 +134,11 @@ class SakaiRubricsManager extends RubricsElement {
 
   filterRubrics() {
 
-    const searchInput = document.getElementById('rubrics-search-bar');
-    const searchInputValue = searchInput.value.toLowerCase();
+    const search = document.getElementById('rubrics-search-bar').value.toLowerCase();
 
     this.querySelectorAll('sakai-rubrics-list, sakai-rubrics-shared-list').forEach(rubricList => {
-      rubricList.querySelectorAll('.rubric-item').forEach(rubricItem => {
-        rubricItem.classList.remove('hidden');
-        const rubricTitle = rubricItem.querySelector('.rubric-name').textContent;
-        const rubricAuthor = rubricItem.querySelector('sakai-rubric-creator-name').textContent;
-        const rubricSite = rubricItem.querySelector('sakai-rubric-site-title').textContent;
-        if (!rubricAuthor.toLowerCase().includes(searchInputValue) &&
-            !rubricTitle.toLowerCase().includes(searchInputValue) &&
-            !rubricSite.toLowerCase().includes(searchInputValue)
-        ) {
-          rubricItem.classList.add('hidden');
-        }
-      });
+
+      rubricList.search(search);
     });
   }
 

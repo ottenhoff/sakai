@@ -24,13 +24,11 @@ export class SakaiAddTopic extends SakaiElement {
       disableDiscussions: { attribute: "disable-discussions", type: Boolean },
       canEditTags: { attribute: "can-edit-tags", type: Boolean },
       topic: { type: Object },
-      titleError: { attribute: false, type: Boolean },
       showShowDatePicker: { attribute: false, type: Boolean },
       showHideDatePicker: { attribute: false, type: Boolean },
       showLockDatePicker: { attribute: false, type: Boolean },
       showDue: { attribute: false, type: Boolean },
       showAcceptUntil: { attribute: false, type: Boolean },
-      errorDisplay: { attribute: false, type: String },
     };
   }
 
@@ -102,9 +100,7 @@ export class SakaiAddTopic extends SakaiElement {
   save(draft) {
 
     if (this.topic.title.length < 4) {
-      this.titleError = true;
-      this.errorDisplay = this.i18n.min_title_characters_info;
-      setTimeout(() => this.errorDisplay = undefined, 4000);
+      this.querySelector("#summary").focus();
       return;
     }
 
@@ -304,9 +300,37 @@ export class SakaiAddTopic extends SakaiElement {
     }
   }
 
+  _resetTitle() { this.titleError = false; }
+
+  _setSelectedTagId(e) { this.selectedTagId = e.target.value; }
+
+  _setPinned(e) {
+
+    this.topic.pinned = e.target.checked;
+    this.saveWip();
+  }
+
+  _setAnonymous(e) {
+
+    this.topic.anonymous = e.target.checked;
+    this.saveWip();
+  }
+
+  _setAllowAnonymousPosts(e) {
+
+    this.topic.allowAnonymousPosts = e.target.checked;
+    this.saveWip();
+  }
+
+  _setMustPostBeforeViewing(e) {
+
+    this.topic.mustPostBeforeViewing = e.target.checked;
+    this.saveWip();
+  }
+
   firstUpdated() {
 
-    this.querySelector(".summary-input").focus();
+    this.querySelector("#summary").focus();
     /*
     let url = `addTopic`;
     history.pushState({ state: STATE_ADDING_TOPIC }, "", url);
@@ -331,7 +355,7 @@ export class SakaiAddTopic extends SakaiElement {
           <div id="post-type-label" class="add-topic-label">${this.i18n.topic_type}</div>
           <div id="topic-type-toggle-block">
             <div @click=${this.setType}
-                @keydown=${this.setType}}
+                @keydown=${this.setType}
                 tabindex="0"
                 data-type="${QUESTION}"
                 class="topic-type-toggle ${this.topic.type === QUESTION ? "active" : ""}">
@@ -342,7 +366,7 @@ export class SakaiAddTopic extends SakaiElement {
               <div class="topic-type-description">${this.i18n.question_type_description}</div>
             </div>
             <div @click=${this.setType}
-                @keydown=${this.setType}}
+                @keydown=${this.setType}
                 tabindex="0"
                 data-type="${DISCUSSION}"
                 class="topic-type-toggle ${this.topic.type === DISCUSSION ? "active" : ""}">
@@ -359,9 +383,7 @@ export class SakaiAddTopic extends SakaiElement {
         <div class="add-topic-block">
           <div id="summary-label" class="add-topic-label">${this.i18n.summary} *</div>
           <input id="summary"
-            class="summary-input ${this.titleError ? "error" : ""}"
             @change=${this.updateSummary}
-            @focus=${() => this.titleError = false}
             .value="${this.topic.title}" />
           <div class="required">
             <span>* ${this.i18n.required}</span>
@@ -381,7 +403,7 @@ export class SakaiAddTopic extends SakaiElement {
         <div id="tag-post-block" class="add-topic-block">
           <div id="tag-post-label" class="add-topic-label">${this.i18n.tag_topic}</div>
           ${this.tags.length > 0 ? html`
-          <select @change=${e => this.selectedTagId = e.target.value}>
+          <select @change="${this._setSelectedTagId}" aria-labelledby="tag-post-label">
             ${this.tags.map(tag => html`
             <option value="${tag.id}">${tag.label}</option>
             `)}
@@ -459,97 +481,99 @@ export class SakaiAddTopic extends SakaiElement {
         ${this.topic.canModerate ? html`
         <div id="conversations-availablility-block" class="add-topic-block">
           <form>
-          <div id="availability-label" class="add-topic-label">${this.i18n.availability}</div>
-          <div class="availability-wrapper">
-            <div>
-              <input
-                  type="radio"
-                  id="add-topic-now"
-                  aria-labelledby="availability-now-label"
-                  name="availabilitytype"
-                  @click=${this.setAvailableNow}
-                  ?checked=${this.topic.availability === AVAILABILITY_NOW}>
-            </div>
-            <div id="availability-now-label">${this.i18n.make_available_now}</div>
-            <div>${this.i18n.make_available_now_explanation}</div>
-          </div>
-          <div class="availability-wrapper">
-            <div>
-              <input
-                  type="radio"
-                  aria-labelledby="availability-dated-label"
-                  name="availabilitytype"
-                  @click=${this.setAvailableDated}
-                  ?checked=${this.topic.availability === AVAILABILITY_DATED} />
-            </div>
-            <div id="availability-dated-label">${this.i18n.make_available_dated}</div>
-            <div>${this.i18n.make_available_dated_explanation}</div>
-          </div>
-          ${this.topic.availability === AVAILABILITY_DATED ? html`
-          <div id="add-topic-availability-block">
-            <div class="add-topic-date-checkbox">
+            <div id="availability-label" class="add-topic-label">${this.i18n.availability}</div>
+            <div class="availability-wrapper">
               <div>
-                <input type="checkbox"
-                    @click=${this.toggleShowDatePicker}
-                    ?checked=${this.topic.showDate}>
+                <input
+                    type="radio"
+                    id="add-topic-now"
+                    aria-labelledby="availability-now-label"
+                    name="availabilitytype"
+                    @click=${this.setAvailableNow}
+                    ?checked=${this.topic.availability === AVAILABILITY_NOW}>
               </div>
+              <div id="availability-now-label">${this.i18n.make_available_now}</div>
+              <div>${this.i18n.make_available_now_explanation}</div>
+            </div>
+            <div class="availability-wrapper">
               <div>
-                <div>${this.i18n.show}</div>
-                ${this.showShowDatePicker ? html`
+                <input
+                    type="radio"
+                    aria-labelledby="availability-dated-label"
+                    name="availabilitytype"
+                    @click=${this.setAvailableDated}
+                    ?checked=${this.topic.availability === AVAILABILITY_DATED} />
+              </div>
+              <div id="availability-dated-label">${this.i18n.make_available_dated}</div>
+              <div>${this.i18n.make_available_dated_explanation}</div>
+            </div>
+            ${this.topic.availability === AVAILABILITY_DATED ? html`
+            <div id="add-topic-availability-block">
+              <div class="add-topic-date-checkbox">
                 <div>
-                  <span>${this.i18n.date}</span>
-                  <sakai-date-picker
-                      @datetime-selected=${this.setShowDate}
-                      epoch-millis="${this.topic.showDateMillis}"
-                      label="${this.i18n.showdate_picker_tooltip}">
-                  </sakai-date-picker>
+                  <input type="checkbox"
+                      aria-labelledby="add-topic-show-label"
+                      @click=${this.toggleShowDatePicker}
+                      ?checked=${this.topic.showDate}>
                 </div>
-                ` : ""}
+                <div>
+                  <div id="add-topic-show-label">${this.i18n.show}</div>
+                  ${this.showShowDatePicker ? html`
+                  <div>
+                    <span>${this.i18n.date}</span>
+                    <sakai-date-picker
+                        @datetime-selected=${this.setShowDate}
+                        epoch-millis="${this.topic.showDateMillis}"
+                        label="${this.i18n.showdate_picker_tooltip}">
+                    </sakai-date-picker>
+                  </div>
+                  ` : ""}
+                </div>
+              </div>
+              <div class="add-topic-date-checkbox">
+                <div>
+                  <input type="checkbox"
+                      aria-labelledby="add-topic-lock-label"
+                      @click=${this.toggleLockDatePicker}
+                      ?checked=${this.topic.lockDate}>
+                </div>
+                <div>
+                  <div id="add-topic-lock-label">${this.i18n.lock}</div>
+                  ${this.showLockDatePicker ? html`
+                  <div>
+                    <span>${this.i18n.date}</span>
+                    <sakai-date-picker
+                        @datetime-selected=${this.setLockDate}
+                        epoch-millis="${this.topic.lockDateMillis}"
+                        label="${this.i18n.lockdate_picker_tooltip}">
+                    </sakai-date-picker>
+                  </div>
+                  ` : ""}
+                </div>
+              </div>
+              <div class="add-topic-date-checkbox">
+                <div>
+                  <input type="checkbox"
+                      aria-labelledby="add-topic-hide-label"
+                      @click=${this.toggleHideDatePicker}
+                      ?checked=${this.topic.hideDate}>
+                </div>
+                <div>
+                  <div id="add-topic-hide-label">${this.i18n.hide}</div>
+                  ${this.showHideDatePicker ? html`
+                  <div>
+                    <span>${this.i18n.date}</span>
+                    <sakai-date-picker
+                        @datetime-selected=${this.setHideDate}
+                        epoch-millis="${this.topic.hideDateMillis}"
+                        label="${this.i18n.hidedate_picker_tooltip}">
+                    </sakai-date-picker>
+                  </div>
+                  ` : ""}
+                </div>
               </div>
             </div>
-            <div class="add-topic-date-checkbox">
-              <div>
-                <input type="checkbox"
-                    @click=${this.toggleLockDatePicker}
-                    ?checked=${this.topic.lockDate}>
-              </div>
-              <div>
-                <div>${this.i18n.lock}</div>
-                ${this.showLockDatePicker ? html`
-                <div>
-                  <span>${this.i18n.date}</span>
-                  <sakai-date-picker
-                      @datetime-selected=${this.setLockDate}
-                      epoch-millis="${this.topic.lockDateMillis}"
-                      label="${this.i18n.lockdate_picker_tooltip}">
-                  </sakai-date-picker>
-                </div>
-                ` : ""}
-              </div>
-            </div>
-            <div class="add-topic-date-checkbox">
-              <div>
-                <input type="checkbox"
-                    @click=${this.toggleHideDatePicker}
-                    ?checked=${this.topic.hideDate}>
-              </div>
-              <div>
-                <div>${this.i18n.hide}</div>
-                ${this.showHideDatePicker ? html`
-                <div>
-                  <span>${this.i18n.date}</span>
-                  <sakai-date-picker
-                      @datetime-selected=${this.setHideDate}
-                      epoch-millis="${this.topic.hideDateMillis}"
-                      label="${this.i18n.hidedate_picker_tooltip}">
-                  </sakai-date-picker>
-                </div>
-                ` : ""}
-              </div>
-            <div>
-          </div>
           ` : ""}
-          </div>
           </form>
         </div>
         ` : ""}
@@ -611,7 +635,7 @@ export class SakaiAddTopic extends SakaiElement {
           ${this.canPin ? html`
           <div>
             <input type="checkbox" id="pinned-checkbox"
-              @click=${e => { this.topic.pinned = e.target.checked; this.saveWip(); }}
+              @click="${this._setPinned}"
               ?checked=${this.topic.pinned}>
             </input>
             <span class="topic-option-label">${this.i18n.pinned}</span>
@@ -621,7 +645,7 @@ export class SakaiAddTopic extends SakaiElement {
           ${this.canAnonPost ? html`
           <div>
             <input type="checkbox"
-              @click=${e => { this.topic.anonymous = e.target.checked; this.saveWip(); }}
+              @click=${this._setAnonymous}
               ?checked=${this.topic.anonymous}>
             </input>
             <span class="topic-option-label">${this.i18n.anonymous}</span>
@@ -629,7 +653,7 @@ export class SakaiAddTopic extends SakaiElement {
           </div>
           <div>
             <input type="checkbox"
-              @click=${e => { this.topic.allowAnonymousPosts = e.target.checked; this.saveWip(); }}
+              @click="${this._setAllowAnonymousPosts}"
               ?checked=${this.topic.allowAnonymousPosts}>
             </input>
             <span class="topic-option-label">${this.i18n.anonymous_posts}</span>
@@ -638,7 +662,7 @@ export class SakaiAddTopic extends SakaiElement {
           ` : ""}
           <div>
             <input type="checkbox"
-              @click=${e => { this.topic.mustPostBeforeViewing = e.target.checked; this.saveWip(); }}
+              @click="${this._setMustPostBeforeViewing}"
               ?checked=${this.topic.mustPostBeforeViewing}>
             </input>
             <span class="topic-option-label">${this.i18n.post_before_viewing_label}</span>
@@ -650,9 +674,6 @@ export class SakaiAddTopic extends SakaiElement {
           <input type="button" @click=${this.saveAsDraft} value="${this.i18n.save_as_draft}">
           <input type="button" @click=${this.cancel} value="${this.i18n.cancel}">
         </div>
-        ${this.errorDisplay ? html`
-          <div id="conv-add-topic-error" class="sak-banner-error">${this.errorDisplay}</div>
-        ` : ""}
 
       </div>
     `;
