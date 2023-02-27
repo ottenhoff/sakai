@@ -25,6 +25,14 @@ $(window).load(function () {
   $('.defaultClosed').each(function () {
     setCollapsedStatus($(this).prev(), true);
   });
+
+  // Scroll the last-answered question into view
+  const questionToScrollTo = sessionStorage.getItem('question-submit-return-id');
+  if (questionToScrollTo) {
+    sessionStorage.removeItem('question-submit-return-id');
+    document.getElementById(questionToScrollTo).scrollIntoView(true);
+  }
+
 });
 
 function fixAddBefore(href) {
@@ -117,6 +125,28 @@ $(document).ready(function () {
     box = $(this).children().first();
     box.attr('title', $(this).children().nextAll('.tooltip-content').html())
     box.tooltip();
+  });
+
+  document.querySelectorAll('.question-submit').forEach(el => {
+    el.addEventListener("click", e => {
+      // Dont allow empty responses to matching questions
+      $(this).parent().find('option:selected').each(function() {
+        if ($(this).val() == '') {
+          $(this).parent().parent().addClass('alert alert-danger');
+          e.preventDefault();
+          return false;
+        }
+      });
+
+      // Store the question the student just answered and jump to it on new page load
+      const qEl = e.target.parentElement.closest('[id]');
+      qEl && sessionStorage.setItem('question-submit-return-id', qEl.id);
+    });
+  });
+
+  // Add a blank option at beginning of matching select boxes
+  $('.matchingAnswer select:enabled').each(function () {
+    $(this).prepend("<option hidden disabled selected value>----</option>");
   });
 
   $("input[type=checkbox].checklist-checkbox").on("change", function () {
@@ -1042,9 +1072,15 @@ $(document).ready(function () {
 
       if ($(this).attr("id") === "multipleChoiceSelect") {
         $("#shortanswerDialogDiv").hide();
+        $("#matchingDialogDiv").hide();
         $("#multipleChoiceDialogDiv").show();
-      } else {
+      } else if($(this).attr("id") === "matchingSelect") {
+        $("#shortanswerDialogDiv").hide();
+        $("#multipleChoiceDialogDiv").hide();
+        $("#matchingDialogDiv").show();
+      } else if($(this).attr("id") === "shortanswerSelect") {
         $("#shortanswerDialogDiv").show();
+        $("#matchingDialogDiv").hide();
         $("#multipleChoiceDialogDiv").hide();
       }
     });
@@ -1086,10 +1122,12 @@ $(document).ready(function () {
       $("#multipleChoiceSelect").click();
       $("#multipleChoiceSelect").prop('checked',true);  //the Click above will trigger the right hide/show of things itself, but it will not actually display multipleChoiceSelect as Checked, so we do it explicitly here.
       resetMultipleChoiceAnswers();
+      resetMatchingAnswers();
       resetShortanswers();
 
       $("#multipleChoiceSelect").prop("disabled", false);
       $("#shortanswerSelect").prop("disabled", false);
+      $("#matchingSelect").prop("disabled", false);
       checkQuestionGradedForm();
 
       $("#question-correct-text").val("");
@@ -1130,6 +1168,7 @@ $(document).ready(function () {
       CKEDITOR.instances["question-text-area-evolved::input"].setData(questionText);
 
       resetMultipleChoiceAnswers();
+      resetMatchingAnswers();
       resetShortanswers();
 
       // We can't have these disabled when trying to select them (which we do to set the type
@@ -1137,12 +1176,13 @@ $(document).ready(function () {
       // change the question type of an already existing question.
       $("#multipleChoiceSelect").prop("disabled", false);
       $("#shortanswerSelect").prop("disabled", false);
+      $("#matchingSelect").prop("disabled", false);
 
-      var questionType = row.find(".questionType").text();
+      const questionType = row.find(".questionType").text();
       if (questionType === "shortanswer") {
         $("#shortanswerSelect").click();
 
-        var questionAnswers = row.find(".questionAnswer").text().split("\n");
+        const questionAnswers = row.find(".questionAnswer").text().split("\n");
         for (let index = 0; index < questionAnswers.length - 1; index++) {
           let answerSlot;
           if (index === 0) {
@@ -1153,6 +1193,25 @@ $(document).ready(function () {
 
           answerSlot.find(".question-shortanswer-answer").val(questionAnswers[index]);
         }
+      } else if (questionType === "matching") {
+        $("#matchingSelect").click();
+
+        row.find(".questionMatchingAnswer").each(function(index, el) {
+          const qId = $(el).find(".questionMatchingAnswerId").text();
+          const qPrompt = $(el).find(".questionMatchingPrompt").text();
+          const qResponse = $(el).find(".questionMatchingResponse").text();
+
+          let answerSlot;
+          if (index === 0) {
+            answerSlot = $("#copyableMatchingAnswer").first();
+          } else {
+            answerSlot = addMatchingAnswer();
+          }
+
+          answerSlot.find(".question-matching-id").val(qId);
+          answerSlot.find(".question-matching-prompt").val(qPrompt);
+          answerSlot.find(".question-matching-response").val(qResponse);
+        });
       } else {
         $("#multipleChoiceSelect").click();
 
@@ -1160,12 +1219,12 @@ $(document).ready(function () {
 
         row.find(".questionMultipleChoiceAnswer").each(function (index, el) {
 
-          var id = $(el).find(".questionMultipleChoiceAnswerId").text();
+          const id = $(el).find(".questionMultipleChoiceAnswerId").text();
           //SAK-46296
-          var text = $(el).find(".raw-questionAnswer-text").val();
-          var correct = $(el).find(".questionMultipleChoiceAnswerCorrect").text();
+          const text = $(el).find(".raw-questionAnswer-text").val();
+          const correct = $(el).find(".questionMultipleChoiceAnswerCorrect").text();
 
-          var answerSlot;
+          let answerSlot;
           if (index === 0) {
             answerSlot = $("#copyableMultipleChoiceAnswer").first();
           } else {
@@ -1181,7 +1240,7 @@ $(document).ready(function () {
           }
         });
 
-        var questionShowPoll = row.find(".questionShowPoll").text();
+        const questionShowPoll = row.find(".questionShowPoll").text();
         if (questionShowPoll === "true") {
           $("#question-show-poll").prop("checked", true);
         } else {
@@ -1192,8 +1251,9 @@ $(document).ready(function () {
       // Don't allow question types to be changed.  Simplifies consistency in grading on the backend.
       $("#multipleChoiceSelect").prop("disabled", true);
       $("#shortanswerSelect").prop("disabled", true);
+      $("#matchingSelect").prop("disabled", true);
 
-      var questionGraded = row.find(".questionGrade").text();
+      const questionGraded = row.find(".questionGrade").text();
       if (questionGraded === "true") {
         $("#question-graded").prop("checked", true);
       } else {
@@ -1202,34 +1262,34 @@ $(document).ready(function () {
 
       checkQuestionGradedForm();
 
-      var gradebookTitle = row.find(".questionGradebookTitle").text();
+      const gradebookTitle = row.find(".questionGradebookTitle").text();
       if (gradebookTitle === "null") {
         $("#question-gradebook-title").val("");
       } else {
         $("#question-gradebook-title").val(gradebookTitle);
       }
 
-      var maxPoints = row.find(".questionMaxPoints").text();
+      const maxPoints = row.find(".questionMaxPoints").text();
       if (maxPoints === "null") {
         $("#question-max").val("");
       } else {
         $("#question-max").val(maxPoints);
       }
 
-      var questionCorrectText = row.find(".questionCorrectText").text();
+      const questionCorrectText = row.find(".questionCorrectText").text();
       $("#question-correct-text").val(questionCorrectText);
 
-      var questionIncorrectText = row.find(".questionIncorrectText").text();
+      const questionIncorrectText = row.find(".questionIncorrectText").text();
       $("#question-incorrect-text").val(questionIncorrectText);
 
-      var required = row.find(".questionitem-required").text();
+      const required = row.find(".questionitem-required").text();
       if (required === "true") {
         $("#question-required").prop("checked", true);
       } else {
         $("#question-required").prop("checked", false);
       }
 
-      var prerequisite = row.find(".questionitem-prerequisite").text();
+      const prerequisite = row.find(".questionitem-prerequisite").text();
       if (prerequisite === "true") {
         $("#question-prerequisite").prop("checked", true);
       } else {
@@ -3112,6 +3172,42 @@ function addMultipleChoiceAnswer() {
   return clonedAnswer;
 }
 
+// Clones one of the matching prompts in the Question dialog and appends it to the end of the list
+function addMatchingAnswer() {
+  const clonedAnswer = $("#copyableMatchingAnswer").clone(true);
+  const num = $("#matchingAnswersBody").find("tr").length + 2; // Should be currentNumberOfAnswers + 1
+  clonedAnswer.find(".question-matching-id").val("-1");
+  clonedAnswer.find(".question-matching-prompt").val("");
+  clonedAnswer.find(".question-matching-response").val("");
+
+  clonedAnswer.attr("id", "matchingAnswerDiv" + num);
+
+  // Each input has to be renamed so that RSF will recognize them as distinct
+  clonedAnswer.find("[name='question-matching-complete']")
+    .attr("name", "question-matching-complete" + num);
+  clonedAnswer.find("[name='question-matching-complete-fossil']")
+    .attr("name", "question-matching-complete" + num + "-fossil");
+  clonedAnswer.find("[name='question-matching-id']")
+    .attr("name", "question-matching-id" + num);
+  clonedAnswer.find("[for='question-matching-prompt']")
+    .attr("for", "question-matching-prompt" + num);
+  clonedAnswer.find("[name='question-matching-prompt']")
+    .attr("name", "question-matching-prompt" + num);
+  clonedAnswer.find("[for='question-matching-response']")
+    .attr("for", "question-matching-response" + num);
+  clonedAnswer.find("[name='question-matching-response']")
+    .attr("name", "question-matching-response" + num);
+
+  // Unhide the delete link on every answer choice other than the first.
+  // Not allowing them to remove the first makes this AddAnswer code simpler,
+  // and ensures that there is always at least one answer choice.
+  clonedAnswer.find(".deleteAnswerLink").removeAttr("style");
+
+  clonedAnswer.appendTo("#matchingAnswersBody");
+
+  return clonedAnswer;
+}
+
 function reassignAnswerOptions() {
   const capitalLettersIndex = 65; // 65 corresponds to A.
   document.querySelectorAll('.question-multiplechoice-answer-option').forEach( (item, index) => {
@@ -3148,16 +3244,26 @@ function addShortanswer() {
 
 function updateMultipleChoiceAnswers() {
   $(".question-multiplechoice-answer-complete").each(function (index, el) {
-    var id = $(el).parent().find(".question-multiplechoice-answer-id").val();
-    var checked = $(el).parent().find(".question-multiplechoice-answer-correct").is(":checked");
-    var text = $(el).parent().find(".question-multiplechoice-answer").val();
+    const id = $(el).parent().find(".question-multiplechoice-answer-id").val();
+    const checked = $(el).parent().find(".question-multiplechoice-answer-correct").is(":checked");
+    const text = $(el).parent().find(".question-multiplechoice-answer").val();
 
     $(el).val(index + ":" + id + ":" + checked + ":" + text);
   });
 }
 
+function updateMatchingAnswers() {
+  $(".question-matching-complete").each(function(index, el) {
+    const id = $(el).parent().find(".question-matching-id").val();
+    const prompt = $(el).parent().find(".question-matching-prompt").val();
+    const resp = $(el).parent().find(".question-matching-response").val();
+    
+    $(el).val(index + ":" + id + ":" + prompt + ":" + resp);
+  });
+}
+
 function updateShortanswers() {
-  var answerText = "";
+  let answerText = "";
 
   $(".question-shortanswer-answer").each(function () {
     answerText += $(this).val() + "\n";
@@ -3200,11 +3306,18 @@ function prepareQuestionDialog() {
       $('#question-error').text(msg("simplepage.question-need-2"));
       $('#question-error-container').show();
       return false;
+  } else if ($("#matchingSelect").prop("checked") &&
+      $(".question-matching-prompt").filter(function(index){return $(this).val() !== '';}).length < 2 &&
+      $(".question-matching-response").filter(function(index){return $(this).val() !== '';}).length < 2) {
+      $('#question-error').text(msg("simplepage.question-need-2"));
+      $('#question-error-container').show();
+      return false;
   } else {
       $('#question-error-container').hide();
   }
 
   updateMultipleChoiceAnswers();
+  updateMatchingAnswers();
   updateShortanswers();
 
   $("input[name='" + $("#activeQuestion").val() + "'").val($("#question-text-area-evolved\\:\\:input").val());
@@ -3212,12 +3325,13 @@ function prepareQuestionDialog() {
   // RSF bugs out if we don't undisable these before submitting
   $("#multipleChoiceSelect").prop("disabled", false);
   $("#shortanswerSelect").prop("disabled", false);
+  $("#matchingSelect").prop("disabled", false);
   return true;
 }
 
 // Reset the multiple choice answers to prevent problems when submitting a shortanswer
 function resetMultipleChoiceAnswers() {
-  var firstMultipleChoice = $("#copyableMultipleChoiceAnswer");
+  const firstMultipleChoice = $("#copyableMultipleChoiceAnswer");
   firstMultipleChoice.find(".question-multiplechoice-answer-id").val("-1");
   firstMultipleChoice.find(".question-multiplechoice-answer").val("");
   firstMultipleChoice.find(".question-multiplechoice-answer-correct").prop("checked", false);
@@ -3225,9 +3339,17 @@ function resetMultipleChoiceAnswers() {
   $("#multipleChoiceAnswersBody").append(firstMultipleChoice);
 }
 
+// Reset the matching prompts to prevent problems when submitting a shortanswer
+function resetMatchingAnswers() {
+  const firstMatching = $("#copyableMatchingAnswer");
+  firstMatching.find(".question-matching-id").val("-1");
+  firstMatching.find(".question-matching-prompt").val("");
+  firstMatching.find(".question-matching-response").val("");
+}
+
 //Reset the shortanswers to prevent problems when submitting a multiple choice
 function resetShortanswers() {
-  var firstShortAnswerChoice = $("#copyableShortanswer");
+  const firstShortAnswerChoice = $("#copyableShortanswer");
   firstShortAnswerChoice.find(".question-shortanswer-answer").val("");
   $("#shortAnswersTableBody").empty();
   $("#shortAnswersTableBody").append(firstShortAnswerChoice);
