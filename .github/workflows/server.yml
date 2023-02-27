@@ -51,24 +51,35 @@ jobs:
 #          curl -sL -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
 #          sudo dpkg -i cloudflared.deb
 #          cloudflared tunnel --url http://localhost:8443 &
-#      - name: Cypress Checkout
-#        uses: actions/checkout@v3
-#        with:
-#          repository: sakaicontrib/cypress-sakai
-#          path: './cypress-sakai'
-#      - name: Cypress Run
-#        uses: cypress-io/github-action@v4
-#        with:
-#          browser: chrome
-#          config: baseUrl=http://localhost:8080
-#          working-directory: cypress-sakai
-#          wait-on: 'http://localhost:8080/portal/'
-#          wait-on-timeout: 1800
-#          record: true
-#        env:
-#          CYPRESS_RECORD_KEY: f2049235-3f10-4142-a26c-fc017211a776
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
-#          COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
+      - name: Run Dastardly Action Step
+        continue-on-error: true                        # This allows subsequent steps to run even if this step fails
+        uses: PortSwigger/dastardly-github-action@main
+        with:
+          target-url: 'http://localhost:8080/portal/'
+      - name: Publish Test Report
+        if: always()                                    # Forces this step to always run
+        uses: mikepenz/action-junit-report@v3
+        with:
+          report_paths: '**/dastardly-report.xml'       # You need to update this path if you pass in a different output filename to the Dastardly action
+          require_tests: true
+      - name: Cypress Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: sakaicontrib/cypress-sakai
+          path: './cypress-sakai'
+      - name: Cypress Run
+        uses: cypress-io/github-action@v4
+        with:
+          browser: chrome
+          config: baseUrl=http://localhost:8080
+          working-directory: cypress-sakai
+          wait-on: 'http://localhost:8080/portal/'
+          wait-on-timeout: 1800
+          record: true
+        env:
+          CYPRESS_RECORD_KEY: f2049235-3f10-4142-a26c-fc017211a776
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+          COMMIT_INFO_MESSAGE: ${{ github.event.pull_request.title }}
       - name: Check number of MySQL statements
         if: always()
         run: |
