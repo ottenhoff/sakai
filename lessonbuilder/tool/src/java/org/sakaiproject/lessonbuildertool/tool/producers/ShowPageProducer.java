@@ -5316,10 +5316,11 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		UIForm form = UIForm.make(tofill, "question-form");
 		makeCsrf(form, "csrf21");
 		
-		UISelect questionType = UISelect.make(form, "question-select", new String[] {"multipleChoice", "shortanswer", "matching"}, "#{simplePageBean.questionType}", "");
+		UISelect questionType = UISelect.make(form, "question-select", new String[] {"multipleChoice", "shortanswer", "matching", "hotspot"}, "#{simplePageBean.questionType}", "");
 		UISelectChoice.make(form, "multipleChoiceSelect", questionType.getFullID(), 0);
 		UISelectChoice.make(form, "shortanswerSelect", questionType.getFullID(), 1);
 		UISelectChoice.make(form, "matchingSelect", questionType.getFullID(), 2);
+		UISelectChoice.make(form, "hotspotSelect", questionType.getFullID(), 3);
 
 		UIOutput.make(form, "question-shortans-del").decorate(new UIFreeAttributeDecorator("alt", messageLocator.getMessage("simplepage.delete")));
 		UIOutput.make(form, "question-mc-del").decorate(new UIFreeAttributeDecorator("alt", messageLocator.getMessage("simplepage.delete")));
@@ -5357,6 +5358,12 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 		UIInput.make(form, "question-matching-id", null);
 		UIInput.make(form, "question-matching-prompt", null);
 		UIInput.make(form, "question-matching-response", null);
+
+		// Hotspot question type
+		UIInput.make(form, "question-hotspot-complete", "#{simplePageBean.addAnswerData}");
+		UIInput.make(form, "question-hotspot-id", null);
+		UIInput.make(form, "question-hotspot-prompt", null);
+		UIInput.make(form, "question-hotspot-response", null);
 		
 		UIInput.make(form, "question-correct-text", "#{simplePageBean.questionCorrectText}");
 		UIInput.make(form, "question-incorrect-text", "#{simplePageBean.questionIncorrectText}");

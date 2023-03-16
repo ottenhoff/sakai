@@ -7563,6 +7563,28 @@ public class SimplePageBean {
 					simplePageToolDao.addMatchingQuestionAnswer(item, answerId, prompt, response);
 				}
 			}
+      // TODO finish this
+		} else if(questionType.equals("hotspot")) {
+			Long max = simplePageToolDao.maxQuestionAnswer(item);
+			simplePageToolDao.clearQuestionAnswers(item);
+
+			for (String data : questionAnswers.values()) {
+				// split the data into the actual fields
+				String[] fields = data.split("||", 3);
+				Long answerId = -1L;
+				if (StringUtils.isNotBlank(fields[0])) {
+					answerId = Long.valueOf(fields[0]);
+				}
+
+				if (answerId <= 0L) {
+					answerId = ++max;
+				}
+				String prompt = fields[1];
+				String response = fields[2];
+				if (StringUtils.isNotBlank(prompt)) {
+					simplePageToolDao.addMatchingQuestionAnswer(item, answerId, prompt, response);
+				}
+			}
 		}
 		
 		int pointsInt = 10;

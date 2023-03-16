@@ -12,6 +12,7 @@
  <link type="text/css" href="/library/webjars/jquery-ui-themes/1.12.1/smoothness/jquery-ui.min.css" rel="stylesheet" />	
  <link rsf:id="scr=portal-matter" href="/library/skin/tool_base.css" type="text/css" rel="stylesheet" media="all" />
  <link rsf:id="scr=portal-matter" href="/library/skin/default/tool.css" type="text/css" rel="stylesheet" media="all" />
+ <link href="../css/jquery.selectareas.css" media="screen" rel="stylesheet" type="text/css" />
  <link rel="stylesheet" rsf:id="scr=rewrite-url" href="../css/Simplepagetool.css" type="text/css" />
  <link rel="stylesheet" rsf:id="scr=rewrite-url" href="../css/checklist.css" type="text/css" />
  <title rsf:id="msg=simplepage.showpage"></title>
@@ -83,6 +84,7 @@
  <script type="text/javascript" src="$context/js/checklistDisplay.js"></script>
  <script type="text/javascript" src="$context/js/forum-summary.js"></script>
  <script type="text/javascript" src="$context/js/lessons-calendar.js"></script>
+ <script type="text/javascript" src="$context/js/jquery.selectareas.js"></script>
  <link rel="stylesheet" rsf:id="customCSS" type="text/css" />
 
  <a href="#" rsf:id="redirect-link" id="redirect-link"></a>
@@ -2299,6 +2301,8 @@
                             <label for="shortanswerSelect" rsf:id="msg=simplepage.shortanswer" />
                             <input type="radio" name="questionTypeGroup" rsf:id="matchingSelect" id="matchingSelect" />
                             <label for="matchingSelect" rsf:id="msg=simplepage.matching" />
+                            <input type="radio" name="questionTypeGroup" rsf:id="hotspotSelect" id="hotspotSelect" />
+                            <label for="hotspotSelect" rsf:id="msg=simplepage.hotspot" />
                         </div>
                         
                         <div class="longtext" style="padding:5px">
@@ -2414,6 +2418,65 @@
                                     <button onclick="addMatchingAnswer(); return false;" rsf:id="msg=simplepage.addAnswer"/>
                                 </fieldset>
                             </div>
+                  <div id="hotspotDialogDiv">
+                  <script>
+                  $(document).ready(function () {
+                    $("img#hotspot").selectAreas({
+                      minSize: [20, 20],    // Minimum size of a selection
+                      maxSize: [400, 400],  // Maximum size of a selection
+                      onChanged: hotspotWriteCoordinates, // Fired when a selection is released
+                      onChanging: hotspotHighlight, // Fired when a selection is touched
+                      onLoaded: addNewRandomHotspotArea,
+                    });
+                    // Add first area
+                    //addNewRandomHotspotArea();
+                  });
+                  </script>
+                    <fieldset>
+                      <legend>
+                        <h4 rsf:id="msg=simplepage.hotspot.areas"></h4></legend>
+
+                      <div id="hotspots">
+                        <div id="copyableHotspotDiv">
+                          <label for="question-showans-alt"><span rsf:id="msg=simplepage.question-possible-answer" class="lb-offscreen sr-only"></span></label>
+                        </div>
+                        <div class="image-decorator" style="min-width: 300px; min-height: 300px">
+                          <img width="400" height="400" alt="Hotspot image" id="hotspot" src="https://raw.githubusercontent.com/360Learning/jquery-select-areas/master/example/example.jpg"/>
+                        </div>
+                        <div id="extraHotspots"></div>
+                        <table id="hotspotsTable" class="table table-striped table-bordered table-hover">
+                          <thead>
+                            <tr>
+                              <th><span rsf:id="msg=simplepage.hotspot.area">Image Area Name</span></th>
+                              <th><span rsf:id="msg=simplepage.hotspot.coordinates">Coordinates</span></th>
+                              <th><span rsf:id="msg=simplepage.question-tableheader-remove">Remove?</span></th>
+                            </tr>
+                          </thead>
+                          <tbody id="hotspotsTableBody">
+                            <tr id="copyableHotspot">
+                              <input type="hidden" rsf:id="question-hotspot-complete" class="question-hotspot-complete" />
+                              <input type="hidden" rsf:id="question-hotspot-id" class="question-hotspot-id" />
+                              <td>
+                                <label for="question-hotspot-prompt"><span rsf:id="msg=simplepage.question-correct-answer" class="offscreen"></span></label>
+                                <input type="text" name="question-hotspot-prompt" rsf:id="question-hotspot-prompt" class="question-hotspot-prompt" />
+                              </td>
+                              <td>
+                                <label for="question-hotspot-response"><span rsf:id="msg=simplepage.question-correct-answer" class="offscreen"></span></label>
+                                <input type="text" name="question-hotspot-response" rsf:id="question-hotspot-response" class="question-hotspot-response" readonly="true" />
+                              </td>
+                              <td>
+                                <a role="button" href="#" onclick="deleteHotspot($(this)); return false;" style="display:none" class="deleteAnswerLink"><img src="$context/images/delete.png" rsf:id="question-mc-del"></img></a>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </fieldset>
+                    <button onclick="addHotspot(); return false;" rsf:id="msg=simplepage.addAnswer" />
+                    <br />
+                    <br />
+                  </div>
+
                             <div rsf:id="gradeBookQuestionsDiv">
                                 <p class="checkbox">
                                     <input type="checkbox" name="question-graded" id="question-graded" rsf:id="question-graded" />

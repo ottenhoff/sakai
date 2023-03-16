@@ -1344,14 +1344,22 @@ $(document).ready(function() {
 			if($(this).attr("id") === "multipleChoiceSelect") {
 				$("#shortanswerDialogDiv").hide();
 				$("#matchingDialogDiv").hide();
+        $("#hotspotDialogDiv").hide();
 				$("#multipleChoiceDialogDiv").show();
 			} else if($(this).attr("id") === "matchingSelect") {
 				$("#shortanswerDialogDiv").hide();
 				$("#multipleChoiceDialogDiv").hide();
+        $("#hotspotDialogDiv").hide();
 				$("#matchingDialogDiv").show();
+      } else if($(this).attr("id") === "hotspotSelect") {
+        $("#shortanswerDialogDiv").hide();
+        $("#multipleChoiceDialogDiv").hide();
+        $("#matchingDialogDiv").hide();
+        $("#hotspotDialogDiv").show();
 			} else if($(this).attr("id") === "shortanswerSelect") {
 				$("#shortanswerDialogDiv").show();
 				$("#matchingDialogDiv").hide();
+        $("#hotspotDialogDiv").hide();
 				$("#multipleChoiceDialogDiv").hide();
 			}
 		});
@@ -1396,11 +1404,13 @@ $(document).ready(function() {
 			$("#multipleChoiceSelect").prop('checked',true);	//the Click above will trigger the right hide/show of things itself, but it will not actually display multipleChoiceSelect as Checked, so we do it explicitly here.
 			resetMultipleChoiceAnswers();
 			resetMatchingAnswers();
+			resetHotspotAnswers();
 			resetShortanswers();
 			
 			$("#multipleChoiceSelect").prop("disabled", false);
 			$("#shortanswerSelect").prop("disabled", false);
 			$("#matchingSelect").prop("disabled", false);
+      $("#hotspotSelect").prop("disabled", false);
 			checkQuestionGradedForm();
 			
 			$("#question-correct-text").val("");
@@ -1444,6 +1454,7 @@ $(document).ready(function() {
 			
 			resetMultipleChoiceAnswers();
 			resetMatchingAnswers();
+			resetHotspotAnswers();
 			resetShortanswers();
 			
 			// We can't have these disabled when trying to select them (which we do to set the type
@@ -1452,6 +1463,7 @@ $(document).ready(function() {
 			$("#multipleChoiceSelect").prop("disabled", false);
 			$("#shortanswerSelect").prop("disabled", false);
 			$("#matchingSelect").prop("disabled", false);
+      $("#hotspotSelect").prop("disabled", false);
 			
 			const questionType = row.find(".questionType").text();
 			if (questionType === "shortanswer") {
@@ -1487,6 +1499,25 @@ $(document).ready(function() {
 					answerSlot.find(".question-matching-prompt").val(qPrompt);
 					answerSlot.find(".question-matching-response").val(qResponse);
 				});
+      } else if (questionType === "hotspot") {
+        $("#hotspotSelect").click();
+
+        row.find(".questionHotspot").each(function(index, el) {
+          const qId = $(el).find(".questionMatchingAnswerId").text();
+          const qPrompt = $(el).find(".questionMatchingPrompt").text();
+          const qResponse = $(el).find(".questionMatchingResponse").text();
+
+          let answerSlot;
+          if (index === 0) {
+            answerSlot = $("#copyableHotspot").first();
+          } else {
+            answerSlot = addHotspot();
+          }
+
+          answerSlot.find(".question-matching-id").val(qId);
+          answerSlot.find(".question-matching-prompt").val(qPrompt);
+          answerSlot.find(".question-matching-response").val(qResponse);
+        });
 			} else {
 				$("#multipleChoiceSelect").click();
 				
@@ -1526,6 +1557,7 @@ $(document).ready(function() {
 			$("#multipleChoiceSelect").prop("disabled", true);
 			$("#shortanswerSelect").prop("disabled", true);
 			$("#matchingSelect").prop("disabled", true);
+      $("#hotspotSelect").prop("disabled", true);
 			
 			const questionGraded = row.find(".questionGrade").text();
 			if(questionGraded === "true") {
@@ -3679,6 +3711,77 @@ function addMatchingAnswer() {
 	return clonedAnswer;
 }
 
+// Clones one of the hotspot prompts in the Question dialog and appends it to the end of the list
+function addHotspot() {
+	const clonedAnswer = $("#copyableHotspot").clone(true);
+	const num = $("#hotspotsTableBody").find("tr").length + 2; // Should be currentNumberOfAnswers + 1
+	clonedAnswer.find(".question-hotspot-id").val("-1");
+	clonedAnswer.find(".question-hotspot-prompt").val("");
+	clonedAnswer.find(".question-hotspot-response").val("");
+
+	clonedAnswer.attr("id", "hotspotAnswerDiv" + num);
+
+	// Each input has to be renamed so that RSF will recognize them as distinct
+	clonedAnswer.find("[name='question-hotspot-complete']")
+		.attr("name", "question-hotspot-complete" + num);
+	clonedAnswer.find("[name='question-hotspot-complete-fossil']")
+		.attr("name", "question-hotspot-complete" + num + "-fossil");
+	clonedAnswer.find("[name='question-hotspot-id']")
+		.attr("name", "question-hotspot-id" + num);
+	clonedAnswer.find("[for='question-hotspot-prompt']")
+		.attr("for", "question-hotspot-prompt" + num);
+	clonedAnswer.find("[name='question-hotspot-prompt']")
+		.attr("name", "question-hotspot-prompt" + num);
+	clonedAnswer.find("[for='question-hotspot-response']")
+		.attr("for", "question-hotspot-response" + num);
+	clonedAnswer.find("[name='question-hotspot-response']")
+		.attr("name", "question-hotspot-response" + num);
+
+	// Unhide the delete link on every answer choice other than the first.
+	// Not allowing them to remove the first makes this AddAnswer code simpler,
+	// and ensures that there is always at least one answer choice.
+	clonedAnswer.find(".deleteAnswerLink").removeAttr("style");
+
+	clonedAnswer.appendTo("#hotspotsTableBody");
+  addNewRandomHotspotArea();
+
+	return clonedAnswer;
+}
+
+function addNewRandomHotspotArea() {
+  const areaOptions = {
+		x: Math.floor((Math.random() * 100)),
+		y: Math.floor((Math.random() * 100)),
+		width: 100,
+		height: 100
+	};
+	$('img#hotspot').selectAreas('add', areaOptions);
+}
+
+function deleteHotspot(el) {
+	const rowToRemove = el.parent('td').parent('tr');
+  const rowId = rowToRemove[0].id;
+  const rowIndex = parseInt(rowId.substr(rowId.length - 1)) - 2;
+  rowToRemove.remove();
+	$('img#hotspot').selectAreas('remove', rowIndex);
+}
+
+function hotspotHighlight  (event, id, areas) {
+  $('input.question-hotspot-response').css({ backgroundColor: "transparent" });
+  $('input[name="question-hotspot-response' + (id > 0 ? id+2 : '') + '"]').css({ backgroundColor: "#defade" });
+}
+
+function hotspotWriteCoordinates (event, id, areas) {
+  let x = 0;
+  $("input.question-hotspot-response").each(function() {
+    const area = areas[x];
+    if (area && area.x) {
+      $(this).val(Math.round(area.x) + ":" + Math.round(area.y) + " " + Math.round(area.width) + "x" + Math.round(area.height));
+    }
+    x++;
+  });
+};
+
 function reassignAnswerOptions() {
 	const capitalLettersIndex = 65; // 65 corresponds to A.
 	document.querySelectorAll('.question-multiplechoice-answer-option').forEach( (item, index) => {
@@ -3733,6 +3836,16 @@ function updateMatchingAnswers() {
 	});
 }
 
+function updateHotspotAnswers() {
+	$(".question-hotspot-complete").each(function(index, el) {
+		const id = $(el).parent().find(".question-hotspot-id").val();
+		const prompt = $(el).parent().find(".question-hotspot-prompt").val();
+		const resp = $(el).parent().find(".question-hotspot-response").val();
+		
+		$(el).val(index + "||" + id + "||" + prompt + "|| + resp);
+	});
+}
+
 function updateShortanswers() {
 	let answerText = "";
 	
@@ -3784,6 +3897,12 @@ function prepareQuestionDialog() {
 	    $('#question-error').text(msg("simplepage.question-need-2"));
 	    $('#question-error-container').show();
 	    return false;
+	} else if ($("#hotspotSelect").prop("checked") && 
+		  $(".question-hotspot-prompt").filter(function(index){return $(this).val() !== '';}).length < 2 &&
+		  $(".question-hotspot-response").filter(function(index){return $(this).val() !== '';}).length < 2) {
+	    $('#question-error').text(msg("simplepage.question-need-2"));
+	    $('#question-error-container').show();
+	    return false;
 	} else {
 	    $('#question-error-container').hide();
 	}
@@ -3791,6 +3910,7 @@ function prepareQuestionDialog() {
 	updateMultipleChoiceAnswers();
 	updateMatchingAnswers();
 	updateShortanswers();
+	updateHotspotAnswers();
 
 	$("input[name='" + $("#activeQuestion").val() + "'").val($("#question-text-area-evolved\\:\\:input").val());
 
@@ -3798,6 +3918,7 @@ function prepareQuestionDialog() {
 	$("#multipleChoiceSelect").prop("disabled", false);
 	$("#shortanswerSelect").prop("disabled", false);
 	$("#matchingSelect").prop("disabled", false);
+  $("#hotspotSelect").prop("disabled", false);
 	return true;
 }
 
@@ -3815,6 +3936,14 @@ function resetMatchingAnswers() {
 	firstMatching.find(".question-matching-id").val("-1");
 	firstMatching.find(".question-matching-prompt").val("");
 	firstMatching.find(".question-matching-response").val("");
+}
+
+// Reset the hotspot prompts to prevent problems when submitting a shortanswer
+function resetHotspotAnswers() {
+	const firstHotspot = $("#copyableHotspotAnswer");
+	firstHotspot.find(".question-hotspot-id").val("-1");
+	firstHotspot.find(".question-hotspot-prompt").val("");
+	firstHotspot.find(".question-hotspot-response").val("");
 }
 
 //Reset the shortanswers to prevent problems when submitting a multiple choice
