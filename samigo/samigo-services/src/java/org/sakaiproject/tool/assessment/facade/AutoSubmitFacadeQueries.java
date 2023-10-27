@@ -38,6 +38,7 @@ public class AutoSubmitFacadeQueries extends HibernateDaoSupport implements Auto
 	public boolean processAttempt(AssessmentGradingData adata, boolean updateGrades, AssessmentGradingFacadeQueriesAPI agfq, PublishedAssessmentFacade assessment,
 			Date currentTime, String lastAgentId, Long lastPublishedAssessmentId, Map<Long, Set<PublishedSectionData>> sectionSetMap)
 	{
+		GradingService gs = new GradingService();
 		boolean autoSubmitCurrent = false;
 		adata.setHasAutoSubmissionRun(Boolean.TRUE);
 
@@ -76,7 +77,9 @@ public class AutoSubmitFacadeQueries extends HibernateDaoSupport implements Auto
 			// We determine "empty" if it has an attempt date but submitted date is null
 			// Attempt date is populated as soon as student clicks "Begin"; submit date is populated as soon as student makes any progress (next, save, submit)
 			// So if there is an attempt date but no submit date, we can safely assume this is a student who began a quiz and did nothing (either walked away, or logged out immediately)
-			if (adata.getAttemptDate() != null && adata.getSubmittedDate() == null) {
+			AssessmentGradingData previousUserSubmission = gs.getHighestSubmittedAssessmentGrading(adata.getPublishedAssessmentId() + "", adata.getAgentId(), null);
+			// If the user does not have a previous submission, then we need to force this empty submission through to give them a proper grade
+			if (adata.getAttemptDate() != null && adata.getSubmittedDate() == null && previousUserSubmission != null) {
 				adata.setStatus(AssessmentGradingData.NO_SUBMISSION);
 			}
 			else {
@@ -95,6 +98,11 @@ public class AutoSubmitFacadeQueries extends HibernateDaoSupport implements Auto
 				else if (adata.getSubmittedDate() != null && dueDate != null &&
 						adata.getSubmittedDate().after(dueDate)) {
 					adata.setIsLate(true);
+				}
+
+				// SAM-2729 user probably opened assessment and then never submitted a question
+				if (adata.getSubmittedDate() == null && adata.getAttemptDate() != null) {
+					adata.setSubmittedDate(adata.getAttemptDate());
 				}
 
 				autoSubmitCurrent = true;
@@ -117,7 +125,6 @@ public class AutoSubmitFacadeQueries extends HibernateDaoSupport implements Auto
 		}
 
 		if (autoSubmitCurrent) {
-			GradingService gs = new GradingService();
 			if (updateGrades) {
 				gs.notifyGradebookByScoringType(adata, assessment); // this may throw runtime exceptions triggering a rollback
 			}
