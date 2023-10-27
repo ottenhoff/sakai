@@ -103,6 +103,8 @@ public class AutoSubmitFacadeQueries extends HibernateDaoSupport implements Auto
 				// SAM-2729 user probably opened assessment and then never submitted a question
 				if (adata.getSubmittedDate() == null && adata.getAttemptDate() != null) {
 					adata.setSubmittedDate(adata.getAttemptDate());
+					adata.setFinalScore(null);
+					adata.setTotalAutoScore(null);
 				}
 
 				autoSubmitCurrent = true;

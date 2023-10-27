@@ -450,14 +450,13 @@ public class TotalScoreUpdateListener
         oldScore = old.getFinalScore().doubleValue();
       }
       Boolean oldIsLate=old.getIsLate();
-      
       String oldComments = old.getComments();
-      log.debug("***oldScore = " + oldScore);
-      log.debug("***newScore = " + newScore);
-      log.debug("***oldIsLate = " + oldIsLate);
-      log.debug("***newIsLate = " + newIsLate);
-      log.debug("***oldComments = " + oldComments);
-      log.debug("***newComments = " + newComments);
+      log.debug("***oldScore = {}", oldScore);
+      log.debug("***newScore = {}", newScore);
+      log.debug("***oldIsLate = {}", oldIsLate);
+      log.debug("***newIsLate = {}", newIsLate);
+      log.debug("***oldComments = {}", oldComments);
+      log.debug("***newComments = {}", newComments);
       if (Precision.equalsIncludingNaN(oldScore, newScore, 0.0001) && newIsLate.equals(oldIsLate) && 
     		  ((newComments!=null && newComments.equals(oldComments)) 
         		   || (newComments==null && oldComments==null)
