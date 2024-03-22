@@ -15,12 +15,13 @@
  */
 package org.sakaiproject.component.app.scheduler.jobs.cm.processor.sis;
 
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.text.RandomStringGenerator;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sakaiproject.component.app.scheduler.jobs.cm.processor.ProcessorState;
 import org.sakaiproject.emailtemplateservice.api.RenderedTemplate;
@@ -146,7 +147,8 @@ public class UserProcessor extends AbstractUserProcessor {
     }
 
     protected String generatePassword() {
-        return RandomStringGenerator.builder().withinRange('0', 'z').build().generate(12);
+        final SecureRandom random = new SecureRandom();
+        return RandomStringUtils.random(12, 0, 0, true, true, null, random);
     }
 
     protected void updateExtraPropertiesWithEdit(SisUser sisUser, UserEdit ue) throws UserNotDefinedException, UserPermissionException, UserLockedException, UserAlreadyDefinedException {
