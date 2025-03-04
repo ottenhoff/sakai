@@ -574,11 +574,33 @@ commons.utils = {
     },
     renderPageOfPosts: function (all) {
         const self = this;
-
+        
+        console.debug('renderPageOfPosts called with all =', all, 'page =', commons.page);
+        
+        // If already loading, don't make another request
+        if (commons.postsLoading) {
+            console.debug('Already loading posts, ignoring request');
+            return;
+        }
+        
+        // Set loading state
+        commons.postsLoading = true;
+        console.debug('Setting postsLoading to true');
+        
+        // Remove any existing load more button
+        $('#commons-load-more').remove();
+        
         const $loadImage = $('#commons-loading-image');
         $loadImage.show();
+        
+        // Add loading indicator at the bottom of the posts list if this is not the first page
+        if (commons.page > 0) {
+            console.debug('Adding loading indicator for page', commons.page);
+            $('#commons-posts').append('<div id="commons-posts-loading" class="commons-loading-indicator">' + commons.i18n['loading_posts'] + '</div>');
+        }
 
         const url = `/direct/commons/posts/${commons.commonsId}.json?siteId=${commons.siteId}&embedder=${commons.embedder}&page=${(all) ? '-1' : commons.page}`;
+        console.debug('Fetching posts from URL:', url);
 
         $.ajax({
             url: url,
@@ -587,11 +609,30 @@ commons.utils = {
             timeout: commons.AJAX_TIMEOUT
         })
         .done(function(data) {
+            console.debug('AJAX request successful, data:', data);
+            
+            // Reset loading state
+            commons.postsLoading = false;
+            console.debug('Setting postsLoading to false');
+            
+            // Remove loading indicator
+            $('#commons-posts-loading').remove();
+            
             if (data.status === 'END') {
+                console.debug('Received END status, no more posts to load');
+                
                 // Remove scroll event listener
                 commons.scrollable.off('scroll.commons');
                 $loadImage.hide();
+                
+                // Show "no more posts" message if we've loaded some posts
+                if (commons.postsRendered > 0) {
+                    console.debug('Adding "no more posts" message');
+                    $('#commons-posts').append('<div class="commons-no-more-posts">' + commons.i18n['no_more_posts'] + '</div>');
+                }
             } else {
+                console.debug('Setting up scroll listener for next page');
+                
                 // Remove existing scroll event listener if any
                 commons.scrollable.off('scroll.commons');
                 // Store the scroll function reference for later removal
@@ -600,7 +641,14 @@ commons.utils = {
             }
 
             commons.postsTotal = data.postsTotal;
-            const posts = data.posts;
+            const posts = data.posts || [];
+            
+            // If no posts were returned and this is the first page, show a message
+            if (posts.length === 0 && commons.page === 0) {
+                $('#commons-posts').append('<div class="commons-no-posts">' + commons.i18n['no_posts'] + '</div>');
+                $loadImage.hide();
+                return;
+            }
 
             commons.currentPosts = commons.currentPosts.concat(posts);
 
@@ -635,32 +683,119 @@ commons.utils = {
             }
             
             commons.page += 1;
+            console.debug('Incremented page counter to', commons.page);
+
+            // Add a "Load More" button if this is not the first page and we have more posts to load
+            if (commons.page > 0 && data.status !== 'END') {
+                // Remove any existing load more button
+                $('#commons-load-more').remove();
+                
+                // Add a new load more button
+                $('#commons-posts').append(
+                    '<div id="commons-load-more" class="commons-load-more">' +
+                    '<button class="btn btn-primary">' + commons.i18n['load_more'] + '</button>' +
+                    '</div>'
+                );
+                
+                // Add click handler for the load more button
+                $('#commons-load-more button').click(function() {
+                    console.debug('Load more button clicked');
+                    $(this).prop('disabled', true).text(commons.i18n['loading_posts']);
+                    commons.utils.renderPageOfPosts();
+                });
+            } else {
+                console.debug('No more posts to load, not adding "Load More" button');
+            }
         }).fail(function(xhr, textStatus, errorThrown) {
-            alert("Failed to get posts. Reason: " + errorThrown);
+            // Reset loading state
+            commons.postsLoading = false;
+            $loadImage.hide();
+            
+            // Remove loading indicator
+            $('#commons-posts-loading').remove();
+            
+            console.error("Failed to get posts:", xhr, textStatus, errorThrown);
+            $('#commons-posts').append('<div class="commons-error">' + commons.i18n['error_loading_posts'] + '</div>');
+            
+            commons.page += 1;
+            console.debug('Incremented page counter to', commons.page);
+
+            // Add a "Load More" button if we have more posts to load
+            if (data.status !== 'END') {
+                console.debug('Adding "Load More" button');
+                
+                // Add a new load more button
+                $('#commons-posts').append(
+                    '<div id="commons-load-more" class="commons-load-more">' +
+                    '<button class="btn btn-primary">' + commons.i18n['load_more'] + '</button>' +
+                    '</div>'
+                );
+                
+                // Add click handler for the load more button
+                $('#commons-load-more button').click(function() {
+                    console.debug('Load more button clicked');
+                    $(this).prop('disabled', true).text(commons.i18n['loading_posts']);
+                    commons.utils.renderPageOfPosts();
+                });
+            } else {
+                console.debug('No more posts to load, not adding "Load More" button');
+            }
         });
     },
     getScrollFunction: function (callback) {
+        // Use a debounced version of the scroll handler to improve performance
+        let scrollTimeout;
+        
+        // Add a debug message to indicate this function is being called
+        console.debug('Setting up scroll function');
+        
         return function () {
-            // Get scroll position and dimensions using jQuery methods
-            const wintop = commons.scrollable.scrollTop();
-            const winheight = commons.scrollable.height();
-            const docheight = commons.doc.height();
+            // Add a debug message to indicate the scroll event is firing
+            console.debug('Scroll event fired');
             
-            // Check if we've scrolled to approximately 95% of the way down
-            // or if the scroll flag is set to true
-            const scrollRatio = wintop / (docheight - winheight);
-            const scrollFlag = $('body').data('scroll-commons') === true;
+            // Clear the previous timeout to prevent multiple calls
+            clearTimeout(scrollTimeout);
             
-            if (scrollRatio > 0.95 || scrollFlag) {
-                // Reset the scroll flag
-                $('body').data('scroll-commons', false);
+            // Set a new timeout to delay the scroll handling
+            scrollTimeout = setTimeout(function() {
+                // If already loading posts, don't do anything
+                if (commons.postsLoading) {
+                    console.debug('Already loading posts, ignoring scroll');
+                    return;
+                }
                 
-                // Remove the scroll event listener
-                commons.scrollable.off('scroll.commons');
+                // Get scroll position and dimensions using jQuery methods
+                const wintop = commons.scrollable.scrollTop();
+                const winheight = commons.scrollable.height();
+                const docheight = commons.doc.height();
                 
-                // Call the callback function (usually renderPageOfPosts)
-                callback();
-            }
+                // Log the scroll values for debugging
+                console.debug('Scroll position:', {
+                    wintop: wintop,
+                    winheight: winheight,
+                    docheight: docheight,
+                    ratio: wintop / (docheight - winheight)
+                });
+                
+                // Check if we've scrolled to approximately 90% of the way down
+                // or if the scroll flag is set to true
+                const scrollRatio = wintop / (docheight - winheight);
+                const scrollFlag = $('body').data('scroll-commons') === true;
+                
+                // Lower the threshold to make it easier to trigger
+                if (scrollRatio > 0.7 || scrollFlag) {
+                    console.debug('Scroll threshold reached, loading more posts');
+                    
+                    // Reset the scroll flag
+                    $('body').data('scroll-commons', false);
+                    
+                    // Call the callback function (usually renderPageOfPosts)
+                    // We don't remove the scroll listener here because renderPageOfPosts will handle that
+                    callback();
+                } else {
+                    console.debug('Scroll threshold not reached', scrollRatio);
+                }
+            }, 100); // 100ms debounce time
         };
     },
     placeCaretAtEnd: function (el) {
