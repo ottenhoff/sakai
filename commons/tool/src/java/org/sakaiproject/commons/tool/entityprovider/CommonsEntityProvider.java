@@ -181,6 +181,11 @@ public class CommonsEntityProvider extends AbstractEntityProvider implements Req
                 }
             }
 
+            // Expensive to fetch this via browser for each post
+            for (Post post : data.posts) {
+                post.setNumberOfLikes(commonsManager.countPostLikes(post.getId()));
+            }
+
             return new ActionReturn(data);
         } catch (Exception e) {
             log.error("Caught exception whilst getting posts.", e);
@@ -202,7 +207,9 @@ public class CommonsEntityProvider extends AbstractEntityProvider implements Req
         Optional<Post> opPost = commonsManager.getPost(postId, true);
 
         if (opPost.isPresent()) {
-            return new ActionReturn(opPost.get());
+            Post post = opPost.get();
+            post.setNumberOfLikes(commonsManager.countPostLikes(post.getId()));
+            return new ActionReturn(post);
         } else {
             throw new EntityException("No post with id '" + postId + "'" , "", HttpServletResponse.SC_NOT_FOUND);
         }

@@ -419,168 +419,218 @@ commons.utils = {
 
         this.renderTemplate('post', post, output);
 
-        var self = this;
+        const self = this;
 
-        $(document).ready(function () {
+        // Set up event listeners
+        $('#commons-post-edit-link-' + post.id).click(self.editPostHandler);
+        $('#commons-post-delete-link-' + post.id).click(self.deletePostHandler);
+        $('#commons-like-link-' + post.id).click(self.likePostHandler);
+        
+        // Use the numberOfLikes property from the post object
+        const likesCountElement = $('#commons-likes-count-number-' + post.id);
+        if (likesCountElement.length > 0) {
+            const count = post.numberOfLikes || 0;
+            likesCountElement.text(count.toString());
+            likesCountElement.attr('data-count', count.toString());
+            
+            // Show singular or plural text based on count
+            if (count === 1) {
+                $('#commons-likes-person-' + post.id).show();
+                $('#commons-likes-people-' + post.id).hide();
+            } else {
+                $('#commons-likes-person-' + post.id).hide();
+                $('#commons-likes-people-' + post.id).show();
+            }
+        }
+        
+        commons.utils.getUserLikes();
+        bootstrap.Popover.getOrCreateInstance(document.body); // Initializes all popovers
+        
+        const textarea = $('#commons-comment-textarea-' + post.id);
+        textarea.each(function() { autosize(this); });
+        
+        const creator = $('#commons-comment-creator-' + post.id);
+        const commentLink = $('#commons-create-comment-link-' + post.id);
+        commentLink.click(function(e) {
+            e.preventDefault();
+            creator.show();
+            textarea.focus();
+        });
 
-            $('#commons-post-edit-link-' + post.id).click(self.editPostHandler);
-            $('#commons-post-delete-link-' + post.id).click(self.deletePostHandler);
-            $('#commons-like-link-' + post.id).click(self.likePostHandler);
-            var numberOfLikes = $('.commons-likes-count');
-            numberOfLikes.each(function(){commons.utils.addLikeCount(this)});
-            commons.utils.getUserLikes();
-            bootstrap.Popover.getOrCreateInstance(document.body); // Initializes all popovers
-            var textarea = $('#commons-comment-textarea-' + post.id);
-            textarea.each(function () { autosize(this); });
-            var creator = $('#commons-comment-creator-' + post.id);
-            var commentLink = $('#commons-create-comment-link-' + post.id);
-            commentLink.click(function (e) {
+        const cancelButton = $('#commons-inplace-comment-editor-cancel-button-' + post.id);
+        cancelButton.click(function(e) {
+            e.preventDefault();
+            creator.hide();
+        });
 
-                creator.show();
-                textarea.focus();
-            });
-            $('#commons-inplace-comment-editor-cancel-button-' + post.id).click(function (e) {
-                creator.hide();
-            });
+        const showCommentsLink = $('#commons-show-comments-link-' + post.id);
+        const hideCommentsLink = $('#commons-hide-comments-link-' + post.id);
+        
+        showCommentsLink.click(function(e) {
+            e.preventDefault();
+            $('#commons-comments-' + post.id + ' .commons-comment-not-recent').show();
+            showCommentsLink.hide();
+            hideCommentsLink.show();
+        });
 
-            var showCommentsLink = $('#commons-show-comments-link-' + post.id);
-            var hideCommentsLink = $('#commons-hide-comments-link-' + post.id);
-            showCommentsLink.click(function (e) {
+        hideCommentsLink.click(function(e) {
+            e.preventDefault();
+            $('#commons-comments-' + post.id + ' .commons-comment-not-recent').hide();
+            hideCommentsLink.hide();
+            showCommentsLink.show();
+        });
 
-                $('#commons-comments-' + post.id + ' .commons-comment-not-recent').show();
-                showCommentsLink.hide();
-                hideCommentsLink.show();
-            });
-            hideCommentsLink.click(function (e) {
-
-                $('#commons-comments-' + post.id + ' .commons-comment-not-recent').hide();
-                hideCommentsLink.hide();
-                showCommentsLink.show();
-            });
-
-            $('#commons-inplace-comment-editor-post-button-' + post.id).click(function (e) {
-
-                commons.utils.saveComment('', post.id, textarea.val(), function (savedComment) {
-
-                        textarea.val('');
-
-                        var commentId = savedComment.id;
-
-                        creator.hide();
-
-                        var numComments = $('#commons-comments-' + post.id + ' .commons-comment').length;
-
-                        if (numComments >= 3) {
-                            var recentComments = $('#commons-comments-' + post.id + ' .commons-comment-recent');
-                            recentComments.removeClass('commons-comment-recent');
-                            var earliestRecentComment = $(recentComments[0]);
+        const postButton = $('#commons-inplace-comment-editor-post-button-' + post.id);
+        if (postButton) {
+            postButton.click(function(e) {
+                e.preventDefault();
+                
+                const text = textarea.val().trim();
+                
+                if (text.length === 0) {
+                    alert(commons.i18n['no_content_warning']);
+                    return;
+                }
+                
+                commons.utils.saveComment('', post.id, text, function(savedComment) {
+                    textarea.val('');
+                    creator.hide();
+                    
+                    const commentsContainer = $('#commons-comments-' + post.id);
+                    const numComments = commentsContainer.find('.commons-comment').length;
+                    
+                    if (numComments >= 3) {
+                        const recentComments = commentsContainer.find('.commons-comment-recent');
+                        recentComments.removeClass('commons-comment-recent');
+                        
+                        if (recentComments.length > 0) {
+                            const earliestRecentComment = $(recentComments[0]);
                             earliestRecentComment.addClass('commons-comment-not-recent');
-                            if (numComments == 3 || showCommentsLink.is(':visible')) {
+                            
+                            if (numComments === 3 || showCommentsLink.is(':visible')) {
                                 earliestRecentComment.hide();
                             }
-                            recentComments[1].className += ' commons-comment-recent';
-                            recentComments[2].className += ' commons-comment-recent';
-                            if (numComments == 3 || showCommentsLink.is(':visible')) {
+                            
+                            if (recentComments.length > 1) $(recentComments[1]).addClass('commons-comment-recent');
+                            if (recentComments.length > 2) $(recentComments[2]).addClass('commons-comment-recent');
+                            
+                            if (numComments === 3 || showCommentsLink.is(':visible')) {
                                 showCommentsLink.show();
                             }
                         }
-
-                        commons.utils.addPermissionsToComment(savedComment);
-                        savedComment.formattedCreatedDate = commons.utils.formatDate(savedComment.createdDate);
-                        savedComment.orderClass = 'commons-comment-recent';
-                        savedComment.isRecent = true;
-                        var wrappedComment = Handlebars.templates['wrapped_comment'] (savedComment, {helpers: commonsHelpers});
-                        $('#commons-comments-container-' + post.id).append(wrappedComment);
-
-                        self.addHandlersToComment(savedComment);
-                    });
+                    }
+                    
+                    commons.utils.addPermissionsToComment(savedComment);
+                    savedComment.formattedCreatedDate = commons.utils.formatDate(savedComment.createdDate);
+                    savedComment.orderClass = 'commons-comment-recent';
+                    savedComment.isRecent = true;
+                    
+                    const wrappedComment = Handlebars.templates['wrapped_comment'](savedComment, {helpers: commonsHelpers});
+                    $('#commons-comments-container-' + post.id).append(wrappedComment);
+                    
+                    self.addHandlersToComment(savedComment);
+                });
             });
+        }
 
-            if (post.comments.length <= 3) {
-                showCommentsLink.hide();
-            }
-            if(post.priority === true){
-                document.getElementById('commons-post-inner-container-' + post.id).classList.add('alert-info');
-                document.getElementById('commons-high-priority-' + post.id).removeAttribute('style');
-            }
-            post.comments.forEach(function (c) { self.addHandlersToComment(c); });
-        });
+        if (post.comments.length <= 3) {
+            showCommentsLink.hide();
+        }
+        
+        if (post.priority === true) {
+            $('#commons-post-inner-container-' + post.id).addClass('alert-info');
+            $('#commons-high-priority-' + post.id).show();
+        }
+        
+        post.comments.forEach(function(c) { self.addHandlersToComment(c); });
     },
     renderPageOfPosts: function (all) {
+        const self = this;
 
-        var self = this;
+        const $loadImage = $('#commons-loading-image');
+        $loadImage.show();
 
-        var loadImage = $('#commons-loading-image')
-        loadImage.show();
+        const url = `/direct/commons/posts/${commons.commonsId}.json?siteId=${commons.siteId}&embedder=${commons.embedder}&page=${(all) ? '-1' : commons.page}`;
 
-        var url = '/direct/commons/posts/' + commons.commonsId + '.json?siteId='
-                        + commons.siteId + '&embedder=' + commons.embedder + '&page=';
-        url += (all) ? '-1' : commons.page;
+        $.ajax({
+            url: url,
+            dataType: 'json',
+            cache: false,
+            timeout: commons.AJAX_TIMEOUT
+        })
+        .done(function(data) {
+            if (data.status === 'END') {
+                // Remove scroll event listener
+                commons.scrollable.off('scroll.commons');
+                $loadImage.hide();
+            } else {
+                // Remove existing scroll event listener if any
+                commons.scrollable.off('scroll.commons');
+                // Store the scroll function reference for later removal
+                commons.utils._scrollFunction = commons.utils.getScrollFunction(commons.utils.renderPageOfPosts);
+                commons.scrollable.on('scroll.commons', commons.utils._scrollFunction);
+            }
 
-        $.ajax( { url : url, dataType: "json", cache: false, timeout: commons.AJAX_TIMEOUT })
-            .done(function (data) {
+            commons.postsTotal = data.postsTotal;
+            const posts = data.posts;
 
-                if (data.status === 'END') {
-                    commons.scrollable.off('scroll.commons');
-                    loadImage.hide();
-                } else {
-                    commons.scrollable.off('scroll.commons').on('scroll.commons', commons.utils.getScrollFunction(commons.utils.renderPageOfPosts));
-                }
+            commons.currentPosts = commons.currentPosts.concat(posts);
 
-                commons.postsTotal = data.postsTotal;
-                var posts = data.posts;
+            if (commons.page == 0 && data.postsTotal > 0) {
+                $('#commons-body-toggle').show();
+            }
 
-                commons.currentPosts = commons.currentPosts.concat(posts);
+            commons.postsRendered += posts.length;
 
-                if (commons.page == 0 && data.postsTotal > 0) {
-                    $('#commons-body-toggle').show();
-                }
+            commons.utils.addFormattedDatesToPosts(posts);
 
-                commons.postsRendered += posts.length;
+            // Add the next batch of placeholders to the post list
+            const template = Handlebars.templates['posts_placeholders'];
+            $('#commons-posts').append(template({ posts: posts }, {helpers: commonsHelpers}));
 
-                commons.utils.addFormattedDatesToPosts(posts);
-
-                // Add the next batch of placeholders to the post list
-                var t = Handlebars.templates['posts_placeholders'];
-                $('#commons-posts').append(t({ posts: posts }, {helpers: commonsHelpers}));
-
-                $(document).ready(function () {
-
-                    // Now render them into their placeholders
-                    posts.forEach(function (p) { commons.utils.renderPost(p, 'commons-post-' + p.id); });
-
-                    loadImage.hide();
-                    try {
-                        if (window.frameElement) {
-                            setMainFrameHeight(window.frameElement.id);
-                        }
-                    } catch (err) {
-                        // This is likely under an LTI provision scenario.
-                        // XSS protection will block this call.
-                    }
-                });
-                commons.page += 1;
-            }).fail(function (xmlHttpRequest, textStatus, errorThrown) {
-                alert("Failed to get posts. Reason: " + errorThrown);
+            // Now render them into their placeholders
+            posts.forEach(function(p) { 
+                commons.utils.renderPost(p, 'commons-post-' + p.id); 
             });
+
+            $loadImage.hide();
+            try {
+                if (window.frameElement) {
+                    setMainFrameHeight(window.frameElement.id);
+                }
+            } catch (err) {
+                // This is likely under an LTI provision scenario.
+                // XSS protection will block this call.
+            }
+            
+            commons.page += 1;
+        }).fail(function(xhr, textStatus, errorThrown) {
+            alert("Failed to get posts. Reason: " + errorThrown);
+        });
     },
     getScrollFunction: function (callback) {
-
-        var scroller = function () {
-
-            //var win = $(window);
-            var wintop = commons.scrollable.scrollTop();
-            var winheight = commons.scrollable.height();
-            var docheight = commons.doc.height()
-
-            if  ((wintop/(docheight-winheight)) > 0.95 || $('body').data('scroll-commons') === true) {
+        return function () {
+            // Get scroll position and dimensions using jQuery methods
+            const wintop = commons.scrollable.scrollTop();
+            const winheight = commons.scrollable.height();
+            const docheight = commons.doc.height();
+            
+            // Check if we've scrolled to approximately 95% of the way down
+            // or if the scroll flag is set to true
+            const scrollRatio = wintop / (docheight - winheight);
+            const scrollFlag = $('body').data('scroll-commons') === true;
+            
+            if (scrollRatio > 0.95 || scrollFlag) {
+                // Reset the scroll flag
                 $('body').data('scroll-commons', false);
+                
+                // Remove the scroll event listener
                 commons.scrollable.off('scroll.commons');
+                
+                // Call the callback function (usually renderPageOfPosts)
                 callback();
             }
         };
-
-        return scroller;
     },
     placeCaretAtEnd: function (el) {
 
