@@ -198,30 +198,58 @@ commons.utils = {
     },
     likePostHandler: function(){
         var postId = this.dataset.postId;
+        
+        // Call the likePost function to update the server
         commons.utils.likePost(postId);
-        var likeButtonNow = document.getElementById('commons-like-link-' + postId);
-        var likeCountNow = document.getElementById('commons-likes-count-number-' + postId);
-        var likeIconNow = document.getElementById('commons-like-icon-' + postId);
-        var likeNumber = parseInt(likeCountNow.getAttribute('data-count'));
-        likeIconNow.classList.remove('si-like');
-        likeIconNow.classList.remove('si-liked');
-        if(likeButtonNow.getAttribute('class').includes('likedAlready')){
+        
+        // Use jQuery for more consistent DOM manipulation
+        var $likeButton = $('#commons-like-link-' + postId);
+        var $likeCount = $('#commons-likes-count-number-' + postId);
+        var $likeIcon = $('#commons-like-icon-' + postId);
+        var likeNumber = parseInt($likeCount.attr('data-count'));
+        
+        // Update the UI
+        $likeIcon.removeClass('si-like si-liked');
+        
+        // Check if already liked and toggle state
+        if ($likeButton.hasClass('likedAlready')) {
+            // Unliking
             likeNumber = likeNumber - 1;
-            likeButtonNow.classList.remove('likedAlready'); //unliking
-            likeIconNow.classList.add('si-like');
+            $likeButton.removeClass('likedAlready');
+            $likeIcon.addClass('si-like');
+            
+            // Update the cache
+            if (commons.userLikes) {
+                commons.userLikes = commons.userLikes.filter(function(like) {
+                    return like.postId !== postId;
+                });
+            }
         } else {
+            // Liking
             likeNumber = likeNumber + 1;
-            likeButtonNow.classList.add('likedAlready');    //liking
-            likeIconNow.classList.add('si-liked');
+            $likeButton.addClass('likedAlready');
+            $likeIcon.addClass('si-liked');
+            
+            // Update the cache
+            if (commons.userLikes) {
+                commons.userLikes.push({ postId: postId });
+            }
         }
-        likeCountNow.textContent = likeNumber.toString();
-        likeCountNow.setAttribute('data-count', likeNumber.toString());
-        if(likeNumber === 1){
-            document.getElementById('commons-likes-person-' + postId).removeAttribute('style');
-            document.getElementById('commons-likes-people-' + postId).setAttribute('style','display:none;');
+        
+        // Update the like count
+        $likeCount.text(likeNumber.toString());
+        $likeCount.attr('data-count', likeNumber.toString());
+        
+        // Show/hide singular/plural text based on count
+        if (likeNumber === 1) {
+            $('#commons-likes-person-' + postId).show();
+            $('#commons-likes-people-' + postId).hide();
+        } else if (likeNumber === 0) {
+            $('#commons-likes-person-' + postId).hide();
+            $('#commons-likes-people-' + postId).hide();
         } else {
-            document.getElementById('commons-likes-people-' + postId).removeAttribute('style');
-            document.getElementById('commons-likes-person-' + postId).setAttribute('style','display:none;');
+            $('#commons-likes-person-' + postId).hide();
+            $('#commons-likes-people-' + postId).show();
         }
     },
     cancelCommentEdit: function (commentId) {
@@ -338,12 +366,13 @@ commons.utils = {
     },
     likePost: function(postId){
         var url = "/direct/commons/likePost?&postId=" + postId;
-        $.ajax( {
+        $.ajax({
             url: url,
             type: 'POST',
             data: postId,
             timeout: commons.AJAX_TIMEOUT
-        }).done(function () {	
+        }).done(function () {
+            // Update the names of likers for this post
             commons.utils.getPostLikerNames(postId);
         });
     },
@@ -443,7 +472,6 @@ commons.utils = {
             }
         }
         
-        commons.utils.getUserLikes();
         bootstrap.Popover.getOrCreateInstance(document.body); // Initializes all popovers
         
         const textarea = $('#commons-comment-textarea-' + post.id);
@@ -592,6 +620,9 @@ commons.utils = {
             posts.forEach(function(p) { 
                 commons.utils.renderPost(p, 'commons-post-' + p.id); 
             });
+            
+            // Apply user likes once for all posts
+            commons.utils.getUserLikes();
 
             $loadImage.hide();
             try {
@@ -671,7 +702,13 @@ commons.utils = {
             }
         });
     },
-    getUserLikes: function(){
+    getUserLikes: function(callback){
+        // If we already have the likes data cached and it's not a forced refresh, use the cache
+        if (commons.userLikes && !callback) {
+            this.applyUserLikes(commons.userLikes);
+            return;
+        }
+        
         var url = "/direct/commons/userLikes.json";
         $.ajax({
             url: url,
@@ -679,18 +716,39 @@ commons.utils = {
             cache: false,
             timeout: commons.AJAX_TIMEOUT,
             success: function(result){
-                for(var count=0; count<result.commons_collection.length; count++){
-                    var likeNow = document.getElementById('commons-like-link-' + result.commons_collection[count].postId);
-                    var iconNow = document.getElementById('commons-like-icon-' + result.commons_collection[count].postId);
-                    if(likeNow !== null){
-                        iconNow.classList.remove('si-like');
-                        iconNow.classList.remove('si-liked');
-                        likeNow.classList.add('likedAlready');
-                        iconNow.classList.add('si-liked');
-                    }
+                // Cache the likes data
+                commons.userLikes = result.commons_collection || [];
+                
+                // Apply the likes to the UI
+                commons.utils.applyUserLikes(commons.userLikes);
+                
+                // Call the callback if provided
+                if (typeof callback === 'function') {
+                    callback();
                 }
             }
         });
+    },
+    
+    // New function to apply user likes to the UI
+    applyUserLikes: function(userLikes) {
+        if (!userLikes || !userLikes.length) return;
+        
+        // First reset all like buttons to the default state
+        $('.commons-like-link').removeClass('likedAlready');
+        $('.commons-like-icon').removeClass('si-liked').addClass('si-like');
+        
+        // Then apply the user's likes
+        for (var i = 0; i < userLikes.length; i++) {
+            var postId = userLikes[i].postId;
+            var likeLink = $('#commons-like-link-' + postId);
+            var likeIcon = $('#commons-like-icon-' + postId);
+            
+            if (likeLink.length) {
+                likeIcon.removeClass('si-like').addClass('si-liked');
+                likeLink.addClass('likedAlready');
+            }
+        }
     },
     getPostLikerNames: function(postId){
         var url = "/direct/commons/postLikes.json?&postId=" + postId;
