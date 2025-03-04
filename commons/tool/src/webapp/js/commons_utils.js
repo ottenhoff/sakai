@@ -17,21 +17,21 @@ commons.utils = {
     },
     getOGPMarkup: function (url, callback) {
 
-        var self = this;
+        const self = this;
 
-        $.get('/direct/commons/getUrlMarkup?url=' + url, function (markup) {
+        $.get(`/direct/commons/getUrlMarkup?url=${url}`, function (markup) {
 
-            var div = document.createElement('div');
+            const div = document.createElement('div');
 
-            var title = '';
-            var matches = markup.match(self.OGP_TITLE_REGEX);
+            let title = '';
+            let matches = markup.match(self.OGP_TITLE_REGEX);
             if (matches && matches.length == 2) {
                 title = matches[1];
                 div.innerHTML = title;
                 title = $(div).html();
             }
 
-            var image = '';
+            let image = '';
             matches = markup.match(self.TWITTER_IMAGE_REGEX);
             if (matches && matches.length == 2) {
                 image = matches[1];
@@ -42,7 +42,7 @@ commons.utils = {
                 }
             }
 
-            var description = '';
+            let description = '';
             matches = markup.match(self.OGP_DESCRIPTION_REGEX);
             if (matches && matches.length == 2) {
                 description = matches[1];
@@ -50,12 +50,12 @@ commons.utils = {
                 description = $(div).html();
             }
 
-            var a = document.createElement('a');
+            const a = document.createElement('a');
             a.href = url;
-            var siteName = a.hostname.toUpperCase();
+            let siteName = a.hostname.toUpperCase();
             matches = markup.match(self.AUTHOR_REGEX);
             if (matches && matches.length == 2) {
-                 siteName += ' | ' + commons.i18n['by'] + ' ' + matches[1].toUpperCase();
+                 siteName += ` | ${commons.i18n['by']} ${matches[1].toUpperCase()}`;
             }
 
             if (!title && !image) {
@@ -70,102 +70,87 @@ commons.utils = {
         });
     },
     addHandlersToComment: function (comment) {
-
-        $('#commons-comment-edit-link-' + comment.id).click(commons.utils.editCommentHandler);
-        $('#commons-comment-delete-link-' + comment.id).click(commons.utils.deleteCommentHandler);
-        $('#commons-like-link-' + comment.id).click(commons.utils.likePostHandler);
+        $(`#commons-comment-edit-link-${comment.id}`).click(commons.utils.editCommentHandler);
+        $(`#commons-comment-delete-link-${comment.id}`).click(commons.utils.deleteCommentHandler);
+        $(`#commons-like-link-${comment.id}`).click(commons.utils.likePostHandler);
     },
     editPostHandler: function (e) {
-
-        var postId = this.dataset.postId;
-        var contentDiv = $('#commons-post-content-' + postId);
+        const postId = this.dataset.postId;
+        const contentDiv = $(`#commons-post-content-${postId}`);
         commons.utils.oldContent = contentDiv.html();
         contentDiv.prop('contenteditable', true).focus();
-        var postEditButtons = $('#commons-post-edit-buttons-'+ postId);
+        const postEditButtons = $(`#commons-post-edit-buttons-${postId}`);
         postEditButtons.show();
 
         $(document).ready(function () {
-
-            $('#commons-inplace-post-editor-post-button-' + postId).off('click').click(function (e) {
-
+            $(`#commons-inplace-post-editor-post-button-${postId}`).off('click').click(function (e) {
                 commons.utils.savePost(postId, contentDiv.html(), function () {
-
-                        contentDiv.prop('contenteditable', false);
-                        $('#commons-post-options-' + postId).show();
-                        postEditButtons.hide();
-                    });
+                    contentDiv.prop('contenteditable', false);
+                    $(`#commons-post-options-${postId}`).show();
+                    postEditButtons.hide();
                 });
+            });
         });
-        $('#commons-post-options-' + postId).hide();
+        $(`#commons-post-options-${postId}`).hide();
     },
     deletePostHandler: function (e) {
-
-        var postId = this.dataset.postId;
+        const postId = this.dataset.postId;
         commons.utils.deletePost(postId, function () {
-                $('#commons-post-' + postId).remove();
-            });
+            $(`#commons-post-${postId}`).remove();
+        });
     },
     cancelPostEdit: function (postId) {
-
-        var contentDiv = $('#commons-post-content-' + postId);
+        const contentDiv = $(`#commons-post-content-${postId}`);
         contentDiv.html(this.oldContent);
         contentDiv.prop('contenteditable', false);
-        $('#commons-post-options-' + postId).show();
-        $('#commons-post-edit-buttons-'+ postId).hide();
+        $(`#commons-post-options-${postId}`).show();
+        $(`#commons-post-edit-buttons-${postId}`).hide();
     },
     editCommentHandler: function (e) {
-
         // Get the comment id from the link
-        var commentId = this.dataset.commentId;
+        const commentId = this.dataset.commentId;
 
-        var container = $('#commons-comment-' + commentId);
-
-        var contentSpan = $('#commons-comment-content-' + commentId);
-
-        var postId = container.data('post-id');
+        const container = $(`#commons-comment-${commentId}`);
+        const contentSpan = $(`#commons-comment-content-${commentId}`);
+        const postId = container.data('post-id');
 
         // Comment metadata is attached to the container
-        var comment = {
-                id: commentId,
-                postId: postId,
-                creatorId: container.data('creator-id'),
-                creatorDisplayName: container.data('creator-display-name'),
-                createdDate: container.data('created-date'),
-                modifiedDate: container.data('modified-date'),
-                content: contentSpan.html(),
-            };
+        const comment = {
+            id: commentId,
+            postId: postId,
+            creatorId: container.data('creator-id'),
+            creatorDisplayName: container.data('creator-display-name'),
+            createdDate: container.data('created-date'),
+            modifiedDate: container.data('modified-date'),
+            content: contentSpan.html(),
+        };
 
         commons.utils.addPermissionsToComment(comment);
 
         commons.utils.commentBeingEdited = comment;
-        commons.utils.renderTemplate('inplace_comment_editor', comment, 'commons-comment-' + commentId);
+        commons.utils.renderTemplate('inplace_comment_editor', comment, `commons-comment-${commentId}`);
 
         $(document).ready(function () {
-
-            var textarea = $('#commons-comment-textarea-' + comment.id);
-            var tmp = commons.utils.fromHtml(comment.content);
+            const textarea = $(`#commons-comment-textarea-${comment.id}`);
             textarea.val(commons.utils.fromHtml(comment.content));
             textarea.each(function () { autosize(this); }).focus();
 
-            $('#commons-inplace-comment-editor-cancel-button-' + comment.id).click(function (e) {
-
+            $(`#commons-inplace-comment-editor-cancel-button-${comment.id}`).click(function (e) {
                 commons.utils.renderTemplate(
-                    'comment', commons.utils.commentBeingEdited, 'commons-comment-' + commentId);
-                $('#commons-comment-edit-link-' + commentId).click(commons.utils.editCommentHandler);
+                    'comment', commons.utils.commentBeingEdited, `commons-comment-${commentId}`);
+                $(`#commons-comment-edit-link-${commentId}`).click(commons.utils.editCommentHandler);
             });
 
-            $('#commons-inplace-comment-editor-post-button-' + commentId).click(function (e) {
-
+            $(`#commons-inplace-comment-editor-post-button-${commentId}`).click(function (e) {
                 commons.utils.saveComment(commentId, postId, textarea.val(), function (savedComment) {
-
-                        textarea.val('');
-                        $('#commons-comments-' + postId).show();
-                        commons.utils.addPermissionsToComment(savedComment);
-                        commons.utils.renderTemplate('comment', savedComment, 'commons-comment-' + savedComment.id);
-                        commons.utils.addHandlersToComment(savedComment);
-                        commons.utils.addLikeCount(document.getElementById('commons-likes-count-' + commentId));   //re-render likesNumber after edit
-                        commons.utils.getUserLikes();   //re-render Like styling for the page
-                    });
+                    textarea.val('');
+                    $(`#commons-comments-${postId}`).show();
+                    commons.utils.addPermissionsToComment(savedComment);
+                    commons.utils.renderTemplate('comment', savedComment, `commons-comment-${savedComment.id}`);
+                    commons.utils.addHandlersToComment(savedComment);
+                    commons.utils.addLikeCount(document.getElementById(`commons-likes-count-${commentId}`));   //re-render likesNumber after edit
+                    commons.utils.getUserLikes();   //re-render Like styling for the page
+                });
             });
         });
     },
@@ -254,8 +239,8 @@ commons.utils = {
     },
     cancelCommentEdit: function (commentId) {
 
-        commons.utils.renderTemplate('comment', commons.utils.commentBeingEdited, 'commons-comment-' + commentId);
-        $('#commons-comment-edit-link-' + commentId).click(commons.utils.editCommentHandler);
+        commons.utils.renderTemplate('comment', commons.utils.commentBeingEdited, `commons-comment-${commentId}`);
+        $(`#commons-comment-edit-link-${commentId}`).click(commons.utils.editCommentHandler);
     },
     getCurrentUserPermissions: function (callback) {
 
@@ -597,7 +582,7 @@ commons.utils = {
         console.debug('Fetching posts from URL:', url);
 
         $.ajax({
-            url: url,
+            url,
             dataType: 'json',
             cache: false,
             timeout: commons.AJAX_TIMEOUT
@@ -614,6 +599,11 @@ commons.utils = {
                 
                 // Remove scroll event listener
                 commons.scrollable.off('scroll.commons');
+                
+                // If no posts were found, show a message
+                if (commons.postsTotal === 0) {
+                    $('#commons-content').append(`<div class="commons-no-more-posts">${commons.i18n['no_posts_yet']}</div>`);
+                }
             } else {
                 console.debug('Setting up scroll listener for next page');
                 
@@ -629,7 +619,7 @@ commons.utils = {
             
             // If no posts were returned and this is the first page, show a message
             if (posts.length === 0 && commons.page === 0) {
-                $('#commons-posts').append('<div class="commons-no-posts">' + commons.i18n['no_posts'] + '</div>');
+                $('#commons-posts').append(`<div class="commons-no-posts">${commons.i18n['no_posts']}</div>`);
                 return;
             }
 
@@ -645,12 +635,10 @@ commons.utils = {
 
             // Add the next batch of placeholders to the post list
             const template = Handlebars.templates['posts_placeholders'];
-            $('#commons-posts').append(template({ posts: posts }, {helpers: commonsHelpers}));
+            $('#commons-posts').append(template({ posts }, {helpers: commonsHelpers}));
 
             // Now render them into their placeholders
-            posts.forEach(function(p) { 
-                commons.utils.renderPost(p, 'commons-post-' + p.id); 
-            });
+            posts.forEach(p => commons.utils.renderPost(p, `commons-post-${p.id}`));
             
             // Apply user likes once for all posts
             commons.utils.getUserLikes();
