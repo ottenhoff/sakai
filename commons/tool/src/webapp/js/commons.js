@@ -384,17 +384,5 @@ commons.switchState = function (state, arg) {
         CKEDITOR.disableAutoInline = true;
     }
 
-    commons.scrollable = $(window.frameElement ? window.frameElement.ownerDocument.defaultView : window);
-    commons.doc = $(window.frameElement ? window.frameElement.ownerDocument : document);
-
-    // Add debugging for scrollable
-    console.debug('commons.scrollable:', commons.scrollable);
-    console.debug('commons.doc:', commons.doc);
-    
-    // Test if scroll events are working
-    commons.scrollable.on('scroll', function() {
-        console.debug('Direct scroll event fired');
-    });
-
 }) (jQuery);
 

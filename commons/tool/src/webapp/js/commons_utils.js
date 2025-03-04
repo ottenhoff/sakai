@@ -597,21 +597,10 @@ commons.utils = {
             if (data.status === 'END') {
                 console.debug('Received END status, no more posts to load');
                 
-                // Remove scroll event listener
-                commons.scrollable.off('scroll.commons');
-                
                 // If no posts were found, show a message
                 if (commons.postsTotal === 0) {
                     $('#commons-content').append(`<div class="commons-no-more-posts">${commons.i18n['no_posts_yet']}</div>`);
                 }
-            } else {
-                console.debug('Setting up scroll listener for next page');
-                
-                // Remove existing scroll event listener if any
-                commons.scrollable.off('scroll.commons');
-                // Store the scroll function reference for later removal
-                commons.utils._scrollFunction = commons.utils.getScrollFunction(commons.utils.renderPageOfPosts);
-                commons.scrollable.on('scroll.commons', commons.utils._scrollFunction);
             }
 
             commons.postsTotal = data.postsTotal;
@@ -619,7 +608,7 @@ commons.utils = {
             
             // If no posts were returned and this is the first page, show a message
             if (posts.length === 0 && commons.page === 0) {
-                $('#commons-posts').append(`<div class="commons-no-posts">${commons.i18n['no_posts']}</div>`);
+                $('#commons-posts').append(`<div class="commons-no-posts">${commons.i18n['no_posts_yet']}</div>`);
                 return;
             }
 
@@ -701,62 +690,6 @@ commons.utils = {
                 commons.utils.renderPageOfPosts();
             });
         });
-    },
-    getScrollFunction: function (callback) {
-        // Use a debounced version of the scroll handler to improve performance
-        let scrollTimeout;
-        
-        // Add a debug message to indicate this function is being called
-        console.debug('Setting up scroll function');
-        
-        return function () {
-            // Add a debug message to indicate the scroll event is firing
-            console.debug('Scroll event fired');
-            
-            // Clear the previous timeout to prevent multiple calls
-            clearTimeout(scrollTimeout);
-            
-            // Set a new timeout to delay the scroll handling
-            scrollTimeout = setTimeout(function() {
-                // If already loading posts, don't do anything
-                if (commons.postsLoading) {
-                    console.debug('Already loading posts, ignoring scroll');
-                    return;
-                }
-                
-                // Get scroll position and dimensions using jQuery methods
-                const wintop = commons.scrollable.scrollTop();
-                const winheight = commons.scrollable.height();
-                const docheight = commons.doc.height();
-                
-                // Log the scroll values for debugging
-                console.debug('Scroll position:', {
-                    wintop: wintop,
-                    winheight: winheight,
-                    docheight: docheight,
-                    ratio: wintop / (docheight - winheight)
-                });
-                
-                // Check if we've scrolled to approximately 90% of the way down
-                // or if the scroll flag is set to true
-                const scrollRatio = wintop / (docheight - winheight);
-                const scrollFlag = $('body').data('scroll-commons') === true;
-                
-                // Lower the threshold to make it easier to trigger
-                if (scrollRatio > 0.7 || scrollFlag) {
-                    console.debug('Scroll threshold reached, loading more posts');
-                    
-                    // Reset the scroll flag
-                    $('body').data('scroll-commons', false);
-                    
-                    // Call the callback function (usually renderPageOfPosts)
-                    // We don't remove the scroll listener here because renderPageOfPosts will handle that
-                    callback();
-                } else {
-                    console.debug('Scroll threshold not reached', scrollRatio);
-                }
-            }, 100); // 100ms debounce time
-        };
     },
     placeCaretAtEnd: function (el) {
 
