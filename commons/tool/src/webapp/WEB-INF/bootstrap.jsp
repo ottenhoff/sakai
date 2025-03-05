@@ -26,7 +26,6 @@
     <body>
 
         <script>includeLatestJQuery("commons");</script>
-        <script>includeWebjarLibrary("qtip2");</script>
         <script>includeWebjarLibrary("handlebars");</script>
         <script src="/commons-tool/templates/templates.js${portalCDNQuery}"></script>
         <script src="/commons-tool/lib/autosize.min.js${portalCDNQuery}"></script>

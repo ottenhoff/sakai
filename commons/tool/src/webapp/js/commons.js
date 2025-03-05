@@ -182,23 +182,17 @@ commons.switchState = function (state, arg) {
             var textField = $('#commons-link-dialog-text');
 
             $('.commons-editor-special-button').click(function (e) {
-
                 if (!editor.is(":focus")) {
                     editor.click();
                 }
             });
 
-            editorLinkButton.qtip({
-                suppress: false,
-                content: { text: $('#commons-link-dialog') },
-                style: { classes: 'commons-qtip qtip-shadow' },
-                show: {event: 'click', delay: 0},
-                hide: {event: 'click', delay: 0},
-                events: {
-                    show: function (event, api) {
-                        textField.val(commons.selectedText);
-                    }
-                }
+            // Replace qtip with Bootstrap modal for link dialog
+            const linkModal = new bootstrap.Modal(document.getElementById('commons-link-dialog'));
+            
+            editorLinkButton.click(function(e) {
+                textField.val(commons.selectedText);
+                linkModal.show();
             });
 
             var urlField = $('#commons-link-dialog-url');
@@ -207,7 +201,6 @@ commons.switchState = function (state, arg) {
             var linkInsertButton = $('#commons-link-dialog-insert-button');
 
             linkInsertButton.click(function (e) {
-
                 if (commons.currentRange) {
                     commons.getSelection().addRange(commons.currentRange);
                 }
@@ -216,15 +209,14 @@ commons.switchState = function (state, arg) {
                 urlField.val('');
                 textField.val('');
                 thumbnailCheckbox.prop('checked', false);
-                editorLinkButton.qtip('api').hide();
+                linkModal.hide();
             });
 
             $('#commons-link-dialog-cancel-button').click(function (e) {
-
                 urlField.val('');
                 textField.val('');
                 thumbnailCheckbox.prop('checked', false);
-                editorLinkButton.qtip('api').hide();
+                linkModal.hide();
             });
 
             urlField.keydown(function (e) {
@@ -232,12 +224,11 @@ commons.switchState = function (state, arg) {
             });
 
             if (!commons.isUserSite) {
-                editorImageButton.qtip({
-                    suppress: false,
-                    content: { text: $('#commons-image-dialog') },
-                    style: { classes: 'commons-qtip qtip-shadow' },
-                    show: {event: 'click', delay: 0},
-                    hide: {event: 'click', delay: 0}
+                // Replace qtip with Bootstrap modal for image dialog
+                const imageModal = new bootstrap.Modal(document.getElementById('commons-image-dialog'));
+                
+                editorImageButton.click(function(e) {
+                    imageModal.show();
                 });
             }
 
@@ -246,9 +237,14 @@ commons.switchState = function (state, arg) {
             var fileMessage = $('#commons-image-dialog-message');
 
             fileInsertButton.click(function (e) {
+<<<<<<< Updated upstream
 
                 var file = fileField[0].files[0];
                 var extension = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase();
+=======
+                const file = fileField[0].files[0];
+                const extension = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase();
+>>>>>>> Stashed changes
 
                 if (commons.imageFileExtensions.indexOf(extension) != -1) {
                     var formData = new FormData();
@@ -260,13 +256,19 @@ commons.switchState = function (state, arg) {
                         editor.append("<div><img src=\"" + xhr.responseText + "\" class=\"commons-image\" /></div>");
                     };
                     xhr.send(formData);
-                    editorImageButton.qtip('api').hide();
+                    if (!commons.isUserSite) {
+                        imageModal.hide();
+                    }
                 }
             });
 
             fileField.change(function (e) {
+<<<<<<< Updated upstream
 
                 var file = fileField[0].files[0];
+=======
+                const file = fileField[0].files[0];
+>>>>>>> Stashed changes
                 if ((file.size/1000000) > parseInt(commons.maxUploadSize)) {
                     fileMessage.html('File too big');
                 } else {
@@ -275,11 +277,12 @@ commons.switchState = function (state, arg) {
             });
 
             $('#commons-image-dialog-cancel-button').click(function (e) {
-
                 fileInsertButton.prop('disabled', true);
                 fileMessage.html('');
                 fileField.val('');
-                editorImageButton.qtip('api').hide();
+                if (!commons.isUserSite) {
+                    imageModal.hide();
+                }
             });
 
             if (window.parent === window) {
