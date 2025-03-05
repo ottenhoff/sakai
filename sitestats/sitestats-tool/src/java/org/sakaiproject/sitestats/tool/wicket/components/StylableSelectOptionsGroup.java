@@ -35,12 +35,12 @@ public class StylableSelectOptionsGroup extends Border {
 		addToBorder(getBodyContainer());
 
 		optgroup = new WebMarkupContainer("optgroup");
-		optgroup.add(new AttributeModifier("label", model));
+		optgroup.add(AttributeModifier.replace("label", model));
 		if(style != null && !"null".equals((String) style.getObject())) {
-			optgroup.add(new AttributeModifier("style", style));
+			optgroup.add(AttributeModifier.replace("style", style));
 		}
 		if(hclass != null && !"null".equals(hclass.getObject())) {
-			optgroup.add(new AttributeModifier("class", hclass));
+			optgroup.add(AttributeModifier.replace("class", hclass));
 		}
 		addToBorder(optgroup);
 	}

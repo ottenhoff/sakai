@@ -61,6 +61,7 @@ public class StylableSelectOptions extends RepeatingView {
 	/**
 	 * @see org.apache.wicket.Component#onBeforeRender()
 	 */
+	@Override
 	protected final void onPopulate() {
 		if(size() == 0 || recreateChoices){
 			// populate this repeating view with SelectOption components
@@ -88,14 +89,14 @@ public class StylableSelectOptions extends RepeatingView {
 					IModel model = renderer.getModel(value);
 					String style = renderer.getStyle(value);
 					String iconClass = renderer.getIconClass(value);
-					row.add(newOption(text, model, style, iconClass));
+					row.add(newOption("option", model, text, style, iconClass));
 				}
 			}
 		}
 	}
 	
-	protected SelectOption newOption(String text, IModel model, String style, String iconClass) {
-		return new StylableSelectOption("option", model, text, style, iconClass);
+	protected SelectOption newOption(String id, IModel model, String text, String style, String iconClass) {
+		return new StylableSelectOption(id, model, text, style, iconClass);
 	}
 	
 	private static class StylableSelectOption extends SelectOption {
@@ -118,20 +119,27 @@ public class StylableSelectOptions extends RepeatingView {
 			setIgnoreAttributeModifier(false);
 		}
 
-		public void onComponentTagBody(MarkupStream markupStream, ComponentTag openTag) {
-			replaceComponentTagBody(markupStream, openTag, text);
-		}
-		
 		@Override
 		protected void onComponentTag(ComponentTag tag) {
+			super.onComponentTag(tag);
+			
+			// In Wicket 9, we need to ensure the tag is an option tag
+			tag.setName("option");
+			
 			if(style != null && !"null".equals(style)) {
 				tag.put("style", style);
 			}
 			if(iconClass != null && !"null".equals(iconClass)) {
 				tag.put("class", iconClass);
 			}
-			super.onComponentTag(tag);
+			
+			// Set the option text as the tag body
+			tag.put("value", getDefaultModelObjectAsString());
 		}
-
+		
+		@Override
+		public void onComponentTagBody(MarkupStream markupStream, ComponentTag openTag) {
+			replaceComponentTagBody(markupStream, openTag, text);
+		}
 	}
 }

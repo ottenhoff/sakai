@@ -29,8 +29,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.HashMap;
 
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -90,6 +92,7 @@ import org.sakaiproject.sitestats.tool.wicket.util.Comparators;
 import org.sakaiproject.wicket.component.SakaiDateTimeField;
 
 import lombok.extern.slf4j.Slf4j;
+import java.io.Serializable;
 
 /**
  * @author Nuno Fernandes
@@ -971,11 +974,7 @@ public class ReportsEditPage extends BasePage {
         for (ToolInfo toolInfo : siteTools) {
             if (isToolSuported(toolInfo)) {
                 List<EventInfo> eventInfos = toolInfo.getEvents();
-                List<SelectOption> events = new ArrayList<SelectOption>();
-                for (EventInfo e : eventInfos) {
-                    SelectOption opt = new SelectOption("option", new EventModel(e));
-                    events.add(opt);
-                }
+                
                 WebMarkupContainer optgroupItem = new WebMarkupContainer(rv.newChildId());
                 optgroupItem.setRenderBodyOnly(true);
                 rv.add(optgroupItem);
@@ -985,22 +984,26 @@ public class ReportsEditPage extends BasePage {
                 String hclass = "tool-" + toolId.replace('.', '-');
                 StylableSelectOptionsGroup group = new StylableSelectOptionsGroup("group", new Model(toolName), new Model(style), new Model(hclass));
                 optgroupItem.add(group);
-                SelectOptions selectOptions = new SelectOptions("selectOptions", events, new IOptionRenderer() {
-
-					@Override
-                    public String getDisplayValue(Object object) {
-                        SelectOption opt = (SelectOption) object;
-                        return ((EventModel) opt.getDefaultModel()).getEventName();
-                    }
-
-					@Override
-                    public IModel getModel(Object value) {
-                        SelectOption opt = (SelectOption) value;
-                        return new Model(((EventModel) opt.getDefaultModel()).getEventId());
-                    }
-                });
-                selectOptions.setRenderBodyOnly(true);
-                group.add(selectOptions);
+                
+                // In Wicket 9, we need to create option tags directly
+                RepeatingView optionsRepeater = new RepeatingView("selectOptions");
+                group.add(optionsRepeater);
+                
+                // Process each event directly
+                for (EventInfo eventInfo : eventInfos) {
+                    WebMarkupContainer container = new WebMarkupContainer(optionsRepeater.newChildId());
+                    container.setRenderBodyOnly(true);
+                    optionsRepeater.add(container);
+                    
+                    String eventId = eventInfo.getEventId();
+                    String eventName = Locator.getFacade().getEventRegistryService().getEventName(eventId);
+                    
+                    // Create the option with the value and display text
+                    SelectOption option = new SelectOption("option", new Model<>(eventId));
+                    // Set the display text as the model object
+                    option.setDefaultModel(new Model<>(eventName));
+                    container.add(option);
+                }
             }
         }
 	}
@@ -1056,9 +1059,26 @@ public class ReportsEditPage extends BasePage {
 				}			
 			};
 			users.sort(Comparators.getOptionRendererComparator(optionRenderer));
-			SelectOptions selectOptions = new SelectOptions("selectOptions", users, optionRenderer);
-			selectOptions.setRenderBodyOnly(true);
-			optgroupItem.add(selectOptions);
+			
+			// In Wicket 9, we need to create option tags directly
+            RepeatingView optionsRepeater = new RepeatingView("selectOptions");
+            optgroupItem.add(optionsRepeater);
+            
+            for (Object userObj : users) {
+                WebMarkupContainer container = new WebMarkupContainer(optionsRepeater.newChildId());
+                container.setRenderBodyOnly(true);
+                optionsRepeater.add(container);
+                
+                String userId = (String) optionRenderer.getModel(userObj).getObject();
+                String displayValue = optionRenderer.getDisplayValue(userObj);
+                
+                // Create the option with the value and display text
+                SelectOption option = new SelectOption("option", new Model<>(userId));
+                // Set the display text as the model object
+                option.setDefaultModel(new Model<>(displayValue));
+                container.add(option);
+            }
+			
 			usersLoaded = true;
 		}finally{
 			ajaxUpdateLock.unlock();
@@ -1082,60 +1102,51 @@ public class ReportsEditPage extends BasePage {
 			totalsOptions.add(StatsManager.T_SITE);
 		}
 		
-		// add grouping options
-		List<SelectOption> selectOptionList = new ArrayList<>();
-        for (String totalOpt : totalsOptions) {
-            SelectOption so = new SelectOption("option", new Model(totalOpt));
-            so.setEscapeModelStrings(false);
-            selectOptionList.add(so);
-        }
+		// Create a map of option values to display values
+		Map<String, String> optionDisplayMap = new HashMap<>();
+		for (String totalOpt : totalsOptions) {
+			if(StatsManager.T_USER.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_user").getObject());					
+			} else if(StatsManager.T_TOOL.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_tool").getObject());
+			} else if(StatsManager.T_EVENT.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_event").getObject());
+			} else if(StatsManager.T_RESOURCE.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_resource").getObject());
+			} else if(StatsManager.T_RESOURCE_ACTION.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_resourceaction").getObject());
+			} else if(StatsManager.T_DATE.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_date").getObject());
+			} else if(StatsManager.T_LASTDATE.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_lastdate").getObject());
+			} else if(StatsManager.T_SITE.equals(totalOpt)) {
+				optionDisplayMap.put(totalOpt, (String) new ResourceModel("report_option_site").getObject());
+			} else {
+				optionDisplayMap.put(totalOpt, totalOpt);
+			}
+		}
 		
 		WebMarkupContainer optgroupItem = new WebMarkupContainer(rv.newChildId());
 		optgroupItem.setRenderBodyOnly(true);
 		rv.add(optgroupItem);
-		final IOptionRenderer optionRenderer = new IOptionRenderer() {
-
-			@Override
-			public String getDisplayValue(Object o) {
-				SelectOption opt = (SelectOption) o;
-				Object object = opt.getDefaultModel().getObject();
-				if(StatsManager.T_USER.equals(object)) {
-					return (String) new ResourceModel("report_option_user").getObject();					
-				}
-				if(StatsManager.T_TOOL.equals(object)) {
-					return (String) new ResourceModel("report_option_tool").getObject();
-				}
-				if(StatsManager.T_EVENT.equals(object)) {
-					return (String) new ResourceModel("report_option_event").getObject();
-				}
-				if(StatsManager.T_RESOURCE.equals(object)) {
-					return (String) new ResourceModel("report_option_resource").getObject();
-				}
-				if(StatsManager.T_RESOURCE_ACTION.equals(object)) {
-					return (String) new ResourceModel("report_option_resourceaction").getObject();
-				}
-				if(StatsManager.T_DATE.equals(object)) {
-					return (String) new ResourceModel("report_option_date").getObject();
-				}
-				if(StatsManager.T_LASTDATE.equals(object)) {
-					return (String) new ResourceModel("report_option_lastdate").getObject();
-				}
-				if(StatsManager.T_SITE.equals(object)) {
-					return (String) new ResourceModel("report_option_site").getObject();
-				}
-				return (String) object;			
-			}
-
-			@Override
-			public IModel getModel(Object value) {
-				SelectOption opt = (SelectOption) value;
-				return opt.getDefaultModel();
-			}
-		};
-		SelectOptions selectOptions = new SelectOptions("selectOptions", selectOptionList, optionRenderer);
-		selectOptions.setRenderBodyOnly(true);
-		selectOptions.setEscapeModelStrings(false);
-		optgroupItem.add(selectOptions);
+		
+		// In Wicket 9, we need to create option tags directly
+        RepeatingView optionsRepeater = new RepeatingView("selectOptions");
+        optgroupItem.add(optionsRepeater);
+        
+        for (String optionValue : totalsOptions) {
+            WebMarkupContainer container = new WebMarkupContainer(optionsRepeater.newChildId());
+            container.setRenderBodyOnly(true);
+            optionsRepeater.add(container);
+            
+            String displayValue = optionDisplayMap.get(optionValue);
+            
+            // Create the option with the value and display text
+            SelectOption option = new SelectOption("option", new Model<>(optionValue));
+            // Set the display text as the model object
+            option.setDefaultModel(new Model<>(displayValue));
+            container.add(option);
+        }
 	}
 	
 	private List<String> getGroups() {
