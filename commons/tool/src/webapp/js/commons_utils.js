@@ -594,24 +594,21 @@ commons.utils = {
             commons.postsLoading = false;
             console.debug('Setting postsLoading to false');
             
-            if (data.status === 'END') {
-                console.debug('Received END status, no more posts to load');
-                
-                // If no posts were found, show a message
-                if (commons.postsTotal === 0) {
-                    $('#commons-content').append(`<div class="commons-no-more-posts">${commons.i18n['no_posts_yet']}</div>`);
-                }
-            }
-
             commons.postsTotal = data.postsTotal;
             const posts = data.posts || [];
             
-            // If no posts were returned and this is the first page, show a message
-            if (posts.length === 0 && commons.page === 0) {
+            // If no posts were found and this is the first page, show a message
+            if ((posts.length === 0 && commons.page === 0) || (data.status === 'END' && commons.postsTotal === 0)) {
+                // Remove any existing "no posts" message to avoid duplicates
+                $('.commons-no-posts').remove();
                 $('#commons-posts').append(`<div class="commons-no-posts">${commons.i18n['no_posts_yet']}</div>`);
                 return;
             }
 
+            if (data.status === 'END') {
+                console.debug('Received END status, no more posts to load');
+            }
+            
             commons.currentPosts = commons.currentPosts.concat(posts);
 
             if (commons.page == 0 && data.postsTotal > 0) {

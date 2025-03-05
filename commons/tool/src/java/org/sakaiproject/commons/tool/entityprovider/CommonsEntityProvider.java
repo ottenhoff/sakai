@@ -133,10 +133,9 @@ public class CommonsEntityProvider extends AbstractEntityProvider implements Req
                                             , "", HttpServletResponse.SC_BAD_REQUEST);
         }
 
-        List<Post> posts = new ArrayList();
+        List<Post> posts;
 
         boolean isUserSite = sakaiProxy.isUserSite(siteId);
-
 
         QueryBean query = QueryBean.builder()
             .commonsId(commonsId)
