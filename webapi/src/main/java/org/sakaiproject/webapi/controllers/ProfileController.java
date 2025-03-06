@@ -26,6 +26,7 @@ import org.sakaiproject.user.api.User;
 import org.sakaiproject.user.api.UserDirectoryService;
 import org.sakaiproject.user.api.UserNotDefinedException;
 import org.sakaiproject.webapi.beans.ProfileRestBean;
+import org.sakaiproject.roster.api.RosterFunctions;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -56,11 +57,6 @@ public class ProfileController extends AbstractSakaiApiController {
     @Autowired private SecurityService securityService;
     @Autowired private SiteService siteService;
     @Autowired private ToolManager toolManager;
-
-    // Permission constants for Roster tool
-    private static final String ROSTER_PERMISSION_VIEW_PROFILE = "roster.viewprofile";
-    private static final String ROSTER_PERMISSION_VIEW_EMAIL = "roster.viewemail";
-    private static final String ROSTER_PERMISSION_VIEW_CANDIDATE_DETAILS = "roster.viewcandidatedetails";
 
     @GetMapping(value = "/users/{userId}/profile", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ProfileRestBean> getUserProfile(
@@ -95,9 +91,9 @@ public class ProfileController extends AbstractSakaiApiController {
         
         String siteRef = "/site/" + siteId;
         
-        boolean canViewProfile = isSelf || securityService.unlock(ROSTER_PERMISSION_VIEW_PROFILE, siteRef);
-        boolean canViewEmail = isSelf || securityService.unlock(ROSTER_PERMISSION_VIEW_EMAIL, siteRef);
-        boolean canViewCandidateDetails = isSelf || securityService.unlock(ROSTER_PERMISSION_VIEW_CANDIDATE_DETAILS, siteRef);
+        boolean canViewProfile = isSelf || securityService.unlock(RosterFunctions.ROSTER_FUNCTION_VIEWPROFILE, siteRef);
+        boolean canViewEmail = isSelf || securityService.unlock(RosterFunctions.ROSTER_FUNCTION_VIEWEMAIL, siteRef);
+        boolean canViewCandidateDetails = isSelf || securityService.unlock(RosterFunctions.ROSTER_FUNCTION_VIEWCANDIDATEDETAILS, siteRef);
         
         // Only add these fields if the user has permission to view the profile
         if (canViewProfile) {

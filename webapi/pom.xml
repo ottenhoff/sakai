@@ -166,6 +166,11 @@
             <groupId>org.sakaiproject.conditions</groupId>
             <artifactId>sakai-conditions-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.sakaiproject.roster</groupId>
+            <artifactId>roster-api</artifactId>
+            <version>25-SNAPSHOT</version>
+        </dependency>
         <!-- Spring dependencies -->
         <dependency>
             <groupId>org.springframework</groupId>
