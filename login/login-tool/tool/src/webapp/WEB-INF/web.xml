@@ -23,11 +23,26 @@
         </init-param>
     </filter>
 
+     <!-- Spring Security filter chain using our custom SafeDelegatingFilterProxy -->
      <filter>
          <filter-name>springSecurityFilterChain</filter-name>
          <filter-class>org.sakaiproject.login.springframework.SafeDelegatingFilterProxy</filter-class>
+         <init-param>
+             <param-name>contextConfigLocation</param-name>
+             <param-value>/WEB-INF/xlogin-context.saml-new.xml</param-value>
+         </init-param>
      </filter>
 
+     <!-- SAML-specific URL mappings -->
+     <filter-mapping>
+         <filter-name>springSecurityFilterChain</filter-name>
+         <url-pattern>/container/saml/*</url-pattern>
+         <dispatcher>REQUEST</dispatcher>
+         <dispatcher>FORWARD</dispatcher>
+         <dispatcher>INCLUDE</dispatcher>
+     </filter-mapping>
+     
+     <!-- General container security -->
      <filter-mapping>
          <filter-name>springSecurityFilterChain</filter-name>
          <url-pattern>/container/*</url-pattern>
@@ -91,6 +106,27 @@
     <servlet-mapping>
         <servlet-name>sakai.logout.container</servlet-name>
         <url-pattern>/container/logout</url-pattern>
+    </servlet-mapping>
+    
+    <!-- SAML-specific servlet mappings -->
+    <servlet-mapping>
+        <servlet-name>sakai.login.container</servlet-name>
+        <url-pattern>/container/saml/metadata</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>sakai.login.container</servlet-name>
+        <url-pattern>/container/saml/login</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>sakai.login.container</servlet-name>
+        <url-pattern>/container/saml/SSO</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>sakai.login.container</servlet-name>
+        <url-pattern>/container/saml/SingleLogout</url-pattern>
     </servlet-mapping>
 
      <servlet-mapping>
