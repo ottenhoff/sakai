@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+                          http://www.springframework.org/schema/beans/spring-beans.xsd
+                          http://www.springframework.org/schema/context 
+                          http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- Enable component scanning to find our Java configuration class -->
+    <context:component-scan base-package="org.sakaiproject.login.springframework"/>
+    
+    <!-- Import Sakai services -->
+    <bean id="org.sakaiproject.tool.api.SessionManager"
+          class="org.springframework.beans.factory.config.PropertyPathFactoryBean"/>
+          
+    <bean id="org.sakaiproject.event.api.UsageSessionService"
+          class="org.springframework.beans.factory.config.PropertyPathFactoryBean"/>
+          
+    <!-- Custom logout handler -->
+    <bean id="sakaiSamlLogoutFilter" class="org.sakaiproject.login.filter.SakaiSamlLogoutFilter">
+        <property name="usageSessionService" ref="org.sakaiproject.event.api.UsageSessionService"/>
+        <property name="sessionManager" ref="org.sakaiproject.tool.api.SessionManager"/>
+        <property name="invalidateSakaiSession" value="true"/>
+        <property name="invalidateHttpSession" value="true"/>
+        <property name="clearAuthentication" value="true"/>
+    </bean>
+
+</beans>

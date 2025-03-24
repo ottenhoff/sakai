@@ -7,7 +7,7 @@
     <version>26-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-  <name>sakai-login-tool</name>
+  <n>sakai-login-tool</n>
   <groupId>org.sakaiproject.login</groupId>
   <artifactId>sakai-login-tool</artifactId>
   <packaging>war</packaging>
@@ -57,15 +57,31 @@
       <scope>test</scope>
     </dependency>
 	<dependency>
-	    <groupId>org.springframework.security.extensions</groupId>
-	    <artifactId>spring-security-saml2-core</artifactId>
-	    <version>1.0.10.RELEASE</version>
+	    <groupId>org.springframework.security</groupId>
+	    <artifactId>spring-security-saml2-service-provider</artifactId>
+	    <version>${sakai.spring.security.version}</version>
         <exclusions>
             <exclusion>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
             </exclusion>
         </exclusions>
+    </dependency>
+    <!-- OpenSAML dependencies -->
+    <dependency>
+        <groupId>org.opensaml</groupId>
+        <artifactId>opensaml-core</artifactId>
+        <version>4.1.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.opensaml</groupId>
+        <artifactId>opensaml-saml-api</artifactId>
+        <version>4.1.1</version>
+    </dependency>
+    <dependency>
+        <groupId>org.opensaml</groupId>
+        <artifactId>opensaml-saml-impl</artifactId>
+        <version>4.1.1</version>
     </dependency>
       <dependency>
           <groupId>org.jasig.cas.client</groupId>
