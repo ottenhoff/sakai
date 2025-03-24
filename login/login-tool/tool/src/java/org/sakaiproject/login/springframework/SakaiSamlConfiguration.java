@@ -33,12 +33,15 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.saml2.core.Saml2X509Credential;
+import org.springframework.security.saml2.provider.service.authentication.OpenSaml4AuthenticationProvider;
 import org.springframework.security.saml2.provider.service.registration.InMemoryRelyingPartyRegistrationRepository;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistration;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrations;
-import org.springframework.security.saml2.provider.service.web.authentication.Saml2WebSsoAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.authentication.ProviderManager;
+
+import org.sakaiproject.login.saml.SakaiSamlAuthenticationConverter;
 
 import org.sakaiproject.event.api.UsageSessionService;
 import org.sakaiproject.tool.api.SessionManager;
@@ -61,6 +64,9 @@ public class SakaiSamlConfiguration {
     @Value("${sakai.saml.idp.metadata.path:/opt/tomcat/sakai/ssocircle_idp.xml}")
     private String idpMetadataPath;
     
+    @Value("${sakai.saml.idp.metadata.url:}")
+    private String idpMetadataUrl;
+    
     @Value("${sakai.saml.sp.entityId:SakaiSAMLApp}")
     private String spEntityId;
     
@@ -69,9 +75,34 @@ public class SakaiSamlConfiguration {
     
     @Value("${sakai.saml.idp.entityId:http://idp.ssocircle.com}")
     private String defaultIdpEntityId;
+    
+    @Value("${sakai.saml.mock.enabled:false}")
+    private boolean mockSamlEnabled;
+    
+    @Value("${sakai.saml.mock.baseUrl:http://localhost:8080/mocksaml}")
+    private String mockSamlBaseUrl;
+    
+    @Value("${sakai.saml.idp.sso.url:}")
+    private String idpSsoUrl;
+    
+    @Autowired(required = false)
+    private SakaiSamlAuthenticationConverter authenticationConverter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // Configure the custom authentication provider with our converter if available
+        if (authenticationConverter != null) {
+            log.info("Registering SakaiSamlAuthenticationConverter for SAML authentication");
+            
+            // Create the authentication provider with our converter
+            OpenSaml4AuthenticationProvider provider = new OpenSaml4AuthenticationProvider();
+            provider.setResponseAuthenticationConverter(authenticationConverter);
+            
+            // Configure login with the provider
+            http.saml2Login(saml2 -> saml2
+                .authenticationManager(new ProviderManager(provider)));
+        }
+        
         http
             .csrf().disable()
             .authorizeRequests(authorize -> authorize
@@ -82,8 +113,12 @@ public class SakaiSamlConfiguration {
                 .defaultSuccessUrl("/portal", true)
                 .failureUrl("/portal/xlogin")
             )
+            // Configure SAML 2.0 logout
             .saml2Logout(saml2 -> saml2
                 .logoutUrl("/container/saml/logout")
+            )
+            // Configure general logout behavior
+            .logout(logout -> logout
                 .logoutSuccessUrl("/portal")
                 // Add custom logout handler to clear Sakai sessions
                 .addLogoutHandler((request, response, authentication) -> {
@@ -110,20 +145,70 @@ public class SakaiSamlConfiguration {
         List<RelyingPartyRegistration> registrations = new ArrayList<>();
         
         try {
-            File idpMetadataFile = new File(idpMetadataPath);
-            if (idpMetadataFile.exists()) {
-                RelyingPartyRegistration registration = RelyingPartyRegistrations
-                    .fromMetadataLocation(idpMetadataFile.toURI().toString())
-                    .entityId(spEntityId)
-                    .registrationId("sakai-saml")
-                    .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
-                    .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout")
-                    .build();
+            if (mockSamlEnabled) {
+                // Configure for MockSaml testing environment
+                log.info("Configuring SAML for MockSaml testing environment at {}", mockSamlBaseUrl);
                 
-                registrations.add(registration);
-                log.info("Loaded SAML IdP metadata from {}", idpMetadataPath);
+                RelyingPartyRegistration.Builder builder = RelyingPartyRegistration.withRegistrationId("sakai-saml-mock")
+                    .entityId(spEntityId)
+                    .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                    .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");
+                
+                // If metadata URL is provided, use it
+                if (idpMetadataUrl != null && !idpMetadataUrl.isEmpty()) {
+                    builder = RelyingPartyRegistrations
+                        .fromMetadataLocation(idpMetadataUrl)
+                        .entityId(spEntityId)
+                        .registrationId("sakai-saml-mock")
+                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                        .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");
+                } else {
+                    // Configure manually for MockSaml
+                    builder.assertingPartyDetails(party -> party
+                        .entityId(defaultIdpEntityId)
+                        .singleSignOnServiceLocation(idpSsoUrl)
+                        .wantAuthnRequestsSigned(false)
+                    );
+                }
+                
+                registrations.add(builder.build());
+                log.info("MockSaml configuration complete");
+                
             } else {
-                log.warn("IdP metadata file not found at {}", idpMetadataPath);
+                // Standard production configuration
+                File idpMetadataFile = new File(idpMetadataPath);
+                if (idpMetadataFile.exists()) {
+                    RelyingPartyRegistration registration = RelyingPartyRegistrations
+                        .fromMetadataLocation(idpMetadataFile.toURI().toString())
+                        .entityId(spEntityId)
+                        .registrationId("sakai-saml")
+                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                        .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout")
+                        .build();
+                    
+                    registrations.add(registration);
+                    log.info("Loaded SAML IdP metadata from {}", idpMetadataPath);
+                } else {
+                    log.warn("IdP metadata file not found at {}", idpMetadataPath);
+                    
+                    // If metadata URL is provided as fallback, use it
+                    if (idpMetadataUrl != null && !idpMetadataUrl.isEmpty()) {
+                        try {
+                            RelyingPartyRegistration registration = RelyingPartyRegistrations
+                                .fromMetadataLocation(idpMetadataUrl)
+                                .entityId(spEntityId)
+                                .registrationId("sakai-saml")
+                                .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                                .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout")
+                                .build();
+                                
+                            registrations.add(registration);
+                            log.info("Loaded SAML IdP metadata from URL: {}", idpMetadataUrl);
+                        } catch (Exception e) {
+                            log.error("Error loading SAML IdP metadata from URL", e);
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             log.error("Error loading SAML IdP metadata", e);
