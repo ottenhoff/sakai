@@ -36,7 +36,7 @@ echo "MockSaml started with PID: $MOCKSAML_PID"
 sleep 5
 
 # Set the SAML environment to mocksaml
-export JAVA_OPTS="$JAVA_OPTS -Dsakai.saml.env=mocksaml"
+export JAVA_OPTS="$JAVA_OPTS -Dsaml.env=mocksaml"
 
 # Start Tomcat with MockSaml configuration
 echo "Starting Tomcat with MockSaml configuration..."

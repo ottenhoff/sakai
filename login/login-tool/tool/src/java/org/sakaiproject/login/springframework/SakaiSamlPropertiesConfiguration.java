@@ -34,10 +34,10 @@ import lombok.extern.slf4j.Slf4j;
  * 3. Tomcat conf: ${catalina.base}/sakai/saml/sakai-saml.properties (or CATALINA_HOME if base not set)
  * 4. Environment-specific properties from all the above locations
  * 
- * Environment-specific configurations can be activated by setting the sakai.saml.env system property:
- * - For production: no setting needed (default), or sakai.saml.env=production
- * - For testing with MockSaml: sakai.saml.env=mocksaml
- * - For other environments: sakai.saml.env=custom (loads sakai-saml-custom.properties)
+ * Environment-specific configurations can be activated by setting the saml.env system property:
+ * - For production: no setting needed (default), or saml.env=production
+ * - For testing with MockSaml: saml.env=mocksaml
+ * - For other environments: saml.env=custom (loads sakai-saml-custom.properties)
  */
 @Configuration
 // Default properties from classpath and sakai.home
@@ -48,11 +48,11 @@ import lombok.extern.slf4j.Slf4j;
 @PropertySource(value = "file:${catalina.base:${catalina.home}}/sakai/saml/sakai-saml.properties", ignoreResourceNotFound = true)
 
 // Environment-specific properties from classpath and sakai.home
-@PropertySource(value = "classpath:sakai-saml-${sakai.saml.env:production}.properties", ignoreResourceNotFound = true)
-@PropertySource(value = "file:${sakai.home}/sakai-saml-${sakai.saml.env:production}.properties", ignoreResourceNotFound = true)
+@PropertySource(value = "classpath:sakai-saml-${saml.env:production}.properties", ignoreResourceNotFound = true)
+@PropertySource(value = "file:${sakai.home}/sakai-saml-${saml.env:production}.properties", ignoreResourceNotFound = true)
 
 // Environment-specific properties from Tomcat directory (highest precedence)
-@PropertySource(value = "file:${catalina.base:${catalina.home}}/sakai/saml/sakai-saml-${sakai.saml.env:production}.properties", ignoreResourceNotFound = true)
+@PropertySource(value = "file:${catalina.base:${catalina.home}}/sakai/saml/sakai-saml-${saml.env:production}.properties", ignoreResourceNotFound = true)
 
 @Slf4j
 public class SakaiSamlPropertiesConfiguration {
@@ -62,7 +62,7 @@ public class SakaiSamlPropertiesConfiguration {
     
     @Bean
     public String samlEnvironment() {
-        String env = environment.getProperty("sakai.saml.env", "production");
+        String env = environment.getProperty("saml.env", "production");
         log.info("SAML environment configured as: {}", env);
         
         if ("mocksaml".equals(env)) {

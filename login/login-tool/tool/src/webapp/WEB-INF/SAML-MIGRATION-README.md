@@ -90,7 +90,7 @@ We've included easy integration with MockSaml for testing your SAML configuratio
 
 2. Alternatively, manually set the environment variable and start Tomcat:
    ```
-   export JAVA_OPTS="$JAVA_OPTS -Dsakai.saml.env=mocksaml"
+   export JAVA_OPTS="$JAVA_OPTS -Dsaml.env=mocksaml"
    $CATALINA_HOME/bin/startup.sh
    ```
 

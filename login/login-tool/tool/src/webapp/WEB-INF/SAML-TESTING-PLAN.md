@@ -57,7 +57,7 @@ This document outlines the testing approach for verifying the successful migrati
 | Test Case ID | Description | Steps | Expected Result | Status |
 |--------------|-------------|-------|-----------------|--------|
 | CONFIG-01 | Property Loading | 1. Set properties in different locations<br>2. Check which ones are applied | Properties are loaded with correct precedence order | |
-| CONFIG-02 | Environment-Specific Config | 1. Set `sakai.saml.env=mocksaml`<br>2. Observe config loading | Environment-specific properties are correctly loaded | |
+| CONFIG-02 | Environment-Specific Config | 1. Set `saml.env=mocksaml`<br>2. Observe config loading | Environment-specific properties are correctly loaded | |
 | CONFIG-03 | Tomcat Directory Config | 1. Place properties in `$CATALINA_HOME/sakai/saml/`<br>2. Start Sakai | Properties from Tomcat directory are loaded with highest priority | |
 
 ### 5. Error Handling and Edge Cases
