@@ -27,11 +27,13 @@
      <filter>
          <filter-name>springSecurityFilterChain</filter-name>
          <filter-class>org.sakaiproject.login.springframework.SafeDelegatingFilterProxy</filter-class>
-         <init-param>
-             <param-name>contextConfigLocation</param-name>
-             <param-value>/WEB-INF/xlogin-context.saml-new.xml</param-value>
-         </init-param>
      </filter>
+
+    <!-- Initialize Spring Web application context with saml profile -->
+    <context-param>
+        <param-name>spring.profiles.active</param-name>
+        <param-value>saml</param-value>
+    </context-param>
 
      <!-- SAML-specific URL mappings -->
      <filter-mapping>

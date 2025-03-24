@@ -11,18 +11,64 @@ The following testing tools are available in this directory:
 3. **generate-test-saml-response.sh** - Script to generate test SAML responses
 4. **SAML-TESTING-PLAN.md** - Comprehensive testing plan
 
-## Testing with MockSaml
+## Testing Options
 
-[MockSaml](https://github.com/spring-projects/spring-security-samples/tree/main/servlet/spring-boot/java/saml2/mocksaml) is a simple SAML Identity Provider (IdP) implementation that you can use for testing SAML integration without needing a real IdP.
+There are two main options for testing your SAML configuration:
 
-### Setup Instructions
+1. **MockSAML.com** - An online service that provides a free SAML IdP
+2. **Local MockSaml** - A local Java-based SAML IdP implementation
+
+### Option 1: Testing with MockSAML.com (Recommended)
+
+[MockSAML.com](https://mocksaml.com) is a free online SAML Identity Provider (IdP) service that's perfect for testing. It provides a simple interface with predictable responses and doesn't require any local setup.
+
+#### Setup Instructions
 
 1. Set your `CATALINA_HOME` environment variable to your Tomcat installation directory:
    ```bash
    export CATALINA_HOME=/path/to/tomcat
    ```
 
-2. Run the MockSaml setup script:
+2. Run the MockSAML.com setup script:
+   ```bash
+   chmod +x test-with-mocksamlcom.sh
+   ./test-with-mocksamlcom.sh
+   ```
+
+3. This will:
+   - Download the latest MockSAML.com metadata
+   - Configure Sakai to use the MockSAML.com IdP
+   - Start Tomcat with the appropriate configuration
+
+4. Once Tomcat starts, access Sakai at:
+   ```
+   http://localhost:8080/portal
+   ```
+
+5. Click on the SAML login option, which will redirect you to the MockSAML.com login page.
+   You can use any username/password combination (e.g., user1/user1pass).
+
+#### MockSAML.com Configuration
+
+MockSAML.com is configured using the `sakai-saml-mocksamlcom.properties` file. Key properties:
+
+- `sakai.saml.idp.entityId=https://saml.example.com/entityid` - MockSAML.com entityID
+- `sakai.saml.idp.metadata.url=https://mocksaml.com/api/saml/metadata` - Metadata URL
+- `sakai.saml.auth.useEppn=true` - Use eduPersonPrincipalName for user identification
+- `sakai.saml.auth.useUpn=true` - Use UserPrincipalName as fallback
+
+### Option 2: Testing with Local MockSaml
+
+[MockSaml](https://github.com/spring-projects/spring-security-samples/tree/main/servlet/spring-boot/java/saml2/mocksaml) is a local SAML Identity Provider (IdP) implementation that you can use for testing SAML integration without internet connectivity.
+
+#### Setup Instructions
+
+1. Set your `CATALINA_HOME` environment variable to your Tomcat installation directory:
+   ```bash
+   export CATALINA_HOME=/path/to/tomcat
+   ```
+
+2. Run the local MockSaml setup script:
    ```bash
    chmod +x run-with-mocksaml.sh
    ./run-with-mocksaml.sh
@@ -31,7 +77,7 @@ The following testing tools are available in this directory:
 3. This will:
    - Clone the MockSaml repository if needed
    - Build and launch MockSaml on port 8080
-   - Configure Sakai to use the MockSaml IdP
+   - Configure Sakai to use the local MockSaml IdP
    - Start Tomcat with the appropriate configuration
 
 4. Once Tomcat starts, access Sakai at:
@@ -39,12 +85,12 @@ The following testing tools are available in this directory:
    http://localhost:8080/portal
    ```
 
-5. Click on the SAML login option, which will redirect you to the MockSaml login page.
+5. Click on the SAML login option, which will redirect you to the local MockSaml login page.
    You can use any username/password for testing.
 
-### MockSaml Configuration
+#### Local MockSaml Configuration
 
-MockSaml is configured using the `sakai-saml-mocksaml.properties` file. Key properties:
+Local MockSaml is configured using the `sakai-saml-mocksaml.properties` file. Key properties:
 
 - `sakai.saml.mock.enabled=true` - Enables MockSaml mode
 - `sakai.saml.mock.baseUrl=http://localhost:8080/mocksaml` - MockSaml URL
@@ -140,6 +186,25 @@ To enable verbose SAML logging, set:
 sakai.saml.verbose.logging=true
 ```
 in your SAML properties file.
+
+## How SAML Configuration Works
+
+The SAML configuration system is designed to be completely optional. It will only be activated when:
+
+1. The `saml.env` system property is set (defines which environment to use)
+2. The `spring.profiles.active` system property includes "saml" (activates SAML configuration)
+
+This means:
+- When both properties are set, SAML support is fully enabled with the specified environment
+- When neither is set, SAML support is completely disabled
+- You must set both properties to enable SAML authentication
+
+Example configuration:
+- For MockSAML.com: `-Dsaml.env=mocksamlcom -Dspring.profiles.active=saml`
+- For local MockSaml: `-Dsaml.env=mocksaml -Dspring.profiles.active=saml`
+- For production: `-Dsaml.env=production -Dspring.profiles.active=saml`
+
+The provided scripts automatically set both properties for you.
 
 ## Troubleshooting
 

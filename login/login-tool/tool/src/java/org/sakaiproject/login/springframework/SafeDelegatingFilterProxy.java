@@ -64,7 +64,22 @@ public class SafeDelegatingFilterProxy extends DelegatingFilterProxy {
                     super.initFilterBean();
                     enabled = true;
                 } else {
-                    log.info("Can't find a bean with name: " + getTargetBeanName() + ", safely disable proxying");
+                    log.info("Can't find a bean with name: " + getTargetBeanName() + ", attempting to find it in parent context");
+                    
+                    // Try to find bean in root context
+                    if (wac.getParent() != null && wac.getParent().containsBean(getTargetBeanName())) {
+                        // As there is no setWebApplicationContext method, we need to create a new instance
+                        // that will use the root context
+                        try {
+                            log.info("Found bean {} in parent context, using parent context", getTargetBeanName());
+                            super.initFilterBean();
+                            enabled = true;
+                        } catch (Exception e) {
+                            log.warn("Error initializing filter with parent context", e);
+                        }
+                    } else {
+                        log.info("Can't find a bean with name: " + getTargetBeanName() + " in any context, safely disable proxying");
+                    }
                 }
             } else {
                 log.warn("Can't find web application context");

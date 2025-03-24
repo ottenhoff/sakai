@@ -117,12 +117,91 @@ else
   echo "Java not found. Please manually convert the metadata files."
 fi
 
+# Backup and replace the SAML configuration file
+WEBAPP_DIR=$(dirname "$0")
+if [ -f "$WEBAPP_DIR/xlogin-context.saml.xml" ]; then
+  echo "Backing up xlogin-context.saml.xml..."
+  cp "$WEBAPP_DIR/xlogin-context.saml.xml" "$BACKUP_DIR/xlogin-context.saml.xml.bak"
+  echo "Replacing with new SAML configuration..."
+  cp "$WEBAPP_DIR/xlogin-context.saml-new.xml" "$WEBAPP_DIR/xlogin-context.saml.xml"
+  echo "Successfully replaced SAML configuration file"
+else
+  echo "Warning: xlogin-context.saml.xml not found in the current directory"
+fi
+
+# Ensure both XML files have proper Sakai service bean definitions
+update_services() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    echo "Checking service bean definitions in $file..."
+    
+    # Check if the file already has the correct component manager bean definition
+    if ! grep -q "componentManager.*org.sakaiproject.component.cover.ComponentManager" "$file"; then
+      echo "Updating service bean definitions in $file..."
+      # Create a backup
+      cp "$file" "${file}.bak"
+      
+      # Insert the component manager after the component-scan tag
+      sed -i.tmp '/<context:component-scan/a\
+    <!-- Import required Sakai component manager -->\
+    <bean id="componentManager" \
+          class="org.sakaiproject.component.cover.ComponentManager" \
+          factory-method="getInstance" />' "$file"
+      
+      # Replace the SessionManager bean
+      sed -i.tmp '/<bean id="org.sakaiproject.tool.api.SessionManager"/,/<\/bean>/ c\
+    <!-- Legacy service beans (for backward compatibility) -->\
+    <bean id="org.sakaiproject.tool.api.SessionManager" \
+          factory-bean="componentManager"\
+          factory-method="get">\
+        <constructor-arg value="org.sakaiproject.tool.api.SessionManager" />\
+    </bean>' "$file"
+      
+      # Replace the UsageSessionService bean
+      sed -i.tmp '/<bean id="org.sakaiproject.event.api.UsageSessionService"/,/<\/bean>/ c\
+    <bean id="org.sakaiproject.event.api.UsageSessionService" \
+          factory-bean="componentManager"\
+          factory-method="get">\
+        <constructor-arg value="org.sakaiproject.event.api.UsageSessionService" />\
+    </bean>\
+    \
+    <!-- Autowireable service proxy beans (with exact type names) -->\
+    <bean id="sessionManager" \
+          class="org.sakaiproject.tool.api.SessionManager" \
+          factory-bean="componentManager"\
+          factory-method="get">\
+        <constructor-arg value="org.sakaiproject.tool.api.SessionManager" />\
+    </bean>\
+    \
+    <bean id="usageSessionService" \
+          class="org.sakaiproject.event.api.UsageSessionService" \
+          factory-bean="componentManager"\
+          factory-method="get">\
+        <constructor-arg value="org.sakaiproject.event.api.UsageSessionService" />\
+    </bean>' "$file"
+      
+      rm -f "${file}.tmp"
+      echo "Service bean definitions updated in $file"
+    else
+      echo "Service bean definitions already updated in $file"
+    fi
+  fi
+}
+
+# Update service bean definitions in both XML files
+update_services "$WEBAPP_DIR/xlogin-context.saml.xml"
+update_services "$WEBAPP_DIR/xlogin-context.saml-new.xml"
+
 echo ""
-echo "Migration preparation complete!"
+echo "Migration complete!"
 echo "Next steps:"
-echo "1. Review and edit $SAKAI_HOME/sakai-saml.properties"
+echo "1. Review and edit $TOMCAT_SAML_DIR/sakai-saml.properties"
 echo "2. Run the MetadataConverter if necessary"
-echo "3. Test the new SAML configuration"
-echo "4. Rename xlogin-context.saml-new.xml to xlogin-context.saml.xml after successful testing"
+echo "3. Set the following system properties to enable SAML:"
+echo "   -Dsaml.env=production -Dspring.profiles.active=saml"
+echo "4. Restart Tomcat to apply changes"
+echo ""
+echo "For testing with MockSAML.com, use:"
+echo "   -Dsaml.env=mocksamlcom -Dspring.profiles.active=saml"
 echo ""
 echo "Backup of original files is located at: $BACKUP_DIR"

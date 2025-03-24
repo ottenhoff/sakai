@@ -46,6 +46,36 @@ public class SakaiSamlLogoutFilter extends SecurityContextLogoutHandler implemen
     @Setter private SessionManager sessionManager;
     @Setter private boolean invalidateSakaiSession = true;
     
+    /**
+     * Gets the SessionManager, falling back to ComponentManager if needed.
+     */
+    private SessionManager getSessionManager() {
+        if (sessionManager == null) {
+            sessionManager = org.sakaiproject.component.cover.ComponentManager.get(SessionManager.class);
+            if (sessionManager == null) {
+                log.error("Unable to get SessionManager from either Spring context or Component Manager");
+            } else {
+                log.debug("Retrieved SessionManager from Component Manager");
+            }
+        }
+        return sessionManager;
+    }
+    
+    /**
+     * Gets the UsageSessionService, falling back to ComponentManager if needed.
+     */
+    private UsageSessionService getUsageSessionService() {
+        if (usageSessionService == null) {
+            usageSessionService = org.sakaiproject.component.cover.ComponentManager.get(UsageSessionService.class);
+            if (usageSessionService == null) {
+                log.error("Unable to get UsageSessionService from either Spring context or Component Manager");
+            } else {
+                log.debug("Retrieved UsageSessionService from Component Manager");
+            }
+        }
+        return usageSessionService;
+    }
+    
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
         log.debug("Processing Sakai SAML logout");
@@ -54,16 +84,20 @@ public class SakaiSamlLogoutFilter extends SecurityContextLogoutHandler implemen
         if (invalidateSakaiSession) {
             try {
                 // Clear Sakai session
-                Session session = sessionManager.getCurrentSession();
-                if (session != null) {
-                    log.debug("Invalidating Sakai session: {}", session.getId());
-                    session.invalidate();
+                SessionManager sm = getSessionManager();
+                if (sm != null) {
+                    Session session = sm.getCurrentSession();
+                    if (session != null) {
+                        log.debug("Invalidating Sakai session: {}", session.getId());
+                        session.invalidate();
+                    }
                 }
                 
                 // Clear usage session data
-                if (usageSessionService != null) {
+                UsageSessionService uss = getUsageSessionService();
+                if (uss != null) {
                     log.debug("Logging out of usage session service");
-                    usageSessionService.logout();
+                    uss.logout();
                 }
             } catch (Exception e) {
                 log.error("Error invalidating Sakai session during SAML logout", e);

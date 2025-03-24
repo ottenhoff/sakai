@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-    <!-- Sample configuration for SAML -->
-    <!-- import resource="xlogin-context.saml.xml" / -->
+    <!-- Enable property placeholder resolution -->
+    <context:property-placeholder location="classpath:sakai-saml.properties" ignore-resource-not-found="true" />
 
-    <!-- Sample configuration for SAML with ADFS IdP -->
-    <!-- import resource="xlogin-context.saml.adfs-prod.xml" / -->
+    <!-- Check if saml.env is set and conditionally load SAML configuration -->
+    <beans profile="saml">
+        <!-- SAML Configuration -->
+        <import resource="xlogin-context.saml.xml" />
+    </beans>
 
     <!-- Sample configuration for CAS authentication -->
+    <!-- Uncomment to enable CAS authentication -->
     <!-- import resource="xlogin-context.cas3.xml" / -->
-</beans>
 
+</beans>

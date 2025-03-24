@@ -1,30 +1,16 @@
 #!/bin/bash
 # Test SAML Response Generator
-# This script generates test SAML responses with different attributes and conditions
-
-# Load OpenSAML libraries
-LIB_DIR="$CATALINA_HOME/webapps/sakai-login-tool/WEB-INF/lib"
-CLASSPATH=""
-for jar in "$LIB_DIR"/*.jar; do
-  CLASSPATH="$CLASSPATH:$jar"
-done
+# This script generates simple test SAML response templates with different attributes and conditions
 
 # Create output directory
 OUTPUT_DIR="saml-test-responses"
 mkdir -p "$OUTPUT_DIR"
 
 echo "Generating test SAML responses..."
-echo "This may take a few seconds..."
+echo "Creating XML templates for testing..."
 
-# Use Java to generate SAML responses
-java -cp "$CLASSPATH" org.sakaiproject.login.saml.TestSamlResponseGenerator "$OUTPUT_DIR"
-
-# If Java class doesn't exist, create a simple XML template
-if [ $? -ne 0 ]; then
-  echo "Java SAML generator not available, creating XML templates instead"
-  
-  # Create a basic SAML response template
-  cat > "$OUTPUT_DIR/basic-saml-response.xml" << EOF
+# Create a basic SAML response template
+cat > "$OUTPUT_DIR/basic-saml-response.xml" << EOF
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                 ID="_response_id"
@@ -83,7 +69,7 @@ if [ $? -ne 0 ]; then
 EOF
 
   # Create a SAML response with EPPN only
-  cat > "$OUTPUT_DIR/eppn-only-response.xml" << EOF
+cat > "$OUTPUT_DIR/eppn-only-response.xml" << EOF
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                 ID="_response_id"
@@ -130,7 +116,7 @@ EOF
 EOF
 
   # Create a SAML response with UPN only
-  cat > "$OUTPUT_DIR/upn-only-response.xml" << EOF
+cat > "$OUTPUT_DIR/upn-only-response.xml" << EOF
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                 ID="_response_id"
@@ -177,7 +163,7 @@ EOF
 EOF
 
   # Create a SAML response with no identity attributes (fallback to NameID)
-  cat > "$OUTPUT_DIR/no-attrs-response.xml" << EOF
+cat > "$OUTPUT_DIR/no-attrs-response.xml" << EOF
 <samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
                 xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
                 ID="_response_id"
@@ -225,8 +211,6 @@ EOF
   </saml:Assertion>
 </samlp:Response>
 EOF
-fi
-
 echo "SAML test responses generated in: $OUTPUT_DIR"
 echo "These responses can be used for testing the SAML attribute handling in SakaiSamlAuthenticationConverter."
 echo ""

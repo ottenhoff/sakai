@@ -55,11 +55,36 @@ import org.sakaiproject.tool.api.SessionManager;
 @Slf4j
 public class SakaiSamlConfiguration {
 
-    @Autowired
+    @Autowired(required = false)
     private UsageSessionService usageSessionService;
     
-    @Autowired
+    @Autowired(required = false)
     private SessionManager sessionManager;
+    
+    // Fallback to Component Manager if Spring autowiring fails
+    private UsageSessionService getUsageSessionService() {
+        if (usageSessionService == null) {
+            usageSessionService = org.sakaiproject.component.cover.ComponentManager.get(UsageSessionService.class);
+            if (usageSessionService == null) {
+                log.error("Unable to get UsageSessionService from either Spring context or Component Manager");
+            } else {
+                log.debug("Retrieved UsageSessionService from Component Manager");
+            }
+        }
+        return usageSessionService;
+    }
+    
+    private SessionManager getSessionManager() {
+        if (sessionManager == null) {
+            sessionManager = org.sakaiproject.component.cover.ComponentManager.get(SessionManager.class);
+            if (sessionManager == null) {
+                log.error("Unable to get SessionManager from either Spring context or Component Manager");
+            } else {
+                log.debug("Retrieved SessionManager from Component Manager");
+            }
+        }
+        return sessionManager;
+    }
     
     @Value("${sakai.saml.idp.metadata.path:/opt/tomcat/sakai/ssocircle_idp.xml}")
     private String idpMetadataPath;
@@ -124,12 +149,14 @@ public class SakaiSamlConfiguration {
                 .addLogoutHandler((request, response, authentication) -> {
                     try {
                         // Clear Sakai session
-                        if (sessionManager != null) {
-                            sessionManager.getCurrentSession().invalidate();
+                        SessionManager sm = getSessionManager();
+                        if (sm != null) {
+                            sm.getCurrentSession().invalidate();
                         }
                         // Clear usage session data
-                        if (usageSessionService != null) {
-                            usageSessionService.logout();
+                        UsageSessionService uss = getUsageSessionService();
+                        if (uss != null) {
+                            uss.logout();
                         }
                     } catch (Exception e) {
                         log.error("Error invalidating Sakai session during SAML logout", e);
