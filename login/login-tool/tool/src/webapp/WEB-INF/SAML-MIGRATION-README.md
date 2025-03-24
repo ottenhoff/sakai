@@ -63,7 +63,21 @@ During the transition phase, both implementations can coexist. To enable the new
    ```
 4. Restart Tomcat to apply all changes
 
-## Testing with MockSaml
+## Comprehensive Testing Approach
+
+We've developed a comprehensive testing framework for the SAML migration:
+
+### 1. Testing Tools
+
+The following testing tools are available:
+
+- **run-with-mocksaml.sh** - Script to set up a test environment with MockSaml
+- **verify-saml-config.sh** - Script to verify SAML configuration
+- **generate-test-saml-response.sh** - Script to generate test SAML responses
+- **SAML-TESTING-PLAN.md** - Comprehensive testing plan
+- **SAML-TESTING-README.md** - Detailed testing guide
+
+### 2. Testing with MockSaml
 
 We've included easy integration with MockSaml for testing your SAML configuration:
 
@@ -87,7 +101,43 @@ We've included easy integration with MockSaml for testing your SAML configuratio
    - Enables verbose logging for SAML operations
 
 4. You can customize the MockSaml settings in:
-   - `/WEB-INF/sakai-saml-mocksaml.properties`
+   - `$CATALINA_HOME/sakai/saml/sakai-saml-mocksaml.properties`
+
+### 3. Verifying Your Configuration
+
+The `verify-saml-config.sh` script helps you diagnose issues with your SAML setup:
+
+```
+cd /path/to/sakai/webapps/sakai-login-tool/WEB-INF/
+chmod +x verify-saml-config.sh
+./verify-saml-config.sh
+```
+
+This script checks directory structures, configuration files, properties settings, and metadata files, then provides testing recommendations.
+
+### 4. Testing Different SAML Attribute Scenarios
+
+Use the `generate-test-saml-response.sh` script to generate test SAML responses for different attribute scenarios:
+
+```
+cd /path/to/sakai/webapps/sakai-login-tool/WEB-INF/
+chmod +x generate-test-saml-response.sh
+./generate-test-saml-response.sh
+```
+
+These responses help verify that the SAML authentication converter correctly handles different attribute combinations (EPPN, UPN, or fallback to NameID).
+
+### 5. Executing the Test Plan
+
+Follow the comprehensive test plan in `SAML-TESTING-PLAN.md` to verify all aspects of the SAML integration:
+
+- Authentication flow
+- Logout process
+- Metadata exchange
+- Error handling
+- Compatibility with different browsers and IdPs
+
+See `SAML-TESTING-README.md` for detailed testing instructions.
 
 ## References
 

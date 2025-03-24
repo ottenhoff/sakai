@@ -28,16 +28,32 @@ import lombok.extern.slf4j.Slf4j;
  * Configuration for loading SAML properties from the sakai-saml.properties file.
  * This makes property values available for @Value annotations in other configuration classes.
  * 
+ * Properties are loaded from the following locations (in order of precedence, later overrides earlier):
+ * 1. Classpath: /sakai-saml.properties
+ * 2. Sakai home: ${sakai.home}/sakai-saml.properties
+ * 3. Tomcat conf: ${catalina.base}/sakai/saml/sakai-saml.properties (or CATALINA_HOME if base not set)
+ * 4. Environment-specific properties from all the above locations
+ * 
  * Environment-specific configurations can be activated by setting the sakai.saml.env system property:
  * - For production: no setting needed (default), or sakai.saml.env=production
  * - For testing with MockSaml: sakai.saml.env=mocksaml
  * - For other environments: sakai.saml.env=custom (loads sakai-saml-custom.properties)
  */
 @Configuration
+// Default properties from classpath and sakai.home
 @PropertySource(value = "classpath:sakai-saml.properties", ignoreResourceNotFound = true)
 @PropertySource(value = "file:${sakai.home}/sakai-saml.properties", ignoreResourceNotFound = true)
+
+// Tomcat-specific properties (highest precedence for default properties)
+@PropertySource(value = "file:${catalina.base:${catalina.home}}/sakai/saml/sakai-saml.properties", ignoreResourceNotFound = true)
+
+// Environment-specific properties from classpath and sakai.home
 @PropertySource(value = "classpath:sakai-saml-${sakai.saml.env:production}.properties", ignoreResourceNotFound = true)
 @PropertySource(value = "file:${sakai.home}/sakai-saml-${sakai.saml.env:production}.properties", ignoreResourceNotFound = true)
+
+// Environment-specific properties from Tomcat directory (highest precedence)
+@PropertySource(value = "file:${catalina.base:${catalina.home}}/sakai/saml/sakai-saml-${sakai.saml.env:production}.properties", ignoreResourceNotFound = true)
+
 @Slf4j
 public class SakaiSamlPropertiesConfiguration {
 

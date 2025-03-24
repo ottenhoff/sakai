@@ -72,24 +72,30 @@ Also added explicit OpenSAML 4.3.2 dependencies:
 1. ✓ Created `SakaiSamlAuthenticationConverter.java` to handle SAML attribute mappings
 2. ✓ Implemented special handling for eduPersonPrincipalName (EPPN) and UserPrincipalName (UPN)
 
-### 5. Testing Plan
+### 5. Testing Plan ✓
 
-1. Create a test environment with a mock SAML IdP
-   - [MockSaml](https://github.com/spring-projects/spring-security-samples/tree/main/servlet/spring-boot/java/saml2/mocksaml) can be used for testing
-   - Alternatively, [testsaml.com](https://testsaml.com/) provides a free testing IdP
-2. Test authentication flow
+1. ✓ Created test environment with a mock SAML IdP
+   - ✓ Created `run-with-mocksaml.sh` script to automate MockSaml setup
+   - ✓ Configured `sakai-saml-mocksaml.properties` for testing
+   - ✓ Documented testing process in `SAML-TESTING-README.md`
+2. ✓ Created comprehensive testing plan
+   - ✓ Documented detailed test cases in `SAML-TESTING-PLAN.md`
+   - ✓ Created `verify-saml-config.sh` for configuration validation
+   - ✓ Created `generate-test-saml-response.sh` for test data generation
+   - ✓ Implemented `TestSamlResponseGenerator.java` for SAML attribute testing
+3. Test authentication flow
    - Access `/container/saml/login` to initiate authentication
    - Verify redirection to IdP
    - Verify successful authentication and assertion processing
    - Confirm attributes are correctly extracted (EPPN/UPN)
-3. Test logout process
+4. Test logout process
    - Test SP-initiated logout via `/container/saml/logout`
    - Test IdP-initiated logout
    - Verify both Sakai session and security context are cleared
-4. Test metadata exchange
+5. Test metadata exchange
    - Verify SP metadata is correctly generated at `/container/saml/metadata`
    - Confirm IdP metadata is correctly processed
-5. Compatibility testing
+6. Compatibility testing
    - Test with multiple browsers
    - Test with multiple IdPs if applicable
 
