@@ -17,24 +17,24 @@ package org.sakaiproject.login.springframework;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import org.sakaiproject.component.api.ServerConfigurationService;
+import org.sakaiproject.tool.api.Tool;
+import org.sakaiproject.user.api.User;
+import org.sakaiproject.user.api.UserDirectoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.saml2.core.Saml2X509Credential;
 import org.springframework.security.saml2.provider.service.authentication.OpenSaml4AuthenticationProvider;
+import org.springframework.security.saml2.provider.service.authentication.Saml2Authentication;
 import org.springframework.security.saml2.provider.service.registration.InMemoryRelyingPartyRegistrationRepository;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistration;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository;
@@ -45,6 +45,7 @@ import org.springframework.security.authentication.ProviderManager;
 import org.sakaiproject.login.saml.SakaiSamlAuthenticationConverter;
 
 import org.sakaiproject.event.api.UsageSessionService;
+import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
 
 /**
@@ -57,35 +58,19 @@ import org.sakaiproject.tool.api.SessionManager;
 public class SakaiSamlConfiguration {
 
     @Autowired(required = false)
+    private SakaiSamlAuthenticationConverter authenticationConverter;
+
+    @Autowired
+    private ServerConfigurationService serverConfigurationService;
+
+    @Autowired
+    private UserDirectoryService userDirectoryService;
+
+    @Autowired
     private UsageSessionService usageSessionService;
     
-    @Autowired(required = false)
+    @Autowired
     private SessionManager sessionManager;
-    
-    // Fallback to Component Manager if Spring autowiring fails
-    private UsageSessionService getUsageSessionService() {
-        if (usageSessionService == null) {
-            usageSessionService = org.sakaiproject.component.cover.ComponentManager.get(UsageSessionService.class);
-            if (usageSessionService == null) {
-                log.error("Unable to get UsageSessionService from either Spring context or Component Manager");
-            } else {
-                log.debug("Retrieved UsageSessionService from Component Manager");
-            }
-        }
-        return usageSessionService;
-    }
-    
-    private SessionManager getSessionManager() {
-        if (sessionManager == null) {
-            sessionManager = org.sakaiproject.component.cover.ComponentManager.get(SessionManager.class);
-            if (sessionManager == null) {
-                log.error("Unable to get SessionManager from either Spring context or Component Manager");
-            } else {
-                log.debug("Retrieved SessionManager from Component Manager");
-            }
-        }
-        return sessionManager;
-    }
     
     @Value("${sakai.saml.idp.metadata.path:/opt/tomcat/sakai/ssocircle_idp.xml}")
     private String idpMetadataPath;
@@ -123,12 +108,6 @@ public class SakaiSamlConfiguration {
     
     @Value("${sakai.saml.keystore.privatekey.password:}")
     private String privateKeyPassword;
-    
-    @Autowired(required = false)
-    private SakaiSamlAuthenticationConverter authenticationConverter;
-
-    @Autowired
-    private ServerConfigurationService serverConfigurationService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -154,6 +133,64 @@ public class SakaiSamlConfiguration {
                 .loginProcessingUrl("/container/saml/{registrationId}/SSO")
                 .defaultSuccessUrl(serverConfigurationService.getServerUrl() + "/portal", true)
                 .failureUrl(serverConfigurationService.getServerUrl() + "/portal/xlogin")
+                // Add custom success handler to create Sakai session
+                .successHandler((request, response, authentication) -> {
+                    try {
+                        // Get the authenticated principal from the SAML authentication
+                        if (authentication instanceof Saml2Authentication) {
+                            Saml2Authentication samlAuth =
+                                (Saml2Authentication) authentication;
+                            
+                            // Get the username from the principal
+                            String username = samlAuth.getName();
+                            log.info("SAML authentication successful for user: {}", username);
+                            
+                            // Create a Sakai session for this user
+                            final User u = userDirectoryService.getUserByEid(username);
+                            log.info("SAML Found user: {}", u);
+
+                            Session session = sessionManager.getCurrentSession();
+
+                            if (usageSessionService.login(
+                                    u.getId(), // uid (internal user ID)
+                                    u.getEid(), // eid (external user ID)
+                                    request.getRemoteAddr(),
+                                    request.getHeader("user-agent"),
+                                    UsageSessionService.EVENT_LOGIN_CONTAINER)) {
+                                
+                                log.info("Successfully created Sakai session for user: {}", username);
+                                
+                                // Redirect to portal or requested URL
+                                String url = serverConfigurationService.getPortalUrl();
+                                String returnUrl = (String) session.getAttribute(Tool.HELPER_DONE_URL);
+                                if (returnUrl != null && !returnUrl.isEmpty()) {
+                                    url = returnUrl;
+                                }
+                                
+                                // Remove session attributes
+                                session.removeAttribute(Tool.HELPER_MESSAGE);
+                                session.removeAttribute(Tool.HELPER_DONE_URL);
+
+                                session.setAttribute("sakai.login.container.success", "sakai.login.container.success");
+                                
+                                response.sendRedirect(response.encodeRedirectURL(url));
+                            } else {
+                                log.error("Failed to create Sakai session for user: {}", username);
+                                response.sendRedirect(response.encodeRedirectURL(serverConfigurationService.getPortalUrl() + "/xlogin?failed=true"));
+                            }
+                        } else {
+                            log.error("Authentication is not a Saml2Authentication: {}", authentication.getClass().getName());
+                            response.sendRedirect(response.encodeRedirectURL(serverConfigurationService.getPortalUrl() + "/xlogin?failed=true"));
+                        }
+                    } catch (Exception e) {
+                        log.error("Error in SAML success handler", e);
+                        try {
+                            response.sendRedirect(response.encodeRedirectURL(serverConfigurationService.getPortalUrl() + "/xlogin?failed=true"));
+                        } catch (Exception ex) {
+                            log.error("Failed to redirect after error", ex);
+                        }
+                    }
+                })
             )
             // Configure SAML 2.0 logout
             .saml2Logout(saml2 -> saml2
@@ -166,15 +203,9 @@ public class SakaiSamlConfiguration {
                 .addLogoutHandler((request, response, authentication) -> {
                     try {
                         // Clear Sakai session
-                        SessionManager sm = getSessionManager();
-                        if (sm != null) {
-                            sm.getCurrentSession().invalidate();
-                        }
+                        sessionManager.getCurrentSession().invalidate();
                         // Clear usage session data
-                        UsageSessionService uss = getUsageSessionService();
-                        if (uss != null) {
-                            uss.logout();
-                        }
+                        usageSessionService.logout();
                     } catch (Exception e) {
                         log.error("Error invalidating Sakai session during SAML logout", e);
                     }
@@ -383,7 +414,7 @@ public class SakaiSamlConfiguration {
         
         // If no registrations were created, add a default fallback registration
         // This prevents the "registrations cannot be empty" error
-        if (!registrationCreated || registrations.isEmpty()) {
+        if (!registrationCreated) {
             log.warn("No valid SAML configurations found, creating a default fallback registration");
             
             // Create a minimal fallback configuration

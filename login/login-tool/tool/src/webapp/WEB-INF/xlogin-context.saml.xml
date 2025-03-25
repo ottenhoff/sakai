@@ -10,39 +10,6 @@
     <!-- Enable component scanning to find our Java configuration class -->
     <context:component-scan base-package="org.sakaiproject.login.springframework"/>
     
-    <!-- Import required Sakai component manager -->
-    <bean id="componentManager" 
-          class="org.sakaiproject.component.cover.ComponentManager" 
-          factory-method="getInstance" />
-          
-    <!-- Legacy service beans (for backward compatibility) -->
-    <bean id="org.sakaiproject.tool.api.SessionManager" 
-          factory-bean="componentManager"
-          factory-method="get">
-        <constructor-arg value="org.sakaiproject.tool.api.SessionManager" />
-    </bean>
-    
-    <bean id="org.sakaiproject.event.api.UsageSessionService" 
-          factory-bean="componentManager"
-          factory-method="get">
-        <constructor-arg value="org.sakaiproject.event.api.UsageSessionService" />
-    </bean>
-    
-    <!-- Autowireable service proxy beans (with exact type names) -->
-    <bean id="sessionManager" 
-          class="org.sakaiproject.tool.api.SessionManager" 
-          factory-bean="componentManager"
-          factory-method="get">
-        <constructor-arg value="org.sakaiproject.tool.api.SessionManager" />
-    </bean>
-    
-    <bean id="usageSessionService" 
-          class="org.sakaiproject.event.api.UsageSessionService" 
-          factory-bean="componentManager"
-          factory-method="get">
-        <constructor-arg value="org.sakaiproject.event.api.UsageSessionService" />
-    </bean>
-          
     <!-- Custom logout handler -->
     <bean id="sakaiSamlLogoutFilter" class="org.sakaiproject.login.filter.SakaiSamlLogoutFilter">
         <property name="usageSessionService" ref="org.sakaiproject.event.api.UsageSessionService"/>
