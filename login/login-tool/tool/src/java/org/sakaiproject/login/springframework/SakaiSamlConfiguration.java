@@ -23,6 +23,7 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 import org.sakaiproject.component.api.ServerConfigurationService;
+import org.sakaiproject.login.tool.SkinnableLogin;
 import org.sakaiproject.tool.api.Tool;
 import org.sakaiproject.user.api.User;
 import org.sakaiproject.user.api.UserDirectoryService;
@@ -131,7 +132,7 @@ public class SakaiSamlConfiguration {
             )
             .saml2Login(saml2 -> saml2
                 .loginProcessingUrl("/container/saml/{registrationId}/SSO")
-                .defaultSuccessUrl(serverConfigurationService.getServerUrl() + "/portal", true)
+                .defaultSuccessUrl(serverConfigurationService.getServerUrl() + "/portal/login", true)
                 .failureUrl(serverConfigurationService.getServerUrl() + "/portal/xlogin")
                 // Add custom success handler to create Sakai session
                 .successHandler((request, response, authentication) -> {
@@ -161,7 +162,7 @@ public class SakaiSamlConfiguration {
                                 log.info("Successfully created Sakai session for user: {}", username);
                                 
                                 // Redirect to portal or requested URL
-                                String url = serverConfigurationService.getPortalUrl();
+                                String url = serverConfigurationService.getPortalUrl() + "/login";
                                 String returnUrl = (String) session.getAttribute(Tool.HELPER_DONE_URL);
                                 if (returnUrl != null && !returnUrl.isEmpty()) {
                                     url = returnUrl;
@@ -170,9 +171,9 @@ public class SakaiSamlConfiguration {
                                 // Remove session attributes
                                 session.removeAttribute(Tool.HELPER_MESSAGE);
                                 session.removeAttribute(Tool.HELPER_DONE_URL);
+                                session.setAttribute(SkinnableLogin.ATTR_CONTAINER_SUCCESS, SkinnableLogin.ATTR_CONTAINER_SUCCESS);
 
-                                session.setAttribute("sakai.login.container.success", "sakai.login.container.success");
-                                
+                                log.info("SAML send user to: {}", url);
                                 response.sendRedirect(response.encodeRedirectURL(url));
                             } else {
                                 log.error("Failed to create Sakai session for user: {}", username);
