@@ -25,6 +25,7 @@ import java.util.List;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import org.sakaiproject.component.api.ServerConfigurationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -113,6 +114,9 @@ public class SakaiSamlConfiguration {
     @Autowired(required = false)
     private SakaiSamlAuthenticationConverter authenticationConverter;
 
+    @Autowired
+    private ServerConfigurationService serverConfigurationService;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         // Configure the custom authentication provider with our converter if available
@@ -134,9 +138,9 @@ public class SakaiSamlConfiguration {
                 .anyRequest().authenticated()
             )
             .saml2Login(saml2 -> saml2
-                .loginProcessingUrl("/container/saml/SSO")
-                .defaultSuccessUrl("/portal", true)
-                .failureUrl("/portal/xlogin")
+                .loginProcessingUrl("/container/saml/{registrationId}/SSO")
+                .defaultSuccessUrl(serverConfigurationService.getServerUrl() + "/portal", true)
+                .failureUrl(serverConfigurationService.getServerUrl() + "/portal/xlogin")
             )
             // Configure SAML 2.0 logout
             .saml2Logout(saml2 -> saml2
@@ -144,7 +148,7 @@ public class SakaiSamlConfiguration {
             )
             // Configure general logout behavior
             .logout(logout -> logout
-                .logoutSuccessUrl("/portal")
+                .logoutSuccessUrl(serverConfigurationService.getServerUrl() + "/portal")
                 // Add custom logout handler to clear Sakai sessions
                 .addLogoutHandler((request, response, authentication) -> {
                     try {
@@ -178,7 +182,7 @@ public class SakaiSamlConfiguration {
                 
                 RelyingPartyRegistration.Builder builder = RelyingPartyRegistration.withRegistrationId("sakai-saml-mock")
                     .entityId(spEntityId)
-                    .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                    .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")
                     .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");
                 
                 // If metadata URL is provided, use it
@@ -187,7 +191,7 @@ public class SakaiSamlConfiguration {
                         .fromMetadataLocation(idpMetadataUrl)
                         .entityId(spEntityId)
                         .registrationId("sakai-saml-mock")
-                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")
                         .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");
                 } else {
                     // Configure manually for MockSaml
@@ -209,7 +213,7 @@ public class SakaiSamlConfiguration {
                         .fromMetadataLocation(idpMetadataFile.toURI().toString())
                         .entityId(spEntityId)
                         .registrationId("sakai-saml")
-                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")
                         .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout")
                         .build();
                     
@@ -225,7 +229,7 @@ public class SakaiSamlConfiguration {
                                 .fromMetadataLocation(idpMetadataUrl)
                                 .entityId(spEntityId)
                                 .registrationId("sakai-saml")
-                                .assertionConsumerServiceLocation("{baseUrl}/container/saml/SSO")
+                                .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")
                                 .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout")
                                 .build();
                                 

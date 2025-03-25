@@ -44,6 +44,15 @@
          <dispatcher>INCLUDE</dispatcher>
      </filter-mapping>
      
+     <!-- Map Spring Security's default SAML paths -->
+     <filter-mapping>
+         <filter-name>springSecurityFilterChain</filter-name>
+         <url-pattern>/saml2/*</url-pattern>
+         <dispatcher>REQUEST</dispatcher>
+         <dispatcher>FORWARD</dispatcher>
+         <dispatcher>INCLUDE</dispatcher>
+     </filter-mapping>
+     
      <!-- General container security -->
      <filter-mapping>
          <filter-name>springSecurityFilterChain</filter-name>
@@ -123,7 +132,12 @@
     
     <servlet-mapping>
         <servlet-name>sakai.login.container</servlet-name>
-        <url-pattern>/container/saml/SSO</url-pattern>
+        <url-pattern>/container/saml/*/SSO</url-pattern>
+    </servlet-mapping>
+    
+    <servlet-mapping>
+        <servlet-name>sakai.login.container</servlet-name>
+        <url-pattern>/container/saml/authenticate</url-pattern>
     </servlet-mapping>
     
     <servlet-mapping>
