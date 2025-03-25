@@ -88,12 +88,6 @@ public class SakaiSamlConfiguration {
     @Value("${sakai.saml.idp.entityId:http://idp.ssocircle.com}")
     private String defaultIdpEntityId;
     
-    @Value("${sakai.saml.mock.enabled:false}")
-    private boolean mockSamlEnabled;
-    
-    @Value("${sakai.saml.mock.baseUrl:http://localhost:8080/mocksaml}")
-    private String mockSamlBaseUrl;
-    
     @Value("${sakai.saml.idp.sso.url:}")
     private String idpSsoUrl;
     
@@ -295,117 +289,64 @@ public class SakaiSamlConfiguration {
             // Load credentials from keystore if configured
             Saml2X509Credential signingCredential = createSigningCredential();
             Saml2X509Credential encryptionCredential = createEncryptionCredential();
-            
-            if (mockSamlEnabled) {
-                // Configure for MockSaml testing environment
-                log.info("Configuring SAML for MockSaml testing environment at {}", mockSamlBaseUrl);
-                
-                RelyingPartyRegistration.Builder builder = RelyingPartyRegistration.withRegistrationId("sakai-saml-mock")
-                    .entityId(spEntityId)
-                    .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")
-                    .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");
-                
-                // Add signing/encryption credentials if available
+
+            // Standard production configuration
+            File idpMetadataFile = new File(idpMetadataPath);
+            if (idpMetadataFile.exists()) {
+                log.info("Loading IdP configuration from metadata file: {}", idpMetadataPath);
+
+                // This loads IdP-specific details from metadata file (entityId, SSO URL, certificates)
+                // but we still need to configure our SP settings on top of it
+                RelyingPartyRegistration.Builder builder = RelyingPartyRegistrations
+                    .fromMetadataLocation(idpMetadataFile.toURI().toString())
+                    // These are our SP settings, not from the IdP metadata:
+                    .entityId(spEntityId)  // Our SP's entityId
+                    .registrationId("sakai-saml")  // Internal identifier
+                    .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")  // Where to receive SAML responses
+                    .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");  // Where to receive logout responses
+
+                // Add our SP's signing/encryption credentials if available
                 if (signingCredential != null) {
                     builder.signingX509Credentials(c -> c.add(signingCredential));
                 }
                 if (encryptionCredential != null) {
                     builder.decryptionX509Credentials(c -> c.add(encryptionCredential));
                 }
-                
-                // If metadata URL is provided, use it to get IdP settings
-                if (idpMetadataUrl != null && !idpMetadataUrl.isEmpty()) {
-                    log.info("Loading IdP configuration from metadata URL: {}", idpMetadataUrl);
-                    
-                    // This loads IdP-specific details from metadata (entityId, SSO URL, certificates)
-                    // but we still need to configure our SP settings on top of it
-                    builder = RelyingPartyRegistrations
-                        .fromMetadataLocation(idpMetadataUrl)
-                        // These are our SP settings, not from the IdP metadata:
-                        .entityId(spEntityId)  // Our SP's entityId
-                        .registrationId("sakai-saml-mock")  // Internal identifier
-                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")  // Where to receive SAML responses
-                        .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");  // Where to receive logout responses
-                    
-                    // Add our SP's signing/encryption credentials if available
-                    if (signingCredential != null) {
-                        builder.signingX509Credentials(c -> c.add(signingCredential));
-                    }
-                    if (encryptionCredential != null) {
-                        builder.decryptionX509Credentials(c -> c.add(encryptionCredential));
-                    }
-                } else {
-                    // Configure manually for MockSaml
-                    builder.assertingPartyDetails(party -> party
-                        .entityId(defaultIdpEntityId)
-                        .singleSignOnServiceLocation(idpSsoUrl)
-                        .wantAuthnRequestsSigned(false)
-                    );
-                }
-                
+
                 registrations.add(builder.build());
                 registrationCreated = true;
-                log.info("MockSaml configuration complete");
-                
+                log.info("Successfully configured SAML with IdP metadata from file: {}", idpMetadataPath);
             } else {
-                // Standard production configuration
-                File idpMetadataFile = new File(idpMetadataPath);
-                if (idpMetadataFile.exists()) {
-                    log.info("Loading IdP configuration from metadata file: {}", idpMetadataPath);
-                    
-                    // This loads IdP-specific details from metadata file (entityId, SSO URL, certificates)
-                    // but we still need to configure our SP settings on top of it
-                    RelyingPartyRegistration.Builder builder = RelyingPartyRegistrations
-                        .fromMetadataLocation(idpMetadataFile.toURI().toString())
-                        // These are our SP settings, not from the IdP metadata:
-                        .entityId(spEntityId)  // Our SP's entityId
-                        .registrationId("sakai-saml")  // Internal identifier
-                        .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")  // Where to receive SAML responses
-                        .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");  // Where to receive logout responses
-                    
-                    // Add our SP's signing/encryption credentials if available
-                    if (signingCredential != null) {
-                        builder.signingX509Credentials(c -> c.add(signingCredential));
-                    }
-                    if (encryptionCredential != null) {
-                        builder.decryptionX509Credentials(c -> c.add(encryptionCredential));
-                    }
-                    
-                    registrations.add(builder.build());
-                    registrationCreated = true;
-                    log.info("Successfully configured SAML with IdP metadata from file: {}", idpMetadataPath);
-                } else {
-                    log.warn("IdP metadata file not found at {}", idpMetadataPath);
-                    
-                    // If metadata URL is provided as fallback, use it to get IdP settings
-                    if (idpMetadataUrl != null && !idpMetadataUrl.isEmpty()) {
-                        try {
-                            log.info("Loading IdP configuration from metadata URL (fallback): {}", idpMetadataUrl);
-                            
-                            // This loads IdP-specific details from metadata (entityId, SSO URL, certificates)
-                            // but we still need to configure our SP settings on top of it
-                            RelyingPartyRegistration.Builder builder = RelyingPartyRegistrations
-                                .fromMetadataLocation(idpMetadataUrl)
-                                // These are our SP settings, not from the IdP metadata:
-                                .entityId(spEntityId)  // Our SP's entityId
-                                .registrationId("sakai-saml")  // Internal identifier
-                                .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")  // Where to receive SAML responses
-                                .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");  // Where to receive logout responses
-                            
-                            // Add our SP's signing/encryption credentials if available
-                            if (signingCredential != null) {
-                                builder.signingX509Credentials(c -> c.add(signingCredential));
-                            }
-                            if (encryptionCredential != null) {
-                                builder.decryptionX509Credentials(c -> c.add(encryptionCredential));
-                            }
-                            
-                            registrations.add(builder.build());
-                            registrationCreated = true;
-                            log.info("Successfully configured SAML with IdP metadata from URL: {}", idpMetadataUrl);
-                        } catch (Exception e) {
-                            log.error("Error loading SAML IdP metadata from URL", e);
+                log.warn("IdP metadata file not found at {}", idpMetadataPath);
+
+                // If metadata URL is provided as fallback, use it to get IdP settings
+                if (idpMetadataUrl != null && !idpMetadataUrl.isEmpty()) {
+                    try {
+                        log.info("Loading IdP configuration from metadata URL (fallback): {}", idpMetadataUrl);
+
+                        // This loads IdP-specific details from metadata (entityId, SSO URL, certificates)
+                        // but we still need to configure our SP settings on top of it
+                        RelyingPartyRegistration.Builder builder = RelyingPartyRegistrations
+                            .fromMetadataLocation(idpMetadataUrl)
+                            // These are our SP settings, not from the IdP metadata:
+                            .entityId(spEntityId)  // Our SP's entityId
+                            .registrationId("sakai-saml")  // Internal identifier
+                            .assertionConsumerServiceLocation("{baseUrl}/container/saml/{registrationId}/SSO")  // Where to receive SAML responses
+                            .singleLogoutServiceLocation("{baseUrl}/container/saml/SingleLogout");  // Where to receive logout responses
+
+                        // Add our SP's signing/encryption credentials if available
+                        if (signingCredential != null) {
+                            builder.signingX509Credentials(c -> c.add(signingCredential));
                         }
+                        if (encryptionCredential != null) {
+                            builder.decryptionX509Credentials(c -> c.add(encryptionCredential));
+                        }
+
+                        registrations.add(builder.build());
+                        registrationCreated = true;
+                        log.info("Successfully configured SAML with IdP metadata from URL: {}", idpMetadataUrl);
+                    } catch (Exception e) {
+                        log.error("Error loading SAML IdP metadata from URL", e);
                     }
                 }
             }

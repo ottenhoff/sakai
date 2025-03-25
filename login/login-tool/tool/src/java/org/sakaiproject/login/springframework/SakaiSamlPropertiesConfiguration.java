@@ -36,7 +36,6 @@ import lombok.extern.slf4j.Slf4j;
  * 
  * Environment-specific configurations can be activated by setting the saml.env system property:
  * - For production: no setting needed (default), or saml.env=production
- * - For testing with MockSaml: saml.env=mocksaml
  * - For other environments: saml.env=custom (loads sakai-saml-custom.properties)
  */
 @Configuration
@@ -64,10 +63,6 @@ public class SakaiSamlPropertiesConfiguration {
     public String samlEnvironment() {
         String env = environment.getProperty("saml.env", "production");
         log.info("SAML environment configured as: {}", env);
-        
-        if ("mocksaml".equals(env)) {
-            log.info("MockSaml testing environment activated");
-        }
         
         return env;
     }
