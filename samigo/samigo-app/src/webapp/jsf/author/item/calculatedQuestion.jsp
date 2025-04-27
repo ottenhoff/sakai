@@ -84,6 +84,7 @@ confirmation dialog
 <h:form id="itemForm">
         <f:verbatim><input type="hidden" id="ckeditor-autosave-context" name="ckeditor-autosave-context" value="samigo_edit_calculatedQuestion" /></f:verbatim>
         <h:panelGroup rendered="#{itemauthor.currentItem.itemId!=null}"><f:verbatim><input type="hidden" id="ckeditor-autosave-entity-id" name="ckeditor-autosave-entity-id" value="</f:verbatim><h:outputText value="#{itemauthor.currentItem.itemId}"/><f:verbatim>"/></f:verbatim></h:panelGroup>
+        <h:inputHidden id="calculatedQuestionFocusTarget" value="#{itemauthor.currentItem.calculatedQuestion.focusTarget}" />
 	<p class="act">
 		<h:commandButton 
 				rendered="#{itemauthor.target=='assessment'}" 
@@ -282,7 +283,8 @@ confirmation dialog
 	  	<h:commandButton rendered="#{itemauthor.target=='assessment' || itemauthor.target=='questionpool'}" 
 	  			value="#{authorMessages.calc_question_extract_button}" 
 	  			action="calculatedQuestion" 
-	  			styleClass="active">
+	  			styleClass="active"
+				onclick="saveFocusPosition('extractVariables')">
 	  		<f:actionListener type="org.sakaiproject.tool.assessment.ui.listener.author.CalculatedQuestionExtractListener" />
 		</h:commandButton>
 	<!-- display variables -->
@@ -377,7 +379,7 @@ confirmation dialog
 
 	<h:commandButton rendered="#{itemauthor.target=='assessment' || itemauthor.target=='questionpool'}" 
   			value="#{authorMessages.calc_question_add_global_variable_button}" 
-  			onclick="addGlobalVariable();"
+  			onclick="addGlobalVariable(); saveFocusPosition('globalVariables');"
   			styleClass="active">
   		<f:actionListener type="org.sakaiproject.tool.assessment.ui.listener.author.CalculatedQuestionAddGlobalVariableListener" />
 	</h:commandButton>
@@ -461,7 +463,8 @@ confirmation dialog
 		<h:commandButton 
 				value="#{commonMessages.check_formulas}" 
 				styleClass="mb-3" 
-				rendered="#{!itemauthor.currentItem.calculatedQuestion.showFormulasCalculation}">
+				rendered="#{!itemauthor.currentItem.calculatedQuestion.showFormulasCalculation}"
+				onclick="saveFocusPosition('checkFormulas')">
 			<f:setPropertyActionListener target="#{itemauthor.currentItem.calculatedQuestion.showFormulasCalculation}" value="true" />
 			<f:actionListener type="org.sakaiproject.tool.assessment.ui.listener.author.CalculatedQuestionFormulaValidatorListener" />
 		</h:commandButton>
@@ -469,7 +472,8 @@ confirmation dialog
 		<h:commandButton 
 				value="#{commonMessages.another_solution}" 
 				styleClass="mb-3"
-				rendered="#{itemauthor.currentItem.calculatedQuestion.showFormulasCalculation}">
+				rendered="#{itemauthor.currentItem.calculatedQuestion.showFormulasCalculation}"
+				onclick="saveFocusPosition('checkFormulas')">
 			<f:setPropertyActionListener target="#{itemauthor.currentItem.calculatedQuestion.showFormulasCalculation}" value="true" />
 			<f:actionListener type="org.sakaiproject.tool.assessment.ui.listener.author.CalculatedQuestionFormulaValidatorListener" />
 		</h:commandButton>

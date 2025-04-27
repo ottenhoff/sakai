@@ -39,6 +39,7 @@ public class CalculatedQuestionBean implements Serializable {
     private Map<String, CalculatedQuestionGlobalVariableBean> globalVariables;
     private List<CalculatedQuestionCalculationBean> calculations;
     private boolean showFormulasCalculation = false;
+    private String focusTarget = null;
 
     public CalculatedQuestionBean() {
         formulas = new HashMap<String, CalculatedQuestionFormulaBean>();
@@ -217,4 +218,11 @@ public class CalculatedQuestionBean implements Serializable {
         this.calculations.clear();
     }
 
+    public String getFocusTarget() {
+        return focusTarget;
+    }
+
+    public void setFocusTarget(String focusTarget) {
+        this.focusTarget = focusTarget;
+    }
 }

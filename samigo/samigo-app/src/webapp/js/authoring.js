@@ -220,7 +220,42 @@ function initCalcQuestion() {
  });
 }
 
+// Save the current focus position before form submission
+function saveFocusPosition(sectionId) {
+    var focusTargetField = document.getElementById('itemForm:calculatedQuestionFocusTarget');
+    if (focusTargetField) {
+        focusTargetField.value = sectionId;
+    }
+}
+
+// Restore focus to the proper section after page load
+function restoreFocusPosition() {
+    var focusTargetField = document.getElementById('itemForm:calculatedQuestionFocusTarget');
+    if (focusTargetField && focusTargetField.value) {
+        var targetSection = null;
+        var sectionId = focusTargetField.value;
+        
+        // Determine which section to scroll to based on the saved ID
+        if (sectionId === 'extractVariables') {
+            targetSection = document.querySelector('.tier2 #pairs');
+        } else if (sectionId === 'globalVariables') {
+            targetSection = document.querySelector('.tier2.globalvariable');
+        } else if (sectionId === 'checkFormulas') {
+            targetSection = document.querySelector('.tier2 #formulas');
+        }
+        
+        // Scroll to the target section if found
+        if (targetSection) {
+            setTimeout(function() {
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }
+}
+
 $( document ).ready( function() {
+    // Restore focus position for calculated questions
+    restoreFocusPosition();
 
     // inputText with class ConvertPoint changes
     $( "input.ConvertPoint[type='text']" ).change( function() {
