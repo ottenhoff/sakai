@@ -1024,7 +1024,7 @@ public class SimplePageToolDaoImpl extends HibernateDaoSupport implements Simple
 		String toolId = tools.iterator().next().getId();
 		StringBuilder sb = new StringBuilder(serverConfigurationService.getPortalUrl());
 		sb.append("/site/").append(siteId).append("/tool/").append(toolId)
-			.append("/ShowPage?returnView=&studentItemId=0&sendingPage=").append(pageId)
+			.append("/ShowPage?returnView=&studentItemId=0&sendingPage=").append(page.getTopParent() != 0 ? page.getTopParent() : pageId)
 			.append("&newTopLevel=false&postedComment=false&path=0&itemId=").append(pageItemId)
 			.append("&addTool=-1");
 		return sb.toString();
