@@ -72,9 +72,25 @@ class SakaiHelpers {
   async sakaiToolClick(toolName) {
     console.log(`Clicking tool: ${toolName}`);
     await this.page.waitForLoadState('networkidle');
-    await this.page.locator('.site-list-item-collapse.collapse.show a.btn-nav')
-      .filter({ hasText: toolName })
-      .click();
+
+    // The tool should be in the "current site". If not, this will fail.
+    const currentSite = this.page.locator('.is-current-site');
+    await currentSite.waitFor({ state: 'visible', timeout: 30000 });
+
+    // Check if the tool list is collapsed
+    const collapseButton = currentSite.locator('button[data-bs-toggle="collapse"]');
+    if (await collapseButton.count() > 0) {
+      const isExpanded = await collapseButton.getAttribute('aria-expanded');
+      if (isExpanded === 'false') {
+        console.log('Tool list for current site is collapsed, expanding it.');
+        await collapseButton.click();
+        // Wait for the collapse div to have the 'show' class, which indicates it's expanded
+        await currentSite.locator('.site-list-item-collapse.show').waitFor({ state: 'visible', timeout: 5000 });
+      }
+    }
+
+    // Now click on the tool
+    await currentSite.locator('a.btn-nav').filter({ hasText: toolName }).click();
   }
 
   /**
