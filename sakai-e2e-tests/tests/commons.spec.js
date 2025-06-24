@@ -47,7 +47,7 @@ test.describe('Commons', () => {
       await page.locator('#commons-editor-post-button').click();
 
       // Check for content
-      await expect(page.locator('.commons-post-content')).toContainText('This is a student test post');
+      await expect(page.locator('span.commons-post-content')).toContainText('This is a student test post');
     });
 
     test('can create a commons post as instructor', async ({ page }) => {
@@ -56,7 +56,7 @@ test.describe('Commons', () => {
       await helpers.sakaiToolClick('Commons');
 
       // Check for student post
-      await expect(page.locator('.commons-post-content')).toContainText('This is a student test post');
+      await expect(page.locator('span.commons-post-content')).toContainText('This is a student test post');
 
       // Create new commons post
       await page.locator('#commons-post-creator-editor').click();
@@ -64,7 +64,7 @@ test.describe('Commons', () => {
       await page.locator('#commons-editor-post-button').click();
 
       // Check for content
-      await expect(page.locator('.commons-post-content')).toContainText('This is a test post');
+      await expect(page.locator('span.commons-post-content')).toContainText('This is a test post');
     });
   });
 });

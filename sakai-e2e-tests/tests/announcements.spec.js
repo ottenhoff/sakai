@@ -80,8 +80,8 @@ test.describe('Announcements', () => {
     await expect(page.locator('table tr.inactive')).toHaveCount(2);
     const currentRow = page.locator('tr', { hasText: currentAnnouncementTitle });
     await expect(currentRow).not.toHaveClass(/inactive/);
-    await expect(page.locator('text=' + futureAnnouncementTitle)).toBeVisible();
-    await expect(page.locator('text=' + pastAnnouncementTitle)).toBeVisible();
+    await expect(page.locator('tr', { hasText: futureAnnouncementTitle })).toBeVisible();
+    await expect(page.locator('tr', { hasText: pastAnnouncementTitle })).toBeVisible();
   });
 
   test('student can only see current announcement', async ({ page }) => {

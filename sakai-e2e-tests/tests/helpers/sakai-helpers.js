@@ -75,7 +75,7 @@ class SakaiHelpers {
 
     // The tool should be in the "current site". If not, this will fail.
     const currentSite = this.page.locator('.is-current-site');
-    await currentSite.waitFor({ state: 'visible', timeout: 30000 });
+    await currentSite.waitFor({ state: 'attached', timeout: 30000 });
 
     // Check if the tool list is collapsed
     const collapseButton = currentSite.locator('button[data-bs-toggle="collapse"]');
@@ -119,25 +119,36 @@ class SakaiHelpers {
    * @param {string} content - HTML content to insert
    */
   async typeCkeditor(elementId, content) {
-    // Wait a bit for CKEditor to initialize
-    await this.page.waitForTimeout(2000);
+    // Wait for the CKEditor instance to be fully loaded and ready
+    await this.page.waitForFunction(
+      (id) => {
+        const editor = window.CKEDITOR?.instances[id];
+        return editor && editor.status === 'ready';
+      },
+      elementId,
+      { timeout: 20000 } // Wait up to 20 seconds for the editor
+    );
 
-    // Click the Source button to switch to HTML mode
-    const sourceButtonSelector = `#cke_${elementId} a.cke_button__source`;
-    await this.page.locator(sourceButtonSelector).click();
-
-    // Set the content directly via CKEditor API
-    await this.page.evaluate(({ elementId, content }) => {
-      if (window.CKEDITOR && window.CKEDITOR.instances[elementId]) {
-        return new Promise((resolve) => {
-          window.CKEDITOR.instances[elementId].setData(content, {
-            callback: function() {
-              resolve('done');
-            }
+    // Set the content using the CKEditor API
+    await this.page.evaluate(
+      ({ elementId, content }) => {
+        const editor = window.CKEDITOR.instances[elementId];
+        if (editor) {
+          return new Promise((resolve) => {
+            editor.setData(content, {
+              callback: function () {
+                // Ensure the underlying textarea is updated
+                editor.updateElement();
+                // Fire a change event as some frameworks might listen for it
+                editor.fire('change');
+                resolve();
+              },
+            });
           });
-        });
-      }
-    }, { elementId, content });
+        }
+      },
+      { elementId, content }
+    );
   }
 
   /**

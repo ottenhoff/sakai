@@ -45,7 +45,7 @@ test.describe('Gradebook', () => {
     await page.close();
   });
 
-  test.describe('Create site and add gradebook', () => {
+  test.describe.serial('Create site and add gradebook', () => {
 
     test('Can create gradebook categories', async ({ page }) => {
       await helpers.sakaiLogin(instructor);
