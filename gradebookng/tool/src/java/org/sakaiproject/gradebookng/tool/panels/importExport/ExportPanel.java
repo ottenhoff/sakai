@@ -537,13 +537,9 @@ public class ExportPanel extends BasePanel {
 					if (isCustomExport && this.includeCalculatedGrade) {
 						line.add(FormatHelper.formatGradeForDisplay(courseGrade.getCalculatedGrade()));
 					}
-					if (isCustomExport && this.includeGradeOverride) {
-						if (courseGrade.getEnteredGrade() != null) {
-							line.add(FormatHelper.formatGradeForDisplay(courseGrade.getEnteredGrade()));
-						} else {
-							line.add(null);
-						}
-					}
+									if (isCustomExport && this.includeGradeOverride) {
+					line.add(courseGrade.getEnteredGrade());
+				}
 					
 					csvWriter.writeNext(line.toArray(new String[] {}));
 				});
