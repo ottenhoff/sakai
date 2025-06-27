@@ -174,6 +174,12 @@ public class MyLittleSession implements ToolSession, ContextSession, HttpSession
 	public Object getAttribute(String name)
 	{
 		Object target = m_attributes.get(name);
+
+		// If not found locally, check clustered session data in Ignite
+		if (target == null) {
+			target = IgniteSessionStore.getSerializableAttribute(getId(), name);
+		}
+
 		if ((target == null) && (m_nonPortalSession != null)) {
 			target = m_nonPortalSession.getAttribute(name);
 		}
@@ -276,7 +282,10 @@ public class MyLittleSession implements ToolSession, ContextSession, HttpSession
 	{
 		// remove
 		Object value = m_attributes.remove(name);
-		
+
+		// Also remove from Ignite
+		IgniteSessionStore.removeSerializableAttribute(getId(), name);
+
 		if ((value == null) && (m_nonPortalSession != null))
 		{
 			value = m_nonPortalSession.removeAttribute(name);
@@ -326,12 +335,17 @@ public class MyLittleSession implements ToolSession, ContextSession, HttpSession
 			}
 
 			Object old = null;
-			
+	
 			// Place the attribute in the normal data structure
 			// Check the current tool id against the tool whitelist
 			if (sessionStore.isCurrentToolClusterable())
 			{
 				old = m_attributes.put(name, value);
+		
+				// Additionally store in Ignite if serializable and available
+				if (value instanceof java.io.Serializable) {
+					IgniteSessionStore.storeSerializableAttribute(getId(), name, (java.io.Serializable) value);
+				}
 			}
 			else
 			{

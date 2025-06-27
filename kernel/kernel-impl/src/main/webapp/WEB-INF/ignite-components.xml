@@ -104,6 +104,7 @@
         <property name="hibernateCacheConfiguration" ref="org.sakaiproject.ignite.cache.list.hibernate"/>
         <property name="requiredCacheConfiguration" ref="org.sakaiproject.ignite.cache.list.core"/>
         <property name="conditionalCacheConfiguration" ref="org.sakaiproject.ignite.cache.list.contrib"/>
+        <property name="sessionCacheConfiguration" ref="org.sakaiproject.ignite.cache.sessions"/>
         <property name="serverConfigurationService" ref="org.sakaiproject.component.api.ServerConfigurationService"/>
     </bean>
 
@@ -403,6 +404,22 @@
         <property name="readFromBackup" value="true"/>
         <property name="statisticsEnabled" value="true"/>
         <property name="expiryPolicyFactory" ref="org.sakaiproject.ignite.cache.eternalExpiryPolicy"/>
+        <property name="eagerTtl" value="true"/>
+    </bean>
+
+    <!-- Session cache for clusterable session data -->
+    <bean id="org.sakaiproject.ignite.cache.sessions"
+          class="org.apache.ignite.configuration.CacheConfiguration">
+        <property name="name" value="sakai_sessions"/>
+        <property name="atomicityMode" value="ATOMIC"/>
+        <property name="cacheMode" value="PARTITIONED"/>
+        <property name="backups" value="1"/>
+        <property name="writeSynchronizationMode" value="FULL_ASYNC"/>
+        <property name="dataRegionName" value="spring_region"/>
+        <property name="onheapCacheEnabled" value="false"/>
+        <property name="readFromBackup" value="true"/>
+        <property name="statisticsEnabled" value="true"/>
+        <property name="expiryPolicyFactory" ref="org.sakaiproject.ignite.cache.expiryPolicy"/>
         <property name="eagerTtl" value="true"/>
     </bean>
 

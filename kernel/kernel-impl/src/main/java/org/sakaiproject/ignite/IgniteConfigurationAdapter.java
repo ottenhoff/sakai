@@ -70,6 +70,7 @@ public class IgniteConfigurationAdapter extends AbstractFactoryBean<IgniteConfig
     @Setter private List<CacheConfiguration> hibernateCacheConfiguration;
     @Setter private List<CacheConfiguration> requiredCacheConfiguration;
     @Setter private List<IgniteConditionalCache> conditionalCacheConfiguration;
+    @Setter private CacheConfiguration sessionCacheConfiguration;
     @Setter private DataStorageConfiguration dataStorageConfiguration;
 
     @Getter @Setter private String address;
@@ -269,6 +270,9 @@ public class IgniteConfigurationAdapter extends AbstractFactoryBean<IgniteConfig
         caches.addAll(hibernateCacheConfiguration);
         caches.addAll(requiredCacheConfiguration);
         conditionalCacheConfiguration.stream().filter(IgniteConditionalCache::exists).map(IgniteConditionalCache::getCacheConfiguration).forEach(caches::add);
+        if (sessionCacheConfiguration != null) {
+            caches.add(sessionCacheConfiguration);
+        }
         igniteConfiguration.setCacheConfiguration(caches.toArray(new CacheConfiguration[]{}));
     }
 }
