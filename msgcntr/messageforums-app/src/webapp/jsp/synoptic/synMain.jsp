@@ -25,6 +25,7 @@
 <%@ taglib uri="http://java.sun.com/jsf/html" prefix="h" %>
 <%@ taglib uri="http://java.sun.com/jsf/core" prefix="f" %>
 <%@ taglib uri="http://sakaiproject.org/jsf2/sakai" prefix="sakai" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 
 <jsp:useBean id="msgs" class="org.sakaiproject.util.ResourceLoader" scope="session">
    <jsp:setProperty name="msgs" property="baseName" value="org.sakaiproject.api.app.messagecenter.bundle.Messages"/>
@@ -61,7 +62,9 @@
 									--%>
 											<h:outputText value="#{eachSite.unreadPrivateAmt}" rendered="#{eachSite.unreadPrivateAmt > 0}" style="width:3.5em;display:block;float:left"/>
 											<h:panelGroup style="display:block;float:left">
-											<span class="bi bi-envelope-fill" aria-hidden="true" rendered="#{eachSite.unreadPrivateAmt > 0}"></span>	
+											<c:if test="#{eachSite.unreadPrivateAmt > 0}">
+												<span class="bi bi-envelope-fill" aria-hidden="true"></span>
+											</c:if>
 											<h:outputText value="#{msgs.syn_tool_link_begin}#{eachSite.privateMessagesUrl}';\">
 												Read</a>" 
 													escape="false" title="#{msgs.syn_goto_messages}" rendered="#{eachSite.unreadPrivateAmt > 0}"
@@ -96,7 +99,9 @@
 										<h:outputText value="#{eachSite.unreadForumsAmt}" rendered="#{eachSite.unreadForumsAmt > 0}" style="width:3.5em;display:block;float:left"/>								
 										<h:panelGroup style="display:block;float:left">
 					<%-- === To create a link to (Messages &) Forums home page === --%>
-										<span class="bi bi-chat-text" aria-hidden="true" title="#{msgs.syn_goto_forums}" rendered="#{eachSite.unreadForumsAmt > 0}"></span>
+										<c:if test="#{eachSite.unreadForumsAmt > 0}">
+											<span class="bi bi-chat-text" aria-hidden="true" title="#{msgs.syn_goto_forums}"></span>
+										</c:if>
 										<h:outputText value="#{msgs.syn_tool_link_begin}#{eachSite.mcPageURL}';\">Read</a>" 
 							escape="false" title="#{msgs.syn_goto_forums}" rendered="#{eachSite.unreadForumsAmt > 0}"/>
 									</h:panelGroup>
