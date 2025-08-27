@@ -143,41 +143,57 @@ public class PollToolBean {
 
 	public Poll processActionAdd() {
 		boolean isNew = true;
+		List<Option> pollOptionList = new ArrayList<>();
 		if (poll.getPollId()!=null) {
 			log.debug("Actualy updating poll " + poll.getPollId());
 			Poll existingPoll = manager.getPollById(poll.getPollId(), false);
 			isNew = false;
 			//check for possible unchanged values
 			log.debug("newPoll is {} while poll text is {}", poll.getText(), existingPoll.getText());
-			
+
 
 			if (poll.getCreationDate() == null) {
 				poll.setCreationDate(existingPoll.getCreationDate());
 			}
+			pollOptionList = manager.getOptionsForPoll(poll);
+			poll.setOptions(pollOptionList);
 		} else {
 			poll.setCreationDate(new Date());
 		}
 
-		
+		boolean hasErrors = false;
 		log.debug("Poll opens: " + poll.getVoteOpen() + " and closes: " + poll.getVoteClose());
 		if (poll.getVoteOpen().after(poll.getVoteClose())) {
 			log.debug("Poll closes before it opens");
 
 			messages.addMessage(new TargettedMessage("close_before_open"));
-			throw new  IllegalArgumentException("close_before_open");
+			hasErrors = true;
 		}
 
 		if (poll.getMinOptions() > poll.getMaxOptions()) {
-			log.debug("Min options greater than max options");
-			messages.addMessage(new TargettedMessage("min_greater_than_max"," min greater than max"));
-			throw new  IllegalArgumentException("min_greater_than_max");
+			log.debug("Min options greater than max options, swapping them.");
+			int oldMin = poll.getMinOptions();
+			poll.setMinOptions(poll.getMaxOptions());
+			poll.setMaxOptions(oldMin);
 		}
 
-		if (poll.getText().trim() == null || poll.getText().length() == 0 ) {
+		if (poll.getText() == null || poll.getText().trim().length() == 0 ) {
 			log.debug("Poll question is Empty!");
 			messages.addMessage(new TargettedMessage("error_no_text","no text"));
-			throw new  IllegalArgumentException("error_no_text");
+			hasErrors = true;
 
+		}
+
+		if (!isNew) {
+			int pollOptionListLength = pollOptionList.size();
+			if (pollOptionListLength > 0 && (pollOptionListLength < poll.getMinOptions() || pollOptionListLength < poll.getMaxOptions())) {
+				messages.addMessage(new TargettedMessage("invalid_poll_limits"));
+				hasErrors = true;
+			}
+		}
+
+		if (hasErrors) {
+			return poll;
 		}
 
 
@@ -186,19 +202,9 @@ public class PollToolBean {
 		manager.savePoll(poll);
 
 		log.info("Poll saved with id of " + poll.getPollId());
-		//if this is not a new poll populate the options list
-		if (!isNew) {
-			List<Option> pollOptionList = manager.getOptionsForPoll(poll);
-			poll.setOptions(pollOptionList);
-			int pollOptionListLength = pollOptionList.size();
-			if (pollOptionListLength < poll.getMinOptions() || pollOptionListLength < poll.getMaxOptions()) {
-				messages.addMessage(new TargettedMessage("invalid_poll_limits"));
-				throw new IllegalArgumentException("invalid_poll_limits");
-			}
-		}
 
 		voteBean.poll = poll;
-		
+
 		return poll;
 	}
 
