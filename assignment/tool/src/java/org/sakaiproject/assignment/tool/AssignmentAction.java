@@ -3849,8 +3849,8 @@ public class AssignmentAction extends PagedResourceActionII {
                 context.put("value_Category", state.getAttribute(NEW_ASSIGNMENT_CATEGORY));
 
                 // Preserve insertion order (matches Gradebook Settings order)
-                List<Long> categoryList = new ArrayList<>(categoryTable.keySet());
-                context.put("categoryKeys", categoryList);
+                List<Long> categoryKeys = new ArrayList<>(categoryTable.keySet());
+                context.put("categoryKeys", categoryKeys);
                 context.put("categoryTable", categoryTable);
             } else {
                 context.put("value_totalCategories", Long.valueOf(0));
