@@ -92,7 +92,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.sakaiproject.messaging.api.MessageMedium.DIGEST;
@@ -102,6 +105,8 @@ import static org.sakaiproject.messaging.api.MessageMedium.EMAIL;
 public class UserMessagingServiceImpl implements UserMessagingService, Observer {
 
     public static final Integer DEFAULT_THREAD_POOL_SIZE = 20;
+    private static final int MAX_PUSH_RETRY_ATTEMPTS = 3;
+    private static final long INITIAL_PUSH_RETRY_DELAY_MILLIS = 1_000L;
 
     @Autowired private DigestService digestService;
     @Autowired private EmailService emailService;
@@ -146,8 +151,22 @@ public class UserMessagingServiceImpl implements UserMessagingService, Observer 
         if (asyncEnabled) {
             int threadPoolSize = serverConfigurationService.getInt("messaging.threadpool.size", DEFAULT_THREAD_POOL_SIZE);
             if (threadPoolSize > 0) {
-                executor = Executors.newFixedThreadPool(threadPoolSize);
-                log.info("Initialized messaging thread pool with {} threads", threadPoolSize);
+                final int queueCapacity = serverConfigurationService.getInt("messaging.threadpool.queue.capacity", 1000);
+                ThreadFactory tf = r -> {
+                    Thread t = new Thread(r, "sakai-msg-" + System.nanoTime());
+                    t.setDaemon(true);
+                    t.setUncaughtExceptionHandler((th, ex) ->
+                            log.error("Uncaught exception in {}", th.getName(), ex));
+                    return t;
+                };
+                executor = new ThreadPoolExecutor(
+                        threadPoolSize, threadPoolSize,
+                        0L, TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<>(queueCapacity),
+                        tf,
+                        new ThreadPoolExecutor.CallerRunsPolicy()
+                );
+                log.info("Initialized messaging thread pool with {} threads and queue capacity {}", threadPoolSize, queueCapacity);
             } else {
                 log.info("Messaging thread pool disabled due to non-positive size; tasks will execute synchronously");
             }
@@ -227,10 +246,23 @@ public class UserMessagingServiceImpl implements UserMessagingService, Observer 
     public void submitNotificationTask(Runnable task) {
         Objects.requireNonNull(task, "task");
         if (executor != null) {
-            executor.execute(task);
+            executor.execute(withErrorBoundary(task));
         } else {
-            task.run();
+            withErrorBoundary(task).run();
         }
+    }
+
+    private Runnable withErrorBoundary(Runnable task) {
+        return () -> {
+            try {
+                task.run();
+            } catch (RuntimeException ex) {
+                log.error("Unhandled exception in notification task", ex);
+            } catch (Error err) {
+                log.error("Error in notification task", err);
+                throw err;
+            }
+        };
     }
 
     public void message(Set<User> users, Message message, List<MessageMedium> media, Map<String, Object> replacements, int priority) {
@@ -370,18 +402,21 @@ public class UserMessagingServiceImpl implements UserMessagingService, Observer 
                 try {
                     UserNotificationHandler handler = notificationHandlers.get(event);
                     if (handler != null) {
-                        final List<UserNotificationData> notifications;
+                        Optional<List<UserNotificationData>> maybeNotifications;
                         try {
-                            Optional<List<UserNotificationData>> maybeNotifications = handler.handleEvent(e);
-                            if (maybeNotifications.isEmpty()) {
-                                return;
-                            }
-                            notifications = maybeNotifications.orElse(Collections.emptyList());
-                        } catch (Exception ex) {
-                            log.error("Caught exception whilst handling events", ex);
+                            maybeNotifications = handler.handleEvent(e);
+                        } catch (RuntimeException ex) {
+                            log.error("Handler {} threw while handling event {}: {}",
+                                    handler.getClass().getSimpleName(), event, ex.getMessage(), ex);
                             return;
                         }
-
+                        if (maybeNotifications == null) {
+                            log.error("Handler {} returned null Optional for event {}; treating as no notifications",
+                                    handler.getClass().getSimpleName(), event);
+                            return;
+                        }
+                        final List<UserNotificationData> notifications =
+                                maybeNotifications.orElse(Collections.emptyList());
                         if (notifications.isEmpty()) {
                             return;
                         }
@@ -391,28 +426,27 @@ public class UserMessagingServiceImpl implements UserMessagingService, Observer 
                         final Date eventDate = e.getEventTime();
                         final boolean pushEnabledLocal = this.pushEnabled;
 
-                        submitNotificationTask(() -> {
+                        submitNotificationTask(() -> notifications.forEach(bd -> {
                             try {
-                                notifications.forEach(bd -> {
-                                    UserNotification un = doInsert(fromUser,
-                                            bd.getTo(),
-                                            event,
-                                            refCopy,
-                                            bd.getTitle(),
-                                            bd.getSiteId(),
-                                            eventDate,
-                                            finalDeferred,
-                                            bd.getUrl(),
-                                            bd.getCommonToolId());
-                                    if (!finalDeferred && pushEnabledLocal) {
-                                        un.setTool(bd.getCommonToolId());
-                                        push(decorateNotification(un));
-                                    }
-                                });
+                                UserNotification un = doInsert(fromUser,
+                                        bd.getTo(),
+                                        event,
+                                        refCopy,
+                                        bd.getTitle(),
+                                        bd.getSiteId(),
+                                        eventDate,
+                                        finalDeferred,
+                                        bd.getUrl(),
+                                        bd.getCommonToolId());
+                                if (!finalDeferred && pushEnabledLocal) {
+                                    un.setTool(bd.getCommonToolId());
+                                    push(decorateNotification(un));
+                                }
                             } catch (Exception ex) {
-                                log.error("Caught exception whilst handling events", ex);
+                                log.error("Failed processing notification for to={} event={} ref={}: {}",
+                                        bd.getTo(), event, refCopy, ex.getMessage(), ex);
                             }
-                        });
+                        }));
                     } else if (SiteService.EVENT_SITE_PUBLISH.equals(event)) {
                         final String siteId = pathParts[2];
 
@@ -576,46 +610,87 @@ public class UserMessagingServiceImpl implements UserMessagingService, Observer 
             return;
         }
 
-        pushSubscriptionRepository.findByUser(un.getToUser()).forEach(pushSubscription -> {
-            String pushEndpoint = pushSubscription.getEndpoint();
-            String pushUserKey = pushSubscription.getUserKey();
-            String pushAuth = pushSubscription.getAuth();
+        final String payload;
+        try {
+            payload = objectMapper.writeValueAsString(un);
+        } catch (Exception e) {
+            log.error("Failed to serialize notification for push: {}", e.getMessage(), e);
+            return;
+        }
 
-            // We only push if the user has given permission for notifications
-            // and successfully set their subscription details
-            if (StringUtils.isAnyBlank(pushEndpoint, pushUserKey, pushAuth)) {
-                log.debug("Skipping push notification due to missing subscription details for user {}", un.getToUser());
+        pushSubscriptionRepository.findByUser(un.getToUser())
+                .forEach(pushSubscription -> sendPushToSubscription(un, pushSubscription, 0, payload));
+    }
+
+    private void sendPushToSubscription(UserNotification un, PushSubscription pushSubscription, int attempt, String payload) {
+        if (!pushEnabled || pushService == null) {
+            log.debug("Push service is not enabled or not initialized");
+            return;
+        }
+
+        String pushEndpoint = pushSubscription.getEndpoint();
+        String pushUserKey = pushSubscription.getUserKey();
+        String pushAuth = pushSubscription.getAuth();
+
+        if (StringUtils.isAnyBlank(pushEndpoint, pushUserKey, pushAuth)) {
+            log.debug("Skipping push notification due to missing subscription details for user {}", un.getToUser());
+            return;
+        }
+
+        Subscription sub = new Subscription(pushEndpoint, new Subscription.Keys(pushUserKey, pushAuth));
+        try {
+            HttpResponse pushResponse = pushService.send(new Notification(sub, payload));
+
+            int statusCode = pushResponse.getStatusLine().getStatusCode();
+            if (statusCode >= 200 && statusCode < 300) {
+                if (attempt > 0) {
+                    log.debug("Successfully sent push notification to {} with status {} on attempt {}",
+                            pushEndpoint, statusCode, attempt + 1);
+                } else {
+                    log.debug("Successfully sent push notification to {} with status {}",
+                            pushEndpoint, statusCode);
+                }
+            } else {
+                String reason = pushResponse.getStatusLine().getReasonPhrase();
+                log.warn("Push notification to {} failed with status {} and reason {}",
+                        pushEndpoint, statusCode, reason);
+
+                if (statusCode == 410 || statusCode == 404 || statusCode == 400) {
+                    log.info("Removing invalid push subscription for user {} due to status {}",
+                            un.getToUser(), statusCode);
+                    clearPushSubscription(pushSubscription);
+                } else if (statusCode == 403) {
+                    log.warn("Push authentication failed (403) - check VAPID configuration");
+                } else if (statusCode == 429 || (statusCode >= 500 && statusCode < 600)) {
+                    schedulePushRetry(un, pushSubscription, attempt + 1, payload, statusCode);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to send push notification to {}: {}", pushEndpoint, e.getMessage(), e);
+        }
+    }
+
+    private void schedulePushRetry(UserNotification un, PushSubscription pushSubscription, int nextAttempt,
+                                   String payload, int statusCode) {
+        if (nextAttempt > MAX_PUSH_RETRY_ATTEMPTS) {
+            log.warn("Giving up on push notification to {} after {} attempts; last status {}",
+                    pushSubscription.getEndpoint(), nextAttempt, statusCode);
+            return;
+        }
+
+        long delay = INITIAL_PUSH_RETRY_DELAY_MILLIS * (1L << (Math.max(nextAttempt - 1, 0)));
+        log.info("Scheduling retry {} for push notification to {} in {} ms (status {})",
+                nextAttempt, pushSubscription.getEndpoint(), delay, statusCode);
+
+        submitNotificationTask(() -> {
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                log.warn("Push retry interrupted for endpoint {}", pushSubscription.getEndpoint());
                 return;
             }
-
-            Subscription sub = new Subscription(pushEndpoint, new Subscription.Keys(pushUserKey, pushAuth));
-            try {
-                String notificationJson = objectMapper.writeValueAsString(un);
-                HttpResponse pushResponse = pushService.send(new Notification(sub, notificationJson));
-
-                int statusCode = pushResponse.getStatusLine().getStatusCode();
-                if (statusCode >= 200 && statusCode < 300) {
-                    log.debug("Successfully sent push notification to {} with status {}", 
-                            pushEndpoint, statusCode);
-                } else {
-                    String reason = pushResponse.getStatusLine().getReasonPhrase();
-                    log.warn("Push notification to {} failed with status {} and reason {}", 
-                            pushEndpoint, statusCode, reason);
-                    
-                    // Handle subscription cleanup for permanent failures
-                    if (statusCode == 410 || statusCode == 404 || statusCode == 400) {
-                        log.info("Removing invalid push subscription for user {} due to status {}", 
-                                un.getToUser(), statusCode);
-                        // Clear the invalid subscription
-                        clearPushSubscription(pushSubscription);
-                    } else if (statusCode == 403) {
-                        log.warn("Push authentication failed (403) - check VAPID configuration");
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Failed to serialize notification for push: {}", e.toString());
-                log.debug("Stacktrace", e);
-            }
+            sendPushToSubscription(un, pushSubscription, nextAttempt, payload);
         });
     }
 
