@@ -1,6 +1,6 @@
 /**********************************************************************************
- * $URL: https://source.sakaiproject.org/svn/kernel/trunk/kernel-util/src/main/java/org/sakaiproject/util/BaseDbDualSingleStorage.java $
- * $Id: BaseDbDualSingleStorage.java 82133 2010-09-07 21:45:01Z aaronz@vt.edu $
+ * $URL: https://source.sakaiproject.org/svn/kernel/trunk/kernel-util/src/main/java/org/sakaiproject/util/BaseDbDualEntityStorage.java $
+ * $Id: BaseDbDualEntityStorage.java 82133 2010-09-07 21:45:01Z aaronz@vt.edu $
  ***********************************************************************************
  *
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008 Sakai Foundation
@@ -45,7 +45,7 @@ import org.sakaiproject.time.cover.TimeService;
 
 /**
  * <p>
- * BaseDbDualSingleStorage is a class that stores Resources (of some type) in a
+ * BaseDbDualEntityStorage is a class that stores Resources (of some type) in a
  * database, <br />
  * provides locked access, and generally implements a services "storage" class.
  * The resources are encoded into two fields.
@@ -72,7 +72,7 @@ import org.sakaiproject.time.cover.TimeService;
  * </p>
  */
 @Slf4j
-public class BaseDbDualSingleStorage  implements DbSingleStorage
+public class BaseDbDualEntityStorage  implements DbSingleStorage
 {
 	public static final String STORAGE_FIELDS = "XML, BINARY_ENTITY";
 
@@ -181,9 +181,9 @@ public class BaseDbDualSingleStorage  implements DbSingleStorage
 	 * @param sqlService
 	 *        The SqlService.
 	 */
-	public BaseDbDualSingleStorage(String resourceTableName, String resourceTableIdField,
-			String[] resourceTableOtherFields, boolean locksInDb,
-			String resourceEntryName, SingleStorageUser user, SqlService sqlService)
+	public BaseDbDualEntityStorage(String resourceTableName, String resourceTableIdField,
+	        String[] resourceTableOtherFields, boolean locksInDb,
+	        String resourceEntryName, SingleStorageUser user, SqlService sqlService)
 	{
 	    this(resourceTableName, resourceTableIdField, resourceTableOtherFields, locksInDb, resourceEntryName, user, sqlService, null);
 	}
@@ -215,7 +215,7 @@ public class BaseDbDualSingleStorage  implements DbSingleStorage
      * @param storage
      *        The storage for the normal resource (only used by delete storage), this is how we load the original resource.
      */
-	public BaseDbDualSingleStorage(String resourceTableName, String resourceTableIdField,
+    public BaseDbDualEntityStorage(String resourceTableName, String resourceTableIdField,
 	        String[] resourceTableOtherFields, boolean locksInDb,
 	        String resourceEntryName, SingleStorageUser user, SqlService sqlService,
 	        DbSingleStorage storage)

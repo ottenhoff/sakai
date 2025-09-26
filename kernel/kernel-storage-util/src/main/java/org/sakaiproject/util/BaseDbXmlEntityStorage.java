@@ -1,6 +1,6 @@
 /**********************************************************************************
- * $URL: https://source.sakaiproject.org/svn/kernel/trunk/kernel-util/src/main/java/org/sakaiproject/util/BaseDbSingleStorage.java $
- * $Id: BaseDbSingleStorage.java 82134 2010-09-07 21:52:06Z aaronz@vt.edu $
+ * $URL: https://source.sakaiproject.org/svn/kernel/trunk/kernel-util/src/main/java/org/sakaiproject/util/BaseDbXmlEntityStorage.java $
+ * $Id: BaseDbXmlEntityStorage.java 82134 2010-09-07 21:52:06Z aaronz@vt.edu $
  ***********************************************************************************
  *
  * Copyright (c) 2003, 2004, 2005, 2006, 2007, 2008 Sakai Foundation
@@ -46,7 +46,7 @@ import org.sakaiproject.time.cover.TimeService;
 /**
  * Single Storage provides persisting of just resources(no properties, no container).
  * <p>
- * BaseDbSingleStorage is a class that stores Resources (of some type) in a database, <br />
+ * BaseDbXmlEntityStorage is a class that stores Resources (of some type) in a database, <br />
  * provides locked access, and generally implements a services "storage" class. The <br />
  * service's storage class can extend this to provide covers to turn Resource and <br />
  * Edit into something more type specific to the service.
@@ -62,7 +62,7 @@ import org.sakaiproject.time.cover.TimeService;
  * </p>
  */
 @Slf4j
-public class BaseDbSingleStorage implements DbSingleStorage 
+public class BaseDbXmlEntityStorage implements DbSingleStorage 
 {
 	public static final String STORAGE_FIELDS = "XML";
 
@@ -149,7 +149,7 @@ public class BaseDbSingleStorage implements DbSingleStorage
 	 * @param sqlService
 	 *        The SqlService.
 	 */
-	public BaseDbSingleStorage(String resourceTableName, String resourceTableIdField, String[] resourceTableOtherFields, boolean locksInDb,
+	public BaseDbXmlEntityStorage(String resourceTableName, String resourceTableIdField, String[] resourceTableOtherFields, boolean locksInDb,
 			String resourceEntryName, SingleStorageUser user, SqlService sqlService)
 	{
 	    this(resourceTableName, resourceTableIdField, resourceTableOtherFields, locksInDb, resourceEntryName, user, sqlService, null);
@@ -178,7 +178,7 @@ public class BaseDbSingleStorage implements DbSingleStorage
      * @param storage
      *        The storage for the normal resource (only used by delete storage)
      */
-	public BaseDbSingleStorage(String resourceTableName, String resourceTableIdField, String[] resourceTableOtherFields, boolean locksInDb,
+    public BaseDbXmlEntityStorage(String resourceTableName, String resourceTableIdField, String[] resourceTableOtherFields, boolean locksInDb,
 	        String resourceEntryName, SingleStorageUser user, SqlService sqlService,
 	        DbSingleStorage storage)
 	{
@@ -246,6 +246,11 @@ public class BaseDbSingleStorage implements DbSingleStorage
 			{
 				// read the xml
 				Document doc = StorageUtils.readDocumentFromString(xml);
+				if (doc == null)
+				{
+					log.warn("readResource(): failed to parse resource XML");
+					return null;
+				}
 
 				// verify the root element
 				Element root = doc.getDocumentElement();
