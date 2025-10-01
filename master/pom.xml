@@ -340,7 +340,8 @@
       <dependency>
         <groupId>xml-apis</groupId>
         <artifactId>xml-apis</artifactId>
-        <version>2.0.2</version>
+        <!-- Xerces expects 1.4.01; a maven-enforcer rule bans the relocated 2.0.2 release -->
+        <version>1.4.01</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -2844,6 +2845,7 @@
                     <exclude>log4j:log4j</exclude>
                     <exclude>javax.mail:mail</exclude>
                     <exclude>org.azeckoski:reflectutils</exclude>
+                    <exclude>xml-apis:xml-apis:[2.0.2]</exclude>
                   </excludes>
                 </bannedDependencies>
               </rules>
