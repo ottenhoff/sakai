@@ -21,7 +21,20 @@ package org.sakaiproject.accountvalidator.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.SequenceGenerator;
+import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 
+@Entity
+@Table(name = "VALIDATIONACCOUNT_ITEM")
+@SequenceGenerator(name = "validationAccountIdSeq", sequenceName = "VALIDATIONACCOUNT_ITEM_ID_SEQ")
 public class ValidationAccount {
 
 	
@@ -68,28 +81,45 @@ public class ValidationAccount {
 	 */
 	public static final int ACCOUNT_STATUS_USERID_UPDATE = 7;
 	
-	@JsonIgnore
-	private Long id;
-	@JsonIgnore
-	private String userId;
-	private Date validationSent;
-	private Date validationReceived;
-	private Integer validationsSent;
-	@JsonIgnore
-	private String validationToken;
-	private Integer status;
-	@JsonIgnore
-	private String eid;
+        @Id
+        @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "validationAccountIdSeq")
+        @JsonIgnore
+        private Long id;
+        @Column(name = "USER_ID", nullable = false, length = 255)
+        @JsonIgnore
+        private String userId;
+        @Temporal(TemporalType.TIMESTAMP)
+        @Column(name = "VALIDATION_SENT")
+        private Date validationSent;
+        @Temporal(TemporalType.TIMESTAMP)
+        @Column(name = "VALIDATION_RECEIVED")
+        private Date validationReceived;
+        @Column(name = "VALIDATIONS_SENT")
+        private Integer validationsSent;
+        @JsonIgnore
+        @Column(name = "VALIDATION_TOKEN", nullable = false, length = 255)
+        private String validationToken;
+        @Column(name = "STATUS")
+        private Integer status;
+        @JsonIgnore
+        @Column(name = "EID", length = 255)
+        private String eid;
 
-	private String firstName = "";
-	private String surname = "";
-	private Integer accountStatus;
-	
-	private String password;
-	private String password2;
-	
-	// This needs to support accepting null
-	private boolean terms;
+        @Column(name = "FIRST_NAME", length = 255)
+        private String firstName = "";
+        @Column(name = "SURNAME", length = 255)
+        private String surname = "";
+        @Column(name = "ACCOUNT_STATUS")
+        private Integer accountStatus;
+
+        @Transient
+        private String password;
+        @Transient
+        private String password2;
+
+        // This needs to support accepting null
+        @Transient
+        private boolean terms;
 	
 	public String getPassword() {
 		return password;
