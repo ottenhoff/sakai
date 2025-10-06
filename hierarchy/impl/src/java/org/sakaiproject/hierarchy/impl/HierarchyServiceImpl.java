@@ -447,6 +447,8 @@ public class HierarchyServiceImpl implements HierarchyService {
 
         // save the node meta data
         nodeMetaRepository.save(metaData);
+        // Invalidate single-node cache so subsequent reads see updated metadata
+        cache.remove("n" + nodeId);
 
         return HierarchyImplUtils.makeNode(metaData);
     }
@@ -472,6 +474,8 @@ public class HierarchyServiceImpl implements HierarchyService {
 
         // save the node meta data
         nodeMetaRepository.save(metaData);
+        // Invalidate single-node cache so subsequent reads see updated disabled flag
+        cache.remove("n" + nodeId);
 
         return HierarchyImplUtils.makeNode(metaData);
 
@@ -558,6 +562,10 @@ public class HierarchyServiceImpl implements HierarchyService {
                 pNodes.add(pNode);
             }
 
+            // Invalidate cached child-node sets for all affected nodes
+            for (HierarchyPersistentNode n : pNodes) {
+                cache.remove("cn" + n.getId());
+            }
             nodeRepository.saveAll(pNodes);
         }
 
@@ -652,6 +660,10 @@ public class HierarchyServiceImpl implements HierarchyService {
                 pNodes.add(pNode);
             }
 
+            // Invalidate cached child-node sets for all affected nodes
+            for (HierarchyPersistentNode n : pNodes) {
+                cache.remove("cn" + n.getId());
+            }
             nodeRepository.saveAll(pNodes);
 
         }
