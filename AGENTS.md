@@ -67,6 +67,8 @@
 - **Tests**: Include tests where sensible/possible
 - **Java Version**: Java 17 for trunk (Java 11 was used for Sakai 22 and Sakai 23)
 - **Pull Request Workflow**: "Squash and Merge" for single issues, "Rebase and Merge" for multiple issues
+<<<<<<< HEAD
+- **Dependency Wiring**: Always ensure required services are injected via Spring configuration; do not introduce runtime "fallback" lookups when wiring can be fixed.
 - **No `var` in Java**: Do not use local variable type inference (`var`) in Java code. Always declare explicit types (e.g., `List<String> names = new ArrayList<>();` not `var names = new ArrayList<String>();`).
    - Enforced: The build runs a Checkstyle rule during `mvn validate` to fail on `var` usages. To bypass in emergencies only, run with `-Dcheckstyle.skip=true` (not recommended for commits).
 
