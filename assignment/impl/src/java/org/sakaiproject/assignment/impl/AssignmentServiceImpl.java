@@ -3532,7 +3532,9 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
     private Optional<CalendarEvent> createCalendarEvent(Assignment assignment, Calendar calendar, Instant dueDate, String title, String dueDateProperty) {
         try {
             CalendarEvent.EventAccess access = assignment.getTypeOfAccess() == GROUP ? CalendarEvent.EventAccess.GROUPED : CalendarEvent.EventAccess.SITE;
-            Collection<Group> groups = assignment.getTypeOfAccess() == GROUP ? resolveGroupsForAssignmentContext(assignment) : Collections.emptyList();
+            Collection<Group> groups = assignment.getTypeOfAccess() == GROUP
+                    ? resolveGroupsForAssignmentContext(assignment)
+                    : Collections.emptyList();
             String effectiveTitle = StringUtils.defaultIfBlank(title, assignment.getTitle());
             String formattedDueTime = userTimeService.dateTimeFormat(dueDate, FormatStyle.MEDIUM, FormatStyle.LONG);
 
@@ -3620,9 +3622,12 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
             header.replaceAttachments(entityManager.newReferenceList());
 
             if (assignment.getTypeOfAccess() == GROUP) {
-                header.setGroupAccess(resolveGroupsForAssignmentContext(assignment).stream()
-                        .map(Group::getReference)
-                        .collect(Collectors.toList()));
+                Collection<Group> groups = resolveGroupsForAssignmentContext(assignment);
+                if (groups.isEmpty()) {
+                    header.clearGroupAccess();
+                } else {
+                    header.setGroupAccess(groups);
+                }
             } else {
                 header.clearGroupAccess();
             }
@@ -3697,6 +3702,15 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
         try {
             Site site = siteService.getSite(assignment.getContext());
             return assignment.getGroups().stream()
+                    .map(groupRef -> {
+                        if (StringUtils.isBlank(groupRef)) {
+                            return groupRef;
+                        }
+                        int lastSlash = groupRef.lastIndexOf('/');
+                        return (lastSlash >= 0 && lastSlash < groupRef.length() - 1)
+                                ? groupRef.substring(lastSlash + 1)
+                                : groupRef;
+                    })
                     .map(site::getGroup)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
