@@ -85,10 +85,6 @@
 
             <!-- Dependencies -->
             <dependency>
-                <groupId>joda-time</groupId>
-                <artifactId>joda-time</artifactId>
-            </dependency>
-            <dependency>
                 <groupId>net.oauth.core</groupId>
                 <artifactId>oauth</artifactId>
                 <version>${oauth.version}</version>

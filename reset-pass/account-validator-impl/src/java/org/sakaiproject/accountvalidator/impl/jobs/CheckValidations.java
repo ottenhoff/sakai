@@ -33,9 +33,7 @@ import java.util.Map.Entry;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
+import java.text.DateFormat;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -184,18 +182,17 @@ public class CheckValidations implements Job {
 			try {
 				User creator = userDirectoryService.getUser(creatorId);
 				Locale locale = preferencesService.getLocale(creatorId);
-				List<String> users = entry.getValue();
-				StringBuilder userText = new StringBuilder();
-				for (int i = 0; i < users.size(); i++) {
-					try {
-						User u = userDirectoryService.getUser(users.get(i));
-						//added the added date 
-						DateTime dt = new DateTime(u.getCreatedDate());
-						DateTimeFormatter fmt = DateTimeFormat.longDate();
-						String str = fmt.withLocale(locale).print(dt);
-						userText.append(u.getEid() + " (" + str +")\n");
+                List<String> users = entry.getValue();
+                StringBuilder userText = new StringBuilder();
+                DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.LONG, locale);
+                for (int i = 0; i < users.size(); i++) {
+                    try {
+                        User u = userDirectoryService.getUser(users.get(i));
+                        //added the added date 
+                        String str = dateFormat.format(u.getCreatedDate());
+                        userText.append(u.getEid() + " (" + str +")\n");
 
-						removeCleaUpUser(u.getId());
+                        removeCleaUpUser(u.getId());
 					}
 					catch (UserNotDefinedException e) {
 						//this is an orphaned validation token

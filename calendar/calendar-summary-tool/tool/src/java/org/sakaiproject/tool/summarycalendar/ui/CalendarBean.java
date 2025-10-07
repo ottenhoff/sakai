@@ -41,8 +41,10 @@ import javax.faces.event.ActionEvent;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.lang3.StringUtils;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.calendar.api.CalendarConstants;
 import org.sakaiproject.calendar.api.CalendarEvent;
@@ -331,11 +333,12 @@ public class CalendarBean {
 		CalendarEventVector cev = new CalendarEventVector();
 		
 		TimeZone timeZone = getCurrentUserTimezone();
-		DateTime start = new DateTime(c).withZone(DateTimeZone.forTimeZone(timeZone)).withTime(0, 0, 0, 0);
+		ZoneId zoneId = timeZone.toZoneId();
+		ZonedDateTime start = c.toInstant().atZone(zoneId).with(LocalTime.MIDNIGHT);
 		log.debug("looking for events for: {}", start);
-		Time sod = M_ts.newTime(start.getMillis());
-		DateTime endOfDay = new DateTime(c).withZone(DateTimeZone.forTimeZone(timeZone)).withTime(23, 59, 59, 0);
-		Time eod = M_ts.newTime(endOfDay.getMillis());
+		Time sod = M_ts.newTime(start.toInstant().toEpochMilli());
+		ZonedDateTime endOfDay = start.with(LocalTime.of(23, 59, 59));
+		Time eod = M_ts.newTime(endOfDay.toInstant().toEpochMilli());
 		TimeRange range = M_ts.newTimeRange(sod, eod);
 		
 		Iterator<CalendarEvent> i = getEventsFromSchedule().iterator();

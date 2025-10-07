@@ -30,9 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.json.simple.JSONObject;
-import org.joda.time.format.PeriodFormat;
-import org.joda.time.format.PeriodFormatter;
-import org.joda.time.Period;
+import org.sakaiproject.accountvalidator.util.DurationFormatter;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
@@ -1012,16 +1010,7 @@ public class MainController {
     }
 
     private String getFormattedMinutes(int totalMinutes, Locale userLocale) {
-        // Create a joda time period (takes milliseconds)
-        Period period = new Period(totalMinutes*60*1000);
-        // format the period for the locale
-        /* 
-         * Covers English, Danish, Dutch, French, German, Japanese, Portuguese, and Spanish.
-         * To translate into others, see http://joda-time.sourceforge.net/apidocs/org/joda/time/format/PeriodFormat.html#wordBased(java.util.Locale)
-         * (ie. put the properties mentioned in http://joda-time.sourceforge.net/apidocs/src-html/org/joda/time/format/PeriodFormat.html#line.94 into the classpath resource bundle)
-         */
-        PeriodFormatter periodFormatter = PeriodFormat.wordBased(userLocale);
-        return periodFormatter.print(period);
+        return DurationFormatter.formatMinutes(totalMinutes, userLocale);
     }
 
     private boolean sendLegacyLinksEnabled() {

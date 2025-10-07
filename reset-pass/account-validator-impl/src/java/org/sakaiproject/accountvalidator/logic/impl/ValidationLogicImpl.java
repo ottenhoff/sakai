@@ -31,9 +31,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.joda.time.Period;
-import org.joda.time.format.PeriodFormat;
-import org.joda.time.format.PeriodFormatter;
 import org.sakaiproject.accountvalidator.logic.ValidationException;
 import org.sakaiproject.accountvalidator.logic.ValidationLogic;
 import org.sakaiproject.accountvalidator.logic.dao.ValidationDao;
@@ -66,6 +63,7 @@ import org.sakaiproject.user.api.UserLockedException;
 import org.sakaiproject.user.api.UserNotDefinedException;
 import org.sakaiproject.user.api.UserPermissionException;
 import org.sakaiproject.util.ResourceLoader;
+import org.sakaiproject.accountvalidator.util.DurationFormatter;
 
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -298,9 +296,7 @@ public class ValidationLogicImpl implements ValidationLogic {
 
 	private String getFormattedExpirationMinutes() {
 		int expirationMinutes = serverConfigurationService.getInt(MAX_PASSWORD_RESET_MINUTES, MAX_PASSWORD_RESET_MINUTES_DEFAULT);
-		Period period = new Period(expirationMinutes * 60 * 1000);
-		PeriodFormatter periodFormatter = PeriodFormat.wordBased(rl.getLocale());
-		return periodFormatter.print(period);
+		return DurationFormatter.formatMinutes(expirationMinutes, rl.getLocale());
 	}
 
 	//Set other details for ValidationAccount and save

@@ -25,16 +25,21 @@
 package org.adl.datamodels.datatypes;
 
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
 
 import org.adl.datamodels.DMDelimiter;
 import org.adl.datamodels.DMErrorCodes;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-
 /**
  * <br><br>
  * 
@@ -145,24 +150,34 @@ public class DateTimeValidatorImpl extends DateTimeValidator implements Serializ
 
 		boolean equal = true;
 
-		DateTimeFormatter dtp = ISODateTimeFormat.dateTimeParser();
-
 		try {
-			// Parse the first string and remove the sub-seconds
-			DateTime dt1 = dtp.parseDateTime(iFirst);
-			dt1 = new DateTime(dt1.getYear(), dt1.getMonthOfYear(), dt1.getDayOfMonth(), dt1.getHourOfDay(), dt1.getMinuteOfHour(), dt1.getSecondOfMinute(), 0);
-
-			// Parse the second string and remove the sub-seconds
-			DateTime dt2 = dtp.parseDateTime(iSecond);
-			dt2 = new DateTime(dt2.getYear(), dt2.getMonthOfYear(), dt2.getDayOfMonth(), dt2.getHourOfDay(), dt2.getMinuteOfHour(), dt2.getSecondOfMinute(), 0);
-
-			equal = dt1.equals(dt2);
-		} catch (Exception e) {
+			Instant firstInstant = parseIsoInstant(iFirst).truncatedTo(ChronoUnit.SECONDS);
+			Instant secondInstant = parseIsoInstant(iSecond).truncatedTo(ChronoUnit.SECONDS);
+			equal = firstInstant.equals(secondInstant);
+		} catch (DateTimeParseException | IllegalArgumentException e) {
 			// String format error -- these cannot be equal
 			equal = false;
 		}
 
 		return equal;
+	}
+
+	private static final DateTimeFormatter ISO_DATE_OPTIONAL_OFFSET = new DateTimeFormatterBuilder()
+			.append(DateTimeFormatter.ISO_DATE_TIME)
+			.toFormatter();
+
+	private Instant parseIsoInstant(String value) {
+		Object parsed = ISO_DATE_OPTIONAL_OFFSET.parseBest(value, OffsetDateTime::from, ZonedDateTime::from, LocalDateTime::from);
+		if (parsed instanceof OffsetDateTime) {
+			return ((OffsetDateTime) parsed).toInstant();
+		}
+		if (parsed instanceof ZonedDateTime) {
+			return ((ZonedDateTime) parsed).toInstant();
+		}
+		if (parsed instanceof LocalDateTime) {
+			return ((LocalDateTime) parsed).atZone(ZoneId.systemDefault()).toInstant();
+		}
+		throw new IllegalArgumentException("Unsupported temporal value: " + value);
 	}
 
 	/**
