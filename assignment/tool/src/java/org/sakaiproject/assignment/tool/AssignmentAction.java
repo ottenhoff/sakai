@@ -9968,7 +9968,7 @@ public class AssignmentAction extends PagedResourceActionII {
 
         }
 
-        if (checkAddDueTime.equalsIgnoreCase(Boolean.TRUE.toString())) {
+        if (Boolean.parseBoolean(checkAddDueTime)) {
             assignmentService.createCalendarEventForAssignment(assignment, c, title, dueTime, dueDateProperty);
         }
     }
