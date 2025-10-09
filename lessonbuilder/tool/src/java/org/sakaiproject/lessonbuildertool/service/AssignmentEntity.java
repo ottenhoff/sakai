@@ -513,29 +513,34 @@ public class AssignmentEntity implements LessonEntity, AssignmentInterface {
 
 	String newassignment = null;
 	if (objectMap != null && !objectMap.isEmpty()) {
-	    newassignment = objectMap.get(realobjectid);
-	    if (newassignment == null) {
-		newassignment = objectMap.get("/" + realobjectid);
+	    String mapped = objectMap.get(realobjectid);
+	    if (!isAssignmentReference(mapped)) {
+		mapped = objectMap.get("/" + realobjectid);
 	    }
-	    if (newassignment == null) {
+
+	    if (!isAssignmentReference(mapped)) {
 		String legacy = realobjectid.startsWith("/") ? realobjectid.substring(1) : realobjectid;
 		for (Map.Entry<String,String> entry : objectMap.entrySet()) {
 		    String value = entry.getValue();
-		    if (value == null) {
+		    if (value == null || !isAssignmentReference(entry.getKey())) {
 			continue;
 		    }
 
 		    String valueNoSlash = value.startsWith("/") ? value.substring(1) : value;
 		    if (legacy.equals(valueNoSlash)) {
-			newassignment = entry.getKey();
+			mapped = entry.getKey();
 			break;
 		    }
 		}
 	    }
+
+	    if (isAssignmentReference(mapped)) {
+		newassignment = mapped.startsWith("/") ? mapped : "/" + mapped;
+	    }
 	}
 
-	if (newassignment != null && !newassignment.isEmpty()) {
-	    return newassignment.startsWith("/") ? newassignment : "/" + newassignment;
+	if (newassignment != null) {
+	    return newassignment;
 	}
 
 	// not in map. try title, but only if title given
@@ -553,6 +558,14 @@ public class AssignmentEntity implements LessonEntity, AssignmentInterface {
 
 	return null;
 
+    }
+
+    private boolean isAssignmentReference(String ref) {
+	if (ref == null) {
+	    return false;
+	}
+	String trimmed = ref.trim();
+	return !trimmed.isEmpty() && (trimmed.startsWith("/" + ASSIGNMENT + "/") || trimmed.startsWith(ASSIGNMENT + "/"));
     }
 
     public String importObject(String title, String href, String mime, boolean hide){
