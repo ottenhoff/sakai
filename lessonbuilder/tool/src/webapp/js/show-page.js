@@ -1655,12 +1655,16 @@ $(document).ready(function () {
         $("#newwindowstuff").show();
       }
 
-      var format = row.find(".item-format").text();
-      var req = row.find(".requirement-text").text();
-      var type = row.find(".type").text();
-                        requirementType = type;
-      var editurl = row.find(".edit-url").text();
-      var editsettingsurl = row.find(".edit-settings-url").text();
+      const format = row.find(".item-format").text();
+      const req = row.find(".requirement-text").text();
+      const itemType = row.find(".type").text();
+      // assignments stash their grading mode in assignment-grade-type;
+      // non-assignments fall back to the item type so downstream logic still works
+      const assignmentGradeType = row.find(".assignment-grade-type").text();
+      const gradeType = assignmentGradeType !== '' ? assignmentGradeType : itemType;
+      requirementType = gradeType;
+      const editurl = row.find(".edit-url").text();
+      const editsettingsurl = row.find(".edit-settings-url").text();
 
       const commonConditionEditor = document.getElementById("common-condition-editor");
       if (!commonConditionEditor) {
@@ -1680,9 +1684,9 @@ $(document).ready(function () {
         "8", // Forum
         "b", // LTI Tool
         "page", // Subpage
-      ].includes(type);
+      ].includes(itemType);
 
-      if (showCommonConditionPicker) {
+      if (showCommonConditionPicker) { // show picker for supported item types (resource, assignment, quiz, forum, LTI, subpage)
         // Show picker
         commonConditionPicker?.classList.remove("hidden");
         commonConditionPicker?.previousElementSibling.classList.remove("hidden");
@@ -1697,7 +1701,7 @@ $(document).ready(function () {
       const showCommonConditionEditor  = [
         "3", // Assignment
         "6", // Assessment
-      ].includes(type);
+      ].includes(itemType);
 
       if (showCommonConditionEditor) {
         // Show editor
@@ -1710,7 +1714,7 @@ $(document).ready(function () {
         commonConditionEditor?.previousElementSibling.classList.add("hidden");
       }
 
-      if (type === 'page') {
+      if (itemType === 'page') {
         $(".pageItem").show();
         $(".reqCheckbox").hide();
 
@@ -1787,18 +1791,18 @@ $(document).ready(function () {
           }
         }
 
-      } else if (type !== '' && type !== '1') { // empty type or type 1 handled in else
-        var groups = row.find(".item-groups").text();
-        var grouplist = $("#grouplist");
-        if ($('#grouplist input').size() > 0) {
-            $("#editgroups").show();
-            $("#grouplist").show();
-            if (groups !== null) {
-              checkgroups(grouplist, groups);
-            }
+      } else if (itemType !== '') { // handle assignment, resource, quiz, forum, blti
+        const groups = row.find(".item-groups").text();
+        const grouplist = $("#grouplist");
+        if (itemType !== '1' && $('#grouplist input').size() > 0) {
+          $("#editgroups").show();
+          $("#grouplist").show();
+          if (groups !== null) {
+            checkgroups(grouplist, groups);
+          }
         }
 
-        if (type === '6') {
+        if (itemType === '6') {
           $("#change-quiz-p").show();
           $("#change-quiz").attr("href",
                 $("#change-quiz").attr("href").replace("itemId=-1", "itemId=" + itemid));
@@ -1812,7 +1816,7 @@ $(document).ready(function () {
             $("#edit-item-settings").attr("href").replace(/(itemId=).*?(&)/, '$1' + itemid + '$2'));
           $("#edit-item-settings-text").text(msg("simplepage.edit_quiz_settings"));
 
-        } else if (type === '8'){
+        } else if (itemType === '8'){
           $("#change-forum-p").show();
           $("#change-forum").attr("href",
                 $("#change-forum").attr("href").replace("itemId=-1", "itemId=" + itemid));
@@ -1822,8 +1826,8 @@ $(document).ready(function () {
             $("#edit-item-object").attr("href").replace(/(itemId=).*?(&)/, '$1' + itemid + '$2'));
           $("#edit-item-text").text(msg("simplepage.edit_topic"));
 
-        } else if (type === 'b'){
-          var height = row.find(".item-height").text();
+        } else if (itemType === 'b'){
+          const height = row.find(".item-height").text();
           $("#edit-height-value").val(height);
           $("#edit-height").show();       
           $("#change-blti-p").show();
@@ -1853,7 +1857,7 @@ $(document).ready(function () {
           $("#edit-item-object-p").show();
           fixitemshows();
 
-        } else {
+        } else if (itemType === '3') {
           $("#change-assignment-p").show();
           $("#change-assignment").attr("href",
                $("#change-assignment").attr("href").replace("itemId=-1", "itemId=" + itemid));
@@ -1862,16 +1866,38 @@ $(document).ready(function () {
           $("#edit-item-object").attr("href",
             $("#edit-item-object").attr("href").replace(/(itemId=).*?(&)/, '$1' + itemid + '$2'));
           $("#edit-item-text").text(msg("simplepage.edit_assignment"));
+        } else {
+          // treat remaining types (e.g., resources) as file/url
+          $("#change-resource-p").show();
+          $("#change-resource").attr("href",
+              $("#change-resource").attr("href").replace("pageItemId=-1", "pageItemId=" + itemid));
+          $("#change-resource").attr("target", "_blank");
+          if (groups === "--inherited--") {
+            $("#resource-group-inherited").show();
+          } else if ($('#grouplist input').size() > 0) {
+            $("#editgroups").show();
+            $("#grouplist").show();
+            $("#select-resource-group").show();
+            if (groups !== null) {
+              checkgroups(grouplist, groups);
+            }
+          }
+          row.find(".path-url").attr("href", row.find(".itemlink").attr('href'));
+          const pathResource = row.find(".item-path").html();
+          if (pathResource !==  null && pathResource !== '') {
+            $("#path").html(pathResource);
+            $("#pathdiv").show();
+          }
         }
 
-        if (type === '3' || type === '6') {
-          // Points or Assessment
+        if (itemType === '3' && (gradeType === '3' || gradeType === '6')) {
+          // assignment item: grade type 3 = points, 6 = assessment (legacy) – requires points entry
 
           $("#require-label2").show();
           $("#require-label2").html(msg("simplepage.require_receive") + " ");
-          if (type === '3') {
+          if (gradeType === '3') {
             $("#assignment-points-label").text(" " + msg("simplepage.require_points_assignment"));
-          } else if (type === '6') {
+          } else if (gradeType === '6') {
             $("#assignment-points-label").text(" " + msg("simplepage.require_points_assessment"));
           }
 
@@ -1891,8 +1917,8 @@ $(document).ready(function () {
 
             $("#assignment-points").val(req);
           }
-        } else if (type === '4') {
-          // Pass / Fail
+        } else if (itemType === '3' && gradeType === '4') {
+          // assignment item: grade type 4 = pass/fail
           $(".reqCheckbox").show();
           $("#require-label2").show();
           $("#require-label2").html(msg("simplepage.require_pass_assignment"));
@@ -1906,8 +1932,8 @@ $(document).ready(function () {
           } else {
             $("#item-required2").prop("checked", false);
           }
-        } else if (type === '2') {
-          // Letter Grade
+        } else if (itemType === '3' && gradeType === '2') {
+          // assignment item: grade type 2 = letter grade threshold
           $(".reqCheckbox").show();
           $("#require-label2").show();
           $("#require-label2").text(msg("simplepage.require_atleast"));
@@ -1924,11 +1950,11 @@ $(document).ready(function () {
 
             $("#assignment-dropdown-selection").val(req);
           }
-        } else if (type === '1') {
-          // Ungraded
+        } else if (itemType === '3' && gradeType === '1') {
+          // assignment item: grade type 1 = ungraded (no extra controls)
           // Nothing more that we need to do
-        } else if (type === '5') {
-          // Checkmark
+        } else if (itemType === '3' && gradeType === '5') {
+          // assignment item: grade type 5 = checkmark
                     $(".reqCheckbox").show();
           $("#require-label2").show();
           $("#require-label2").text(msg("simplepage.require_checkmark"));
@@ -1949,8 +1975,8 @@ $(document).ready(function () {
         $("#change-resource").attr("href",
             $("#change-resource").attr("href").replace("pageItemId=-1", "pageItemId=" + itemid));
         $("#change-resource").attr("target", "_blank");
-        var groups = row.find(".item-groups").text();
-        var grouplist = $("#grouplist");
+        const groups = row.find(".item-groups").text();
+        const grouplist = $("#grouplist");
         if (groups === "--inherited--") {
           $("#resource-group-inherited").show();
         } else if ($('#grouplist input').size() > 0) {

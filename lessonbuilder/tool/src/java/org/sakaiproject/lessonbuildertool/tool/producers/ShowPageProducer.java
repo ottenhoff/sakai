@@ -1583,7 +1583,8 @@ public class ShowPageProducer implements ViewComponentProducer, DefaultView, Nav
 								}
 							}
 
-							UIOutput.make(tableRow, "type", String.valueOf(type));
+							UIOutput.make(tableRow, "type", String.valueOf(SimplePageItem.ASSIGNMENT));
+							UIOutput.make(tableRow, "assignment-grade-type", String.valueOf(type));
 							String requirement = String.valueOf(i.getSubrequirement());
 							if ((type == SimplePageItem.PAGE || type == SimplePageItem.ASSIGNMENT) && i.getSubrequirement()) {
 								requirement = i.getRequirementText();
