@@ -39,7 +39,9 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sakaiproject.authz.api.AuthzGroup;
 import org.sakaiproject.authz.api.AuthzGroupService;
+import org.sakaiproject.authz.api.GroupNotDefinedException;
 import org.sakaiproject.authz.api.FunctionManager;
 import org.sakaiproject.authz.api.SecurityAdvisor;
 import org.sakaiproject.authz.api.SecurityService;
@@ -927,7 +929,7 @@ public class SiteManageServiceImpl implements SiteManageService {
             log.debug("Starting tool permissions copy from site {} to site {}", fromSiteId, toSiteId);
             Site fromSite = siteService.getSite(fromSiteId);
             // Get the destination site
-            Site toSite = siteService.getSite(toSiteId);
+            AuthzGroup toRealm = authzGroupService.getAuthzGroup(siteService.siteReference(toSiteId));
             boolean copyEverything = (permissionCandidatesForCopying == null);
             
             // Copy all role permissions from source site to destination site
@@ -938,7 +940,7 @@ public class SiteManageServiceImpl implements SiteManageService {
                 String roleName = fromRole.getId();
                 try {
                     // Get the corresponding role in the destination site
-                    Role toRole = toSite.getRole(roleName);
+                    Role toRole = toRealm.getRole(roleName);
                     if (toRole != null) {
                         // Get all possible permissions so that permissions could be allowed or disallowed
                         // in the toRole based on permission settings in the fromRole
@@ -968,13 +970,13 @@ public class SiteManageServiceImpl implements SiteManageService {
             }
             
             // Save the destination site's updated permissions
-            authzGroupService.save(authzGroupService.getAuthzGroup(toSite.getId()));
+            authzGroupService.save(toRealm);
             log.debug("Successfully copied all tool permissions from site {} to site {}", fromSiteId, toSiteId);
             
-        } catch (IdUnusedException e) {
-            log.warn("Could not find site when copying permissions: {}", e.toString());
+        } catch (IdUnusedException | GroupNotDefinedException e) {
+            log.warn("Could not find site realm when copying permissions: {}", e.toString());
         } catch (Exception e) {
-            log.error("Could not copy tool permissions from site {} to site {}", fromSiteId, toSiteId, e.toString());
+            log.error("Could not copy tool permissions from site {} to site {}", fromSiteId, toSiteId, e);
         }
     }
 }
