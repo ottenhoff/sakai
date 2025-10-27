@@ -39,6 +39,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sakaiproject.authz.api.AuthzGroupService;
 import org.sakaiproject.authz.api.FunctionManager;
 import org.sakaiproject.authz.api.SecurityAdvisor;
 import org.sakaiproject.authz.api.SecurityService;
@@ -97,6 +98,7 @@ public class SiteManageServiceImpl implements SiteManageService {
     @Setter private ThreadLocalManager threadLocalManager;
     @Setter private ToolManager toolManager;
     @Setter private FunctionManager functionManager;
+    @Setter private AuthzGroupService authzGroupService;
     @Setter private TransactionTemplate transactionTemplate;
     @Setter private UserDirectoryService userDirectoryService;
     @Setter private UserNotificationProvider userNotificationProvider;
@@ -965,8 +967,8 @@ public class SiteManageServiceImpl implements SiteManageService {
                 }
             }
             
-            // Save the destination site with the updated permissions
-            siteService.save(toSite);
+            // Save the destination site's updated permissions
+            authzGroupService.save(authzGroupService.getAuthzGroup(toSite.getId()));
             log.debug("Successfully copied all tool permissions from site {} to site {}", fromSiteId, toSiteId);
             
         } catch (IdUnusedException e) {
