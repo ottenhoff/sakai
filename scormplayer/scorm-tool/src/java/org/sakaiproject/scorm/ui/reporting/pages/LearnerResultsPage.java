@@ -34,10 +34,9 @@ import org.sakaiproject.scorm.model.api.ContentPackage;
 import org.sakaiproject.scorm.model.api.Learner;
 import org.sakaiproject.scorm.ui.console.pages.DisplayDesignatedPackage;
 import org.sakaiproject.scorm.ui.console.pages.PackageListPage;
-import org.sakaiproject.scorm.ui.reporting.util.StatusLocalizer;
+import org.sakaiproject.scorm.ui.reporting.util.StatusPropertyColumn;
 import org.sakaiproject.scorm.ui.reporting.util.SummaryProvider;
 import org.sakaiproject.wicket.ajax.markup.html.table.SakaiDataTable;
-import org.sakaiproject.wicket.markup.html.repeater.data.table.DecoratedPropertyColumn;
 import org.sakaiproject.wicket.markup.html.link.BookmarkablePageLabeledLink;
 import org.sakaiproject.wicket.markup.html.repeater.data.table.Action;
 import org.sakaiproject.wicket.markup.html.repeater.data.table.ActionColumn;
@@ -77,7 +76,7 @@ public class LearnerResultsPage extends BaseResultsPage
 			// SCO-94
 			heading.setVisibilityAllowed( false );
 
-			IModel breadcrumbModel = new StringResourceModel("parent.breadcrumb", this, new Model(contentPackage));
+			IModel<String> breadcrumbModel = new StringResourceModel("parent.breadcrumb", this, new Model(contentPackage));
 
 			// MvH
 			if (isSinglePackageTool())
@@ -164,22 +163,8 @@ public class LearnerResultsPage extends BaseResultsPage
 		columns.add(actionColumn);
 
 		columns.add(new PercentageColumn(scoreHeader, "scaled", "scaled"));
-		columns.add(new DecoratedPropertyColumn(completedHeader, "completionStatus", "completionStatus")
-		{
-			@Override
-			public Object convertObject(Object object)
-			{
-				return StatusLocalizer.completionStatus(LearnerResultsPage.this, object != null ? object.toString() : null);
-			}
-		});
-		columns.add(new DecoratedPropertyColumn(successHeader, "successStatus", "successStatus")
-		{
-			@Override
-			public Object convertObject(Object object)
-			{
-				return StatusLocalizer.successStatus(LearnerResultsPage.this, object != null ? object.toString() : null);
-			}
-		});
+		columns.add(new StatusPropertyColumn<>(completedHeader, "completionStatus", "completionStatus", "completion.status."));
+		columns.add(new StatusPropertyColumn<>(successHeader, "successStatus", "successStatus", "success.status."));
 
 		return columns;
 	}

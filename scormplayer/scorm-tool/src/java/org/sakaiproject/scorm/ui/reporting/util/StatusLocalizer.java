@@ -5,7 +5,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.Component;
-import org.apache.wicket.Localizer;
+import org.apache.wicket.Session;
+import org.sakaiproject.util.ResourceLoader;
 
 /**
  * Utility for localizing SCORM completion and success status codes through Wicket's resource bundles.
@@ -13,6 +14,7 @@ import org.apache.wicket.Localizer;
 public final class StatusLocalizer
 {
 	private static final Pattern NON_ALNUM = Pattern.compile("[^a-z0-9]+");
+	private static final String BUNDLE = StatusLocalizer.class.getName();
 
 	private StatusLocalizer()
 	{
@@ -20,17 +22,32 @@ public final class StatusLocalizer
 
 	public static String completionStatus(Component component, String status)
 	{
-		return localize(component, status, "completion.status.");
+		return localize(resolveLocale(component), status, "completion.status.");
 	}
 
 	public static String successStatus(Component component, String status)
 	{
-		return localize(component, status, "success.status.");
+		return localize(resolveLocale(component), status, "success.status.");
 	}
 
-	private static String localize(Component component, String status, String prefix)
+	private static Locale resolveLocale(Component component)
 	{
-		if (StringUtils.isBlank(status) || component == null)
+		if (component != null)
+		{
+			return component.getLocale();
+		}
+
+		if (Session.exists())
+		{
+			return Session.get().getLocale();
+		}
+
+		return Locale.getDefault();
+	}
+
+	private static String localize(Locale locale, String status, String prefix)
+	{
+		if (StringUtils.isBlank(status))
 		{
 			return StringUtils.defaultString(status);
 		}
@@ -39,12 +56,9 @@ public final class StatusLocalizer
 		normalized = StringUtils.strip(normalized, "-");
 
 		String key = prefix + normalized;
-		Localizer localizer = component.getLocalizer();
-		if (localizer != null)
-		{
-			return localizer.getString(key, component, status);
-		}
-
-		return status;
+		ResourceLoader loader = new ResourceLoader(BUNDLE);
+		loader.setContextLocale(locale);
+		String value = loader.getString(key, status);
+		return StringUtils.defaultIfBlank(value, status);
 	}
 }

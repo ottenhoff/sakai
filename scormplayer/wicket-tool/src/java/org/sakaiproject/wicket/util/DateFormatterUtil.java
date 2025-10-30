@@ -20,15 +20,15 @@
  ********************************************************************************* */
 package org.sakaiproject.wicket.util;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import java.util.Date;
 import java.util.Locale;
+
+import org.sakaiproject.component.cover.ComponentManager;
+import org.sakaiproject.time.api.UserTimeService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,16 +57,8 @@ public final class DateFormatterUtil
 			return null;
 		}
 
-		try
-		{
-			return new SimpleDateFormat( format, locale ).format( inputDate );
-		}
-		catch( Exception ex )
-		{
-			return DateFormat.getDateTimeInstance( DateFormat.SHORT, DateFormat.SHORT, Locale.US )
-					.format( inputDate )
-					.replace( ",", "" );    // FIX JDK8 -> JDK9
-		}
+		UserTimeService userTimeService = ComponentManager.get(UserTimeService.class);
+		return userTimeService.dateTimeFormat(inputDate, locale, java.text.DateFormat.MEDIUM);
 	}
 
 	/**
@@ -112,4 +104,3 @@ public final class DateFormatterUtil
 		}
 	}
 }
-

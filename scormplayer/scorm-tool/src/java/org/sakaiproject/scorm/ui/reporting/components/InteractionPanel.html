@@ -3,8 +3,8 @@
 </head>
 <body>
 <wicket:panel>
-	<div class="card shadow-sm mb-4">
-		<div class="card-body d-flex flex-column gap-4 pb-4">
+	<div class="card shadow-sm mb-4 pb-4">
+		<div class="card-body d-flex flex-column gap-4">
 			<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
 				<div class="col">
 					<div class="text-uppercase text-secondary small fw-semibold mb-1">
@@ -47,13 +47,13 @@
 				</div>
 			</div>
 
-			<div class="border-top border-light pt-2"></div>
+			<hr class="my-3"/>
 
 			<div class="d-flex flex-column gap-2">
 				<div class="text-uppercase text-secondary small fw-semibold mb-2">
 					<wicket:message key="description.label">[description label]</wicket:message>
 				</div>
-				<div class="border rounded p-3 bg-body" wicket:id="description">[description]</div>
+				<div class="border rounded p-3" wicket:id="description">[description]</div>
 			</div>
 
 			<div class="row g-3 align-items-stretch">
@@ -61,13 +61,13 @@
 					<div class="text-uppercase text-secondary small fw-semibold mb-2">
 						<wicket:message key="learner.response.label">[learner response label]</wicket:message>
 					</div>
-					<div class="border rounded h-100 p-3 bg-body" wicket:id="learnerResponse">[learner response]</div>
+					<div class="border rounded h-100 p-2" wicket:id="learnerResponse">[learner response]</div>
 				</div>
 				<div class="col-md-6">
 					<div class="text-uppercase text-secondary small fw-semibold mb-2">
 						<wicket:message key="correct.response.label">[correct response label]</wicket:message>
 					</div>
-					<div class="border rounded h-100 p-3 bg-body" wicket:id="correctResponse">[correct response]</div>
+					<div class="border rounded h-100 p-2" wicket:id="correctResponse">[correct response]</div>
 				</div>
 			</div>
 		</div>

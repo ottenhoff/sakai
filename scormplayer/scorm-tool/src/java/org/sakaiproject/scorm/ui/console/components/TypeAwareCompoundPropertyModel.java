@@ -15,8 +15,12 @@
  */
 package org.sakaiproject.scorm.ui.console.components;
 
-import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.Date;
+import java.util.Locale;
+
+import org.apache.wicket.Session;
+import org.apache.wicket.injection.Injector;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.model.AbstractPropertyModel;
@@ -25,16 +29,20 @@ import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.IWrapModel;
 import org.apache.wicket.model.PropertyModel;
 
+import org.apache.wicket.spring.injection.annot.SpringBean;
+import org.sakaiproject.time.api.UserTimeService;
+
 public class TypeAwareCompoundPropertyModel extends CompoundPropertyModel
 {
 	private static final long serialVersionUID = 1L;
 
-	private SimpleDateFormat dateFormat;
+    @SpringBean(name = "org.sakaiproject.time.api.UserTimeService")
+    private transient UserTimeService userTimeService;
 
 	public TypeAwareCompoundPropertyModel(Object object)
 	{
 		super(object);
-		this.dateFormat = new SimpleDateFormat("MM/dd/yyyy hh:mm a");
+		Injector.get().inject(this);
 	}
 
 	@Override
@@ -65,7 +73,7 @@ public class TypeAwareCompoundPropertyModel extends CompoundPropertyModel
 
 			if (obj instanceof Date)
 			{
-				return dateFormat.format(obj);
+				return formatDate((Date) obj);
 			}
 
 			return obj;
@@ -124,10 +132,16 @@ public class TypeAwareCompoundPropertyModel extends CompoundPropertyModel
 
 			if (obj instanceof Date)
 			{
-				return dateFormat.format(obj);
+				return formatDate((Date) obj);
 			}
 
 			return obj;
 		}
 	}
+
+    private String formatDate(Date date)
+    {
+        Locale locale = Session.exists() ? Session.get().getLocale() : Locale.getDefault();
+        return userTimeService.dateTimeFormat(date, locale, DateFormat.MEDIUM);
+    }
 }

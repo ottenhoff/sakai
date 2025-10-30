@@ -33,13 +33,30 @@ public class ContentPackageDetailPanel extends Panel
 	@SpringBean
 	LearningManagementSystem lms;
 
+	private String unknownLabel;
+	private String unlimitedLabel;
+
+	private String createdByName;
+	private String modifiedByName;
+
+	private final ContentPackage contentPackage;
+
 	public ContentPackageDetailPanel(String id, ContentPackage contentPackage)
 	{
 		super(id, new TypeAwareCompoundPropertyModel(contentPackage));
+		this.contentPackage = contentPackage;
+	}
 
-		String createdByName = getString("unknown");
-		String modifiedByName = createdByName;
-		
+	@Override
+	protected void onInitialize()
+	{
+		super.onInitialize();
+		unknownLabel = getString("unknown");
+		unlimitedLabel = getString("unlimited");
+
+		createdByName = unknownLabel;
+		modifiedByName = unknownLabel;
+
 		if (contentPackage != null)
 		{
 			try
@@ -49,7 +66,7 @@ public class ContentPackageDetailPanel extends Panel
 			}
 			catch (LearnerNotDefinedException e)
 			{
-				// Doesn't matter.
+				// Ignored: fall back to unknown label
 			}
 		}
 
@@ -57,9 +74,10 @@ public class ContentPackageDetailPanel extends Panel
 		add(new Label("releaseOn"));
 		add(new Label("dueOn"));
 		add(new Label("acceptUntil"));
-		add(new Label("numberOfTries", new TriesDecoratedPropertyModel(contentPackage, "numberOfTries")));
+		add(new Label("numberOfTries", new TriesDecoratedPropertyModel(contentPackage, "numberOfTries", unlimitedLabel)));
 		add(new Label("createdBy", new Model(createdByName)));
-		add(new Label("createdOn"));
+		add(new Label("createdOn"))
+			;
 		add(new Label("modifiedBy", new Model(modifiedByName)));
 		add(new Label("modifiedOn"));
 	}
@@ -72,10 +90,12 @@ public class ContentPackageDetailPanel extends Panel
 	public class TriesDecoratedPropertyModel extends DecoratedPropertyModel
 	{
 		private static final long serialVersionUID = 1L;
+		private final String unlimitedLabel;
 
-		public TriesDecoratedPropertyModel(Object modelObject, String expression)
+		public TriesDecoratedPropertyModel(Object modelObject, String expression, String unlimitedLabel)
 		{
 			super(modelObject, expression);
+			this.unlimitedLabel = unlimitedLabel;
 		}
 
 		@Override
@@ -85,7 +105,7 @@ public class ContentPackageDetailPanel extends Panel
 			
 			if (str.equals("-1"))
 			{
-				return getString("unlimited");
+				return unlimitedLabel;
 			}
 
 			return str;
