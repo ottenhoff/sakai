@@ -15,6 +15,8 @@
  */
 package org.sakaiproject.scorm.ui.player.pages;
 
+import java.util.Locale;
+
 /**
  * This is the base page for the player window pop-up (player page, notification page).
  */
@@ -22,6 +24,7 @@ import org.apache.wicket.markup.head.CssHeaderItem;
 import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.html.IHeaderContributor;
 
+import org.sakaiproject.util.ResourceLoader;
 import org.sakaiproject.wicket.markup.html.SakaiPortletWebPage;
 
 public class BaseToolPage extends SakaiPortletWebPage implements IHeaderContributor
@@ -35,5 +38,22 @@ public class BaseToolPage extends SakaiPortletWebPage implements IHeaderContribu
 	{
 		super.renderHead(response);
 		response.render(CssHeaderItem.forUrl(SCORM_CSS));
+	}
+
+	@Override
+	protected void onInitialize()
+	{
+		super.onInitialize();
+		applyUserLocale();
+	}
+
+	private void applyUserLocale()
+	{
+		ResourceLoader loader = new ResourceLoader();
+		Locale locale = loader.getLocale();
+		if (locale != null)
+		{
+			getSession().setLocale(locale);
+		}
 	}
 }

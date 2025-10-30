@@ -17,6 +17,7 @@ package org.sakaiproject.scorm.ui.reporting.components;
 
 import java.util.Locale;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
@@ -26,6 +27,7 @@ import org.apache.wicket.model.Model;
 
 import org.sakaiproject.scorm.model.api.Progress;
 import org.sakaiproject.scorm.ui.reporting.util.ScormDurationFormatter;
+import org.sakaiproject.scorm.ui.reporting.util.StatusLocalizer;
 
 public class ProgressPanel extends Panel
 {
@@ -63,10 +65,13 @@ public class ProgressPanel extends Panel
 		}
 		add(percentBar);
 
-		Label successLabel = new Label("successStatus");
-		Label completionLabel = new Label("completionStatus");
-		successLabel.setVisible(progress.getSuccessStatus() != null && progress.getSuccessStatus().trim().length() != 0);
-		completionLabel.setVisible(progress.getCompletionStatus() != null && progress.getCompletionStatus().trim().length() != 0);
+		String localizedSuccess = StatusLocalizer.successStatus(this, progress.getSuccessStatus());
+		String localizedCompletion = StatusLocalizer.completionStatus(this, progress.getCompletionStatus());
+
+		Label successLabel = new Label("successStatus", Model.of(localizedSuccess));
+		Label completionLabel = new Label("completionStatus", Model.of(localizedCompletion));
+		successLabel.setVisible(StringUtils.isNotBlank(localizedSuccess));
+		completionLabel.setVisible(StringUtils.isNotBlank(localizedCompletion));
 		add(successLabel);
 		add(completionLabel);
 

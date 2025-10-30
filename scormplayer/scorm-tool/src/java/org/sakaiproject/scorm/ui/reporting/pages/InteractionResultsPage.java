@@ -36,7 +36,9 @@ import org.sakaiproject.scorm.model.api.Learner;
 import org.sakaiproject.scorm.model.api.Objective;
 import org.sakaiproject.scorm.ui.reporting.components.InteractionPanel;
 import org.sakaiproject.scorm.ui.reporting.util.ObjectiveProvider;
+import org.sakaiproject.scorm.ui.reporting.util.StatusLocalizer;
 import org.sakaiproject.wicket.ajax.markup.html.table.SakaiDataTable;
+import org.sakaiproject.wicket.markup.html.repeater.data.table.DecoratedPropertyColumn;
 import org.sakaiproject.wicket.markup.html.link.BookmarkablePageLabeledLink;
 
 public class InteractionResultsPage extends BaseResultsPage
@@ -156,8 +158,22 @@ public class InteractionResultsPage extends BaseResultsPage
 
 		columns.add(new PropertyColumn(idHeader, "id", "id"));
 		columns.add(new PropertyColumn(descriptionHeader, "description", "description"));
-		columns.add(new PropertyColumn(completionStatusHeader, "completionStatus", "completionStatus"));
-		columns.add(new PropertyColumn(successStatusHeader, "successStatus", "successStatus"));
+		columns.add(new DecoratedPropertyColumn(completionStatusHeader, "completionStatus", "completionStatus")
+		{
+			@Override
+			public Object convertObject(Object object)
+			{
+				return StatusLocalizer.completionStatus(InteractionResultsPage.this, object != null ? object.toString() : null);
+			}
+		});
+		columns.add(new DecoratedPropertyColumn(successStatusHeader, "successStatus", "successStatus")
+		{
+			@Override
+			public Object convertObject(Object object)
+			{
+				return StatusLocalizer.successStatus(InteractionResultsPage.this, object != null ? object.toString() : null);
+			}
+		});
 
 		return columns;
 	}

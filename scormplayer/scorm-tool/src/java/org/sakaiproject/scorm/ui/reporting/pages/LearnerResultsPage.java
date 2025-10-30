@@ -20,7 +20,6 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.extensions.markup.html.repeater.data.table.IColumn;
-import org.apache.wicket.extensions.markup.html.repeater.data.table.PropertyColumn;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.link.Link;
@@ -35,8 +34,10 @@ import org.sakaiproject.scorm.model.api.ContentPackage;
 import org.sakaiproject.scorm.model.api.Learner;
 import org.sakaiproject.scorm.ui.console.pages.DisplayDesignatedPackage;
 import org.sakaiproject.scorm.ui.console.pages.PackageListPage;
+import org.sakaiproject.scorm.ui.reporting.util.StatusLocalizer;
 import org.sakaiproject.scorm.ui.reporting.util.SummaryProvider;
 import org.sakaiproject.wicket.ajax.markup.html.table.SakaiDataTable;
+import org.sakaiproject.wicket.markup.html.repeater.data.table.DecoratedPropertyColumn;
 import org.sakaiproject.wicket.markup.html.link.BookmarkablePageLabeledLink;
 import org.sakaiproject.wicket.markup.html.repeater.data.table.Action;
 import org.sakaiproject.wicket.markup.html.repeater.data.table.ActionColumn;
@@ -163,8 +164,22 @@ public class LearnerResultsPage extends BaseResultsPage
 		columns.add(actionColumn);
 
 		columns.add(new PercentageColumn(scoreHeader, "scaled", "scaled"));
-		columns.add(new PropertyColumn(completedHeader, "completionStatus", "completionStatus"));
-		columns.add(new PropertyColumn(successHeader, "successStatus", "successStatus"));
+		columns.add(new DecoratedPropertyColumn(completedHeader, "completionStatus", "completionStatus")
+		{
+			@Override
+			public Object convertObject(Object object)
+			{
+				return StatusLocalizer.completionStatus(LearnerResultsPage.this, object != null ? object.toString() : null);
+			}
+		});
+		columns.add(new DecoratedPropertyColumn(successHeader, "successStatus", "successStatus")
+		{
+			@Override
+			public Object convertObject(Object object)
+			{
+				return StatusLocalizer.successStatus(LearnerResultsPage.this, object != null ? object.toString() : null);
+			}
+		});
 
 		return columns;
 	}

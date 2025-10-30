@@ -17,13 +17,16 @@ package org.sakaiproject.scorm.ui.reporting.components;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.markup.repeater.RepeatingView;
 import org.apache.wicket.model.CompoundPropertyModel;
+import org.apache.wicket.model.Model;
 
 import org.sakaiproject.scorm.model.api.Objective;
+import org.sakaiproject.scorm.ui.reporting.util.StatusLocalizer;
 
 public class ObjectivesPanel extends Panel
 {
@@ -53,11 +56,14 @@ public class ObjectivesPanel extends Panel
 		item.setRenderBodyOnly(true);
 
 		Label descLabel = new Label("description");
-		Label successLabel = new Label("successStatus");
-		Label completionLabel = new Label("completionStatus");
+		String localizedSuccess = StatusLocalizer.successStatus(this, objective.getSuccessStatus());
+		String localizedCompletion = StatusLocalizer.completionStatus(this, objective.getCompletionStatus());
 
-		successLabel.setVisible(objective.getSuccessStatus() != null && objective.getSuccessStatus().trim().length() != 0);
-		completionLabel.setVisible(objective.getCompletionStatus() != null && objective.getCompletionStatus().trim().length() != 0);
+		Label successLabel = new Label("successStatus", Model.of(localizedSuccess));
+		Label completionLabel = new Label("completionStatus", Model.of(localizedCompletion));
+
+		successLabel.setVisible(StringUtils.isNotBlank(localizedSuccess));
+		completionLabel.setVisible(StringUtils.isNotBlank(localizedCompletion));
 
 		item.add(descLabel);
 		item.add(new ScorePanel("score", objective.getScore()));

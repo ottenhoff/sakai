@@ -18,6 +18,7 @@ package org.sakaiproject.scorm.ui.reporting.pages;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.extensions.markup.html.repeater.data.table.IColumn;
@@ -272,8 +273,9 @@ public class ScoResultsPage extends BaseResultsPage
 				return "";
 			}
 
-			String key = new StringBuilder("type.").append(object).toString();
-			return getLocalizer().getString(key, ScoResultsPage.this);
+			String value = object.toString();
+			String key = new StringBuilder("type.").append(value.toLowerCase(Locale.ROOT)).toString();
+			return getLocalizer().getString(key, ScoResultsPage.this, value);
 		}
 	}
 }

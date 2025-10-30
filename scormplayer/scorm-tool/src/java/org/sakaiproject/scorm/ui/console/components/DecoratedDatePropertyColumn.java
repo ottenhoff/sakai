@@ -15,31 +15,39 @@
  */
 package org.sakaiproject.scorm.ui.console.components;
 
-import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.Date;
+import java.util.Locale;
 
+import org.apache.wicket.Session;
+import org.apache.wicket.injection.Injector;
 import org.apache.wicket.model.IModel;
 
+import org.apache.wicket.spring.injection.annot.SpringBean;
+import org.sakaiproject.time.api.UserTimeService;
 import org.sakaiproject.wicket.markup.html.repeater.data.table.DecoratedPropertyColumn;
 
 public class DecoratedDatePropertyColumn extends DecoratedPropertyColumn
 {
 	private static final long serialVersionUID = 1L;
 
-	private SimpleDateFormat dateFormat;
+    @SpringBean(name = "org.sakaiproject.time.api.UserTimeService")
+    private transient UserTimeService userTimeService;
 
 	public DecoratedDatePropertyColumn(IModel displayModel, String sortProperty, String propertyExpression)
-	{
+ 	{
 		super(displayModel, sortProperty, propertyExpression);
-		this.dateFormat = new SimpleDateFormat("MMM dd, yyyy hh:mm a");
-	}
+        Injector.get().inject(this);
+ 	}
 
 	@Override
 	public Object convertObject(Object object)
 	{
 		if (object instanceof Date)
 		{
-			return dateFormat.format(object);
+			Date date = (Date) object;
+			Locale locale = Session.exists() ? Session.get().getLocale() : Locale.getDefault();
+			return userTimeService.dateTimeFormat(date, locale, DateFormat.MEDIUM);
 		}
 
 		return object;

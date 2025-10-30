@@ -15,6 +15,8 @@
  */
 package org.sakaiproject.scorm.ui.console.pages;
 
+import java.util.Locale;
+
 import org.apache.wicket.markup.head.CssHeaderItem;
 import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.html.IHeaderContributor;
@@ -33,6 +35,7 @@ import org.sakaiproject.scorm.ui.upload.UploadPage;
 import org.sakaiproject.tool.api.ToolManager;
 import org.sakaiproject.wicket.markup.html.SakaiPortletWebPage;
 import org.sakaiproject.wicket.markup.html.navigation.NavLink;
+import org.sakaiproject.util.ResourceLoader;
 
 public class ConsoleBasePage extends SakaiPortletWebPage implements IHeaderContributor {
 
@@ -63,6 +66,8 @@ public class ConsoleBasePage extends SakaiPortletWebPage implements IHeaderContr
 
 	public ConsoleBasePage(PageParameters params)
 	{
+		applyUserLocale();
+
 		final String context = lms.currentContext();
 		final boolean canUpload = lms.canUpload(context);
 		final boolean canValidate = lms.canValidate(context);
@@ -126,5 +131,15 @@ public class ConsoleBasePage extends SakaiPortletWebPage implements IHeaderContr
 	{
 		return toolManager != null && toolManager.getCurrentTool() != null
 				&& "sakai.scorm.singlepackage.tool".equals(toolManager.getCurrentTool().getId());
+	}
+
+	private void applyUserLocale()
+	{
+		ResourceLoader loader = new ResourceLoader();
+		Locale locale = loader.getLocale();
+		if (locale != null)
+		{
+			getSession().setLocale(locale);
+		}
 	}
 }
