@@ -3298,7 +3298,30 @@ public class ExtractionHelper
         section.addSectionMetaData(SectionDataIfc.RANDOMIZATION_TYPE, (String)sectionMap.get("randomization_type"));
         section.addSectionMetaData(SectionDataIfc.POINT_VALUE_FOR_QUESTION, (String)sectionMap.get("point_value"));
         section.addSectionMetaData(SectionDataIfc.DISCOUNT_VALUE_FOR_QUESTION, (String)sectionMap.get("discount_value"));
- 
+
+        // Multiple pools support (optional)
+        String randomPoolCount = (String) sectionMap.get("random_pool_count");
+        if (StringUtils.isNotBlank(randomPoolCount)) {
+            section.addSectionMetaData(SectionDataIfc.RANDOM_POOL_COUNT, randomPoolCount);
+            try {
+                int count = Integer.parseInt(randomPoolCount);
+                for (int i = 1; i < count; i++) {
+                    String pidKey = "pool_id_" + i;
+                    String pnameKey = "pool_name_" + i;
+                    String pid = (String) sectionMap.get(pidKey);
+                    String pname = (String) sectionMap.get(pnameKey);
+                    if (StringUtils.isNotBlank(pid)) {
+                        section.addSectionMetaData(SectionDataIfc.POOLID_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + i, pid);
+                    }
+                    if (StringUtils.isNotBlank(pname)) {
+                        section.addSectionMetaData(SectionDataIfc.POOLNAME_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + i, pname);
+                    }
+                }
+            } catch (NumberFormatException e) {
+                // ignore malformed count; fall back to single-pool behavior
+            }
+        }
+
         String poolid = section.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW);
         return StringUtils.isNotBlank(poolid);
 

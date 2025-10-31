@@ -859,7 +859,21 @@ public class AuthoringHelper
         if (isBasedOnQuestionPool) {
 
           QuestionPoolService questionPoolService = new QuestionPoolService();
-          section.addSectionMetaData(SectionDataIfc.AUTHOR_TYPE, SectionDataIfc.RANDOM_DRAW_FROM_QUESTIONPOOL.toString());
+          // Determine if this is a multi-pool random draw
+          String randomPoolCountStr = section.getSectionMetaDataByLabel(SectionDataIfc.RANDOM_POOL_COUNT);
+          int randomPoolCount = 1;
+          try {
+            if (StringUtils.isNotBlank(randomPoolCountStr)) {
+              randomPoolCount = Integer.parseInt(randomPoolCountStr);
+            }
+          } catch (NumberFormatException e) {
+            randomPoolCount = 1;
+          }
+          boolean isMultiple = randomPoolCount > 1;
+          section.addSectionMetaData(SectionDataIfc.AUTHOR_TYPE,
+              isMultiple ? SectionDataIfc.RANDOM_DRAW_FROM_QUESTIONPOOLS.toString()
+                         : SectionDataIfc.RANDOM_DRAW_FROM_QUESTIONPOOL.toString());
+
           String poolId = section.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW);
           String poolTitle = section.getSectionMetaDataByLabel(SectionDataIfc.POOLNAME_FOR_RANDOM_DRAW);
           boolean hasRandomPartScore = false;
@@ -894,8 +908,9 @@ public class AuthoringHelper
           
           // The pool we used to create this assessment exists (and is the same) in this system  
           if (pool != null && pool.getTitle().equals(poolTitle)) {
+            int i = 0;
+            // clone items from first pool
             List<ItemFacade> itemlist = questionPoolService.getAllItems(new Long(poolId));
-            int i=0;
             for (ItemFacade item : itemlist) {
               //copy item so we can have it in more than one assessment
               ItemData item2 = itemService.cloneItem(item);
@@ -931,6 +946,68 @@ public class AuthoringHelper
                 }
               }
               section.addItem(item2);
+            }
+
+            // if multiple pools, append items from the rest of pools too (by id)
+            if (isMultiple) {
+              for (int idx = 1; idx < randomPoolCount; idx++) {
+                String pid = section.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + idx);
+                String pname = section.getSectionMetaDataByLabel(SectionDataIfc.POOLNAME_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + idx);
+                if (StringUtils.isBlank(pid)) {
+                  continue;
+                }
+                QuestionPoolFacade qpool = null;
+                QuestionPoolIteratorFacade qpools2 = questionPoolService.getAllPoolsWithAccess(me, QuestionPoolAccessFacade.READ_ONLY);
+                try {
+                  while (qpools2.hasNext()) {
+                    QuestionPoolFacade p = qpools2.next();
+                    if (p.getQuestionPoolId().toString().equals(pid)) {
+                      qpool = p;
+                      break;
+                    }
+                  }
+                } catch (SharedException e) {
+                  qpool = null;
+                }
+                if (qpool != null && (StringUtils.isBlank(pname) || qpool.getTitle().equals(pname))) {
+                  List<ItemFacade> items = questionPoolService.getAllItems(new Long(pid));
+                  for (ItemFacade item : items) {
+                    ItemData item2 = itemService.cloneItem(item);
+                    item2.setSection(section.getData());
+                    item2.setSequence(Integer.valueOf(++i));
+                    if (hasRandomPartScore || hasRandomPartDiscount) {
+                      long itemTypeId = item.getTypeId().longValue();
+                      if (hasRandomPartScore && itemTypeId != TypeFacade.MULTIPLE_CHOICE_SURVEY.longValue()) {
+                        item2.setScore(score);
+                      }
+                      if (hasRandomPartDiscount && (itemTypeId == TypeFacade.MULTIPLE_CHOICE.longValue() || itemTypeId == TypeFacade.TRUE_FALSE.longValue())) {
+                        item2.setDiscount(discount);
+                      }
+                      Set<ItemTextIfc> itemTextSet = item2.getItemTextSet();
+                      if (itemTextSet != null) {
+                        Iterator<ItemTextIfc> iterITS = itemTextSet.iterator();
+                        while (iterITS.hasNext()) {
+                          ItemTextIfc itemText = iterITS.next();
+                          Set<AnswerIfc> answerSet = itemText.getAnswerSet();
+                          if (answerSet != null) {
+                            Iterator<AnswerIfc> iterAS = answerSet.iterator();
+                            while (iterAS.hasNext()) {
+                              AnswerIfc answer = iterAS.next();
+                              if (hasRandomPartScore && itemTypeId != TypeFacade.MULTIPLE_CHOICE_SURVEY.longValue()) {
+                                answer.setScore(score);
+                              }
+                              if (hasRandomPartDiscount && (itemTypeId == TypeFacade.MULTIPLE_CHOICE.longValue() || itemTypeId == TypeFacade.TRUE_FALSE.longValue())) {
+                                answer.setDiscount(discount);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                    section.addItem(item2);
+                  }
+                }
+              }
             }
           }
           else { // The pool doesn't exist in this system, we create it

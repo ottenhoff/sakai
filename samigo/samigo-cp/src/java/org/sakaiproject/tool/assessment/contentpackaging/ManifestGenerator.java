@@ -195,6 +195,22 @@ public class ManifestGenerator {
 					String poolId = sectionData.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW);
 					if (StringUtils.isNotBlank(poolId)) {
 						this.copyQuestionPoolAttachments(Long.valueOf(poolId));
+						// Multiple pools support: copy attachments from all pools
+						String authorType = sectionData.getSectionMetaDataByLabel(SectionDataIfc.AUTHOR_TYPE);
+						String randomPoolCount = sectionData.getSectionMetaDataByLabel(SectionDataIfc.RANDOM_POOL_COUNT);
+						if (SectionDataIfc.RANDOM_DRAW_FROM_QUESTIONPOOLS.toString().equals(authorType) && StringUtils.isNotBlank(randomPoolCount)) {
+							try {
+								int count = Integer.parseInt(randomPoolCount);
+								for (int i = 1; i < count; i++) {
+									String pid = sectionData.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + i);
+									if (StringUtils.isNotBlank(pid)) {
+										this.copyQuestionPoolAttachments(Long.valueOf(pid));
+									}
+								}
+							} catch (NumberFormatException ignore) {
+								// ignore malformed count
+							}
+						}
 					}
 
 					Set<SectionAttachment> sectionAttachmentSet = sectionData.getSectionAttachmentSet();

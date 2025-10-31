@@ -157,6 +157,27 @@ public void setTitle(String title)
     setFieldentry("RANDOMIZATION_TYPE", section.getSectionMetaDataByLabel(SectionDataIfc.RANDOMIZATION_TYPE));
     setFieldentry("POINT_VALUE_FOR_QUESTION", section.getSectionMetaDataByLabel(SectionDataIfc.POINT_VALUE_FOR_QUESTION));
     setFieldentry("DISCOUNT_VALUE_FOR_QUESTION", section.getSectionMetaDataByLabel(SectionDataIfc.DISCOUNT_VALUE_FOR_QUESTION));
+    // Multiple pool support: export count and suffixed ids/names if present
+    String authorType = section.getSectionMetaDataByLabel(SectionDataIfc.AUTHOR_TYPE);
+    String randomPoolCount = section.getSectionMetaDataByLabel(SectionDataIfc.RANDOM_POOL_COUNT);
+    if (randomPoolCount != null && SectionDataIfc.RANDOM_DRAW_FROM_QUESTIONPOOLS.toString().equals(authorType)) {
+      setFieldentry("RANDOM_POOL_COUNT", randomPoolCount);
+      try {
+        int count = Integer.parseInt(randomPoolCount);
+        for (int i = 1; i < count; i++) {
+          String pid = section.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + i);
+          String pname = section.getSectionMetaDataByLabel(SectionDataIfc.POOLNAME_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + i);
+          if (pid != null) {
+            setFieldentry("POOLID_FOR_RANDOM_DRAW_" + i, pid);
+          }
+          if (pname != null) {
+            setFieldentry("POOLNAME_FOR_RANDOM_DRAW_" + i, pname);
+          }
+        }
+      } catch (NumberFormatException e) {
+        // ignore malformed count on export
+      }
+    }
     
     // items
     List items = new ArrayList<>();
@@ -165,6 +186,22 @@ public void setTitle(String title)
     } else {
       QuestionPoolService questionPoolService = new QuestionPoolService();
       items = questionPoolService.getAllItems(Long.parseLong(poolId));
+      if (SectionDataIfc.RANDOM_DRAW_FROM_QUESTIONPOOLS.toString().equals(authorType)) {
+        // append items from additional pools when multiple pools are selected
+        if (randomPoolCount != null) {
+          try {
+            int count = Integer.parseInt(randomPoolCount);
+            for (int i = 1; i < count; i++) {
+              String pid = section.getSectionMetaDataByLabel(SectionDataIfc.POOLID_FOR_RANDOM_DRAW + SectionDataIfc.SEPARATOR_MULTI + i);
+              if (pid != null) {
+                items.addAll(questionPoolService.getAllItems(Long.parseLong(pid)));
+              }
+            }
+          } catch (NumberFormatException e) {
+            // ignore malformed count
+          }
+        }
+      }
     }
     addItems(items);
   }
@@ -468,5 +505,4 @@ public List<Element> getSectionRefs()
 	  return attachment.toString();
   }
 }
-
 
