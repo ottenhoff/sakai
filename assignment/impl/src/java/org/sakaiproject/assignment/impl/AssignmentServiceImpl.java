@@ -4653,11 +4653,6 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
                     nProperties.remove(AssignmentConstants.NEW_ASSIGNMENT_DUE_DATE_SCHEDULED);
                     nProperties.remove(ResourceProperties.PROP_ASSIGNMENT_DUEDATE_CALENDAR_EVENT_ID);
 
-                    if (!nAssignment.getDraft()) {
-                        addImportedDueDateCalendarEvent(oAssignment, nAssignment, nProperties);
-                        addImportedOpenDateAnnouncement(oAssignment, nAssignment, nProperties);
-                    }
-
                     // gradebook-integration link
                     final String associatedGradebookAssignment = nProperties.get(PROP_ASSIGNMENT_ASSOCIATE_GRADEBOOK_ASSIGNMENT);
                     // always clear the old assignments gradebook link
@@ -4820,8 +4815,6 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
                         }
                     }
 
-                    updateAssignment(nAssignment);
-
                     // review service
                     if (oAssignment.getContentReview()) {
                         nAssignment.setContentReview(true);
@@ -4829,9 +4822,15 @@ public class AssignmentServiceImpl implements AssignmentService, EntityTransferr
                         if (StringUtils.isNotBlank(errorMsg)) {
                             log.warn("Error while copying old assignments and creating content review link: {}", errorMsg);
                             nAssignment.setDraft(true);
-                            updateAssignment(nAssignment);
                         }
                     }
+
+                    if (!nAssignment.getDraft()) {
+                        addImportedDueDateCalendarEvent(oAssignment, nAssignment, nProperties);
+                        addImportedOpenDateAnnouncement(oAssignment, nAssignment, nProperties);
+                    }
+
+                    updateAssignment(nAssignment);
 
                     transversalMap.put("assignment/" + oAssignmentId, "assignment/" + nAssignmentId);
                     log.info("Old assignment id: {} - new assignment id: {}", oAssignmentId, nAssignmentId);
