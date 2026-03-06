@@ -22,7 +22,9 @@ import static org.mockito.Mockito.*;
 import org.sakaiproject.alias.api.AliasService;
 import org.sakaiproject.component.api.ServerConfigurationService;
 import org.sakaiproject.content.api.ContentHostingService;
+import org.sakaiproject.scheduling.api.SchedulingService;
 import org.sakaiproject.springframework.orm.hibernate.AdditionalHibernateMappings;
+import org.sakaiproject.test.ImmediateSchedulingService;
 import org.sakaiproject.test.SakaiTestConfiguration;
 import org.sakaiproject.thread_local.api.ThreadLocalManager;
 import org.sakaiproject.tool.api.ActiveToolManager;
@@ -71,11 +73,18 @@ public class PortalTestConfiguration extends SakaiTestConfiguration {
         return mock(ThreadLocalManager.class);
     }
 
+    @Bean(name = "org.sakaiproject.scheduling.api.SchedulingService")
+    public SchedulingService schedulingService() {
+        return new ImmediateSchedulingService();
+    }
+
     @Bean(name = "org.sakaiproject.component.api.ServerConfigurationService")
     public ServerConfigurationService serverConfigurationService() {
         ServerConfigurationService mock = mock(ServerConfigurationService.class);
         when(mock.getInt("portal.max.recent.sites", PortalServiceImpl.DEFAULT_MAX_RECENT_SITES))
             .thenReturn(PortalServiceImpl.DEFAULT_MAX_RECENT_SITES);
+        when(mock.getInt("portal.max.pinned.sites", PortalServiceImpl.DEFAULT_MAX_PINNED_SITES))
+            .thenReturn(PortalServiceImpl.DEFAULT_MAX_PINNED_SITES);
         return mock;
     }
 }
