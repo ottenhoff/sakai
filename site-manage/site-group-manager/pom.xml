@@ -98,6 +98,10 @@
             <artifactId>sakai-kernel-util</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.sakaiproject.portal</groupId>
+            <artifactId>sakai-portal-util</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.sakaiproject.sitemanage</groupId>
             <artifactId>sakai-site-manage-api</artifactId>
         </dependency>

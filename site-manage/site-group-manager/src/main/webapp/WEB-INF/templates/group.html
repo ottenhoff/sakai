@@ -90,7 +90,18 @@
       <div class="row">
           <div class="col-sm-8">
             <label for="groupMembers" class="form-control-label block" th:text="#{groups.assigned.members}">Assigned Members</label>
-            <select name="groupMembers" th:field="*{groupMembers}" id="groupMembers" class="form-control" multiple="multiple">
+            <select name="groupMembers" th:field="*{groupMembers}" id="groupMembers" class="form-control" multiple="multiple"
+              data-sakai-multi-select="true"
+              th:attr="data-sakai-multi-select-label=#{groups.assigned.members},
+                       data-sakai-multi-select-placeholder=#{groups.multiselect.search},
+                       data-sakai-multi-select-clear-label=#{groups.multiselect.clear},
+                       data-sakai-multi-select-no-results=#{groups.multiselect.no.results},
+                       data-sakai-multi-select-remove-label=#{groups.multiselect.remove},
+                       data-sakai-multi-select-selected-count=#{groups.multiselect.selected.count},
+                       data-sakai-multi-select-available-count=#{groups.multiselect.available.count},
+                       data-sakai-multi-select-selected-label=#{groups.multiselect.selected},
+                       data-sakai-multi-select-removed-label=#{groups.multiselect.removed},
+                       data-sakai-multi-select-cleared-label=#{groups.multiselect.cleared}">
               <option th:selected="${groupForm.groupMembers != null && groupForm.groupMembers.contains(siteRole.id)}" th:each="siteRole : ${siteRoleList}" th:value="${siteRole.id}" th:text="|#{groups.role} ${siteRole.id}|"></option>
               <option th:selected="${groupForm.groupMembers != null && groupForm.groupMembers.contains(siteSection.title)}" th:each="siteSection : ${sectionList}" th:value="${siteSection.title}" th:text="|#{groups.section} ${siteSection.title}|"></option>
               <option th:selected="${groupForm.groupMembers != null && groupForm.groupMembers.contains(siteMember.id)}" th:each="siteMember : ${selectableMemberList}" th:value="${siteMember.id}" th:text="|${siteMember.sortName} (${siteMember.eid})|"></option>
@@ -104,6 +115,7 @@
       </div>
     </form>
   </div>
+  <script type="module" th:src="@{~/webcomponents/bundles/sakai-multi-select.js} + ${cdnQuery}"></script>
   <script th:replace="~{fragments/javascript :: groupJs}" />
 </body>
 </html>

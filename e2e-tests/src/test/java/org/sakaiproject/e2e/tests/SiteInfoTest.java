@@ -57,7 +57,26 @@ class SiteInfoTest extends SakaiUiTestBase {
         assertNoTemplateRenderingError();
         assertThat(page.locator("#creategroup-form")).isVisible();
         assertThat(page.locator("#groupTitle")).isVisible();
-        assertThat(page.locator("#groupMembers")).isVisible();
+
+        Locator memberPicker = page.locator("sakai-multi-select").first();
+        assertThat(memberPicker).isVisible();
+        assertThat(page.locator("#groupMembers")).isHidden();
+
+        Locator assignedMembersSearch = memberPicker.locator("input[role='combobox']");
+        assertThat(assignedMembersSearch).isVisible();
+        assignedMembersSearch.fill("Instructor");
+
+        Locator instructorOption = memberPicker.locator("[role='option']")
+            .filter(new Locator.FilterOptions().setHasText(Pattern.compile("Role:.*Instructor", Pattern.CASE_INSENSITIVE)))
+            .first();
+        assertThat(instructorOption).isVisible();
+        instructorOption.click();
+
+        assertThat(memberPicker.locator(".sakai-multi-select__chip")).containsText(Pattern.compile("Instructor", Pattern.CASE_INSENSITIVE));
+        assertThat(page.locator("#groupMembers option:checked")).containsText(Pattern.compile("Instructor", Pattern.CASE_INSENSITIVE));
+
+        memberPicker.locator(".sakai-multi-select__chip-remove").first().click();
+        assertThat(page.locator("#groupMembers option:checked")).hasCount(0);
     }
 
     private String ensureCourseUrl() {

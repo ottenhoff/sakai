@@ -46,6 +46,7 @@ import org.sakaiproject.groupmanager.form.GroupForm;
 import org.sakaiproject.groupmanager.service.SakaiService;
 import org.sakaiproject.messaging.api.MicrosoftMessage;
 import org.sakaiproject.messaging.api.MicrosoftMessagingService;
+import org.sakaiproject.portal.util.PortalUtils;
 import org.sakaiproject.site.api.Group;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SiteService;
@@ -229,6 +230,7 @@ public class GroupController {
         model.addAttribute("groupList", groupList);
         model.addAttribute("sectionList", sectionList);
         model.addAttribute("groupFilterEnabled", sakaiService.getBooleanProperty(SiteManageConstants.PROP_SITEINFO_GROUP_FILTER_ENABLED, true));
+        model.addAttribute("cdnQuery", PortalUtils.getCDNQuery());
 
         return GroupManagerConstants.GROUP_TEMPLATE;
     }

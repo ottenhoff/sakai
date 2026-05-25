@@ -1,0 +1,37 @@
+{
+  "name": "@sakai-ui/sakai-multi-select",
+  "version": "3.0.6",
+  "description": "Sakai multi-select progressive enhancement component",
+  "main": "index.js",
+  "module": "sakai-multi-select.js",
+  "scripts": {
+    "lint:fix": "eslint src --fix",
+    "test": "wtr"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sakaiproject/sakai",
+    "directory": "webcomponents/tool/src/main/frontend/packages/sakai-multi-select"
+  },
+  "files": [
+    "*.js",
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "sakai",
+    "multi-select"
+  ],
+  "author": "The Sakai Project <sakai.user.interface@gmail.com>",
+  "license": "ECL-2.0",
+  "exports": {
+    ".": "./index.js",
+    "./sakai-multi-select.js": "./sakai-multi-select.js"
+  },
+  "dependencies": {
+    "@sakai-ui/sakai-element": "file:../sakai-element"
+  },
+  "homepage": "https://github.com/sakaiproject/sakai/tree/master/webcomponents/tool/src/main/frontend/packages/sakai-multi-select#readme"
+}
