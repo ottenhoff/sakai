@@ -192,6 +192,7 @@ public class PortalServiceImpl implements PortalService, Observer
 					AuthzGroup azg = authzGroupService.getAuthzGroup(event.getResource());
 					azg.getUsers().forEach(u -> {
 						if (!canUserUpdateSite(u, siteId)) {
+							// Remove pinned site if it actually exists and was not explicitly unpinned
 							if (!isSiteUnpinnedByUser(u, siteId)) {
 								removePinnedSite(u, siteId);
 							}
@@ -850,6 +851,8 @@ public class PortalServiceImpl implements PortalService, Observer
 	}
 
 	private boolean isSiteUnpinnedByUser(String userId, String siteId) {
+
+		// Only return true if a pinned site record is found, and it explicitly hasBeenUnpinned
 		return pinnedSiteRepository.findByUserIdAndSiteId(userId, siteId)
 				.map(PinnedSite::getHasBeenUnpinned)
 				.orElse(false);
@@ -1013,7 +1016,9 @@ public class PortalServiceImpl implements PortalService, Observer
 
 		List<String> current = new ArrayList<>(getRecentSites(userId));
 
+		// Clean up excess sites if user has more than the limit
 		while (current.size() >= maxRecentSites && !current.isEmpty()) {
+			// Remove oldest entry (last in the list)
 			String last = current.remove(current.size() - 1);
 			recentSiteRepository.deleteByUserIdAndSiteId(userId, last);
 		}
@@ -1053,6 +1058,7 @@ public class PortalServiceImpl implements PortalService, Observer
 		List<String> favoriteSiteIds = Collections.emptyList();
 		List<String> seenSiteIds = Collections.emptyList();
 
+		// get all site data from preferences
 		Preferences prefs = preferencesService.getPreferences(userId);
 		if (prefs != null) {
 			ResourceProperties props = prefs.getProperties(PreferencesService.SITENAV_PREFS_KEY);
@@ -1073,11 +1079,14 @@ public class PortalServiceImpl implements PortalService, Observer
 		combinedSiteIds.addAll(unPinnedSites);
 		combinedSiteIds.addAll(recentSites);
 
+		// if the user has favorites data in preferences lets migrate
 		if (!favoriteSiteIds.isEmpty() || !seenSiteIds.isEmpty()) {
 			log.debug("Found favorites data performing migration for user [{}]", userId);
+			// check to see if favorites migration is needed
 			log.debug("Adding {} sites from favorites to pinned sites for user [{}]", favoriteSiteIds.size(), userId);
 			combinedSiteIds.addAll(favoriteSiteIds);
 
+			// add seen sites to unpinned, as long as they're not in favorites
 			seenSiteIds.stream()
 					.filter(Predicate.not(favoriteSiteIds::contains))
 					.forEach(sitesToUnpin::add);
@@ -1085,6 +1094,7 @@ public class PortalServiceImpl implements PortalService, Observer
 			log.debug("Adding {} sites from unseen to unpinned sites for user [{}]", seenSiteIds.size(), userId);
 			combinedSiteIds.addAll(sitesToUnpin);
 
+			// delete favorite sites data from preferences
 			removeFavoriteSiteData(userId);
 		}
 
@@ -1092,6 +1102,8 @@ public class PortalServiceImpl implements PortalService, Observer
 				null, SiteService.SortType.NONE, null, userId);
 		combinedSiteIds.addAll(userSiteIds);
 
+		// Bulk-load sites the user can access, then sort combinedSiteIds into pin vs remove
+		// (replaces per-site getSiteVisit / canAccessSite checks).
 		Set<String> accessibleSiteIds = new HashSet<>(siteService.getSiteIds(SiteService.SelectionType.ACCESS, null, null, null,
 				null, SiteService.SortType.NONE, null, userId));
 		for (String id : combinedSiteIds) {
@@ -1104,12 +1116,16 @@ public class PortalServiceImpl implements PortalService, Observer
 			}
 		}
 
+		// remove unpinned as they should not be pinned
 		sitesToPin.removeAll(sitesToUnpin);
+		// any remaining sites should be auto pinned
 		savePinnedSites(userId, new ArrayList<>(sitesToPin));
 
+		// unpin sites not already unpinned
 		sitesToUnpin.removeAll(unPinnedSites);
 		sitesToUnpin.forEach(id -> addPinnedSite(userId, id, false));
 
+		// Remove any special sites from pinned or recent
 		combinedSiteIds.stream()
 				.filter(siteService::isSpecialSite)
 				.forEach(sitesToRemove::add);
