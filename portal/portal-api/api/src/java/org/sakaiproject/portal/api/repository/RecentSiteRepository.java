@@ -15,7 +15,6 @@
  */
 package org.sakaiproject.portal.api.repository;
 
-import java.util.Collection;
 import java.util.List;
 
 import org.sakaiproject.portal.api.model.RecentSite;
@@ -43,6 +42,14 @@ public interface RecentSiteRepository extends SpringCrudRepository<RecentSite, L
      * @return all matching recent sites
      */
     List<RecentSite> findBySiteId(String siteId);
+
+    /**
+     * Delete all recent sites for a user
+     *
+     * @param userId the user whose recent sites will be deleted
+     * @return the number of rows deleted
+     */
+    Integer deleteByUserId(String userId);
 
     /**
      * Delete a recent site for all users

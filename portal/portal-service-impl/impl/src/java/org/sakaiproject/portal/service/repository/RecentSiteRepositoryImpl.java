@@ -63,6 +63,20 @@ public class RecentSiteRepositoryImpl extends SpringCrudRepositoryImpl<RecentSit
 
     @Override
     @Transactional
+    public Integer deleteByUserId(String userId) {
+
+        Session session = sessionFactory.getCurrentSession();
+
+        CriteriaBuilder cb = session.getCriteriaBuilder();
+        CriteriaDelete<RecentSite> delete = cb.createCriteriaDelete(RecentSite.class);
+        Root<RecentSite> recentSite = delete.from(RecentSite.class);
+        delete.where(cb.equal(recentSite.get("userId"), userId));
+
+        return session.createQuery(delete).executeUpdate();
+    }
+
+    @Override
+    @Transactional
     public Integer deleteBySiteId(String siteId) {
 
         Session session = sessionFactory.getCurrentSession();

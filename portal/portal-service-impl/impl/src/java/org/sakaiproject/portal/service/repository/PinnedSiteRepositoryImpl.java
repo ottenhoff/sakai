@@ -36,20 +36,6 @@ public class PinnedSiteRepositoryImpl extends SpringCrudRepositoryImpl<PinnedSit
 
     @Override
     @Transactional(readOnly = true)
-    public List<PinnedSite> findByUserId(String userId) {
-        Session session = sessionFactory.getCurrentSession();
-
-        CriteriaBuilder cb = session.getCriteriaBuilder();
-        CriteriaQuery<PinnedSite> query = cb.createQuery(PinnedSite.class);
-        Root<PinnedSite> pinnedSite = query.from(PinnedSite.class);
-        query.where(cb.equal(pinnedSite.get("userId"), userId))
-                .orderBy(cb.asc(pinnedSite.get("hasBeenUnpinned")), cb.asc(pinnedSite.get("position")), cb.asc(pinnedSite.get("siteId")));
-
-        return session.createQuery(query).list();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<PinnedSite> findByUserIdOrderByPosition(String userId) {
         return findByUserIdAndHasBeenUnpinnedOrderByPosition(userId, false);
     }
