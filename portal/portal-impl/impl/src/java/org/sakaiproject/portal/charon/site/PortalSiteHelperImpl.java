@@ -314,7 +314,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 	}
 
 	private SitePermissionResolver buildPageLockPermissionResolver(Site site) {
-		return site == null ? SitePermissionResolver.EMPTY_BULK : buildPageLockPermissionResolver(List.of(site));
+		return site == null ? SitePermissionResolver.NO_SITES : buildPageLockPermissionResolver(List.of(site));
 	}
 
 	private SitePermissionResolver buildSecurityPermissionResolver(Collection<Site> sites) {
@@ -322,7 +322,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 	}
 
 	private SitePermissionResolver buildSecurityPermissionResolver(Site site) {
-		return site == null ? SitePermissionResolver.EMPTY_BULK : buildSecurityPermissionResolver(List.of(site));
+		return site == null ? SitePermissionResolver.NO_SITES : buildSecurityPermissionResolver(List.of(site));
 	}
 
 	private Map<String, Object> getSiteMap(Site site, String currentSiteId, String userId, boolean pinned, boolean hidden,

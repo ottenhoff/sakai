@@ -13,7 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,263 +27,200 @@ import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.tool.api.ToolManager;
 
 /**
- * Batched site permission resolution for portal navigation rendering.
+ * Preloaded site permissions for portal site-map rendering.
+ *
+ * <p>Portal navigation touches the same sites many times per request. This class loads
+ * authz data once per batch, then answers repeated lookups from in-memory sets instead
+ * of calling {@link SecurityService#unlock} or walking site roles for every page.
+ *
+ * <p>Two factory methods match the two batch shapes portal needs:
+ * <ul>
+ *   <li>{@link #forSecurityChecks} — site maintainer and instructor checks only</li>
+ *   <li>{@link #forPageLocks} — those checks plus role functions for locked-page display</li>
+ * </ul>
+ *
+ * <p>When bulk mode is off for a check, that method falls back to the live service path
+ * (used for single-site rendering and role-swapped sessions).
  */
 public final class SitePermissionResolver {
 
-	public static final SitePermissionResolver DIRECT = new SitePermissionResolver(SitePermissionStrategy.direct());
-	public static final SitePermissionResolver EMPTY_BULK = new SitePermissionResolver(
-			SitePermissionStrategy.bulkAll(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap()));
+	private static final String INSTRUCTOR_FUNCTION = "section.role.instructor";
 
-	private final SitePermissionStrategy strategy;
+	/** Live authz per lookup; used when pages are omitted or only one site is rendered. */
+	public static final SitePermissionResolver DIRECT = create(false, false,
+			Collections.emptySet(), Collections.emptySet(), Collections.emptyMap());
 
-	private SitePermissionResolver(SitePermissionStrategy strategy) {
-		this.strategy = strategy;
+	/** Batched resolver with no sites; security checks deny, page locks see no roles. */
+	public static final SitePermissionResolver NO_SITES = create(true, true,
+			Collections.emptySet(), Collections.emptySet(), Collections.emptyMap());
+
+	/** When true, canUpdateSite/isInstructor use preloaded site ref sets instead of unlock. */
+	private final boolean bulkSecurity;
+	/** When true, page-lock checks use preloaded role functions instead of ToolManager. */
+	private final boolean bulkPageLocks;
+	private final Set<String> siteUpdaterRefs;
+	private final Set<String> instructorRefs;
+	private final Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef;
+
+	private SitePermissionResolver(boolean bulkSecurity, boolean bulkPageLocks,
+			Set<String> siteUpdaterRefs, Set<String> instructorRefs,
+			Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
+		this.bulkSecurity = bulkSecurity;
+		this.bulkPageLocks = bulkPageLocks;
+		this.siteUpdaterRefs = siteUpdaterRefs;
+		this.instructorRefs = instructorRefs;
+		this.nonMaintainerRoleFunctionsBySiteRef = nonMaintainerRoleFunctionsBySiteRef;
 	}
 
+	/** Whether the current user may update the site (site maintainer). */
 	public boolean canUpdateSite(Site site, SecurityService securityService) {
-		return strategy.canUpdate(site, securityService);
+		if (!bulkSecurity) {
+			return securityService.unlock(SiteService.SECURE_UPDATE_SITE, site.getReference());
+		}
+		return siteUpdaterRefs.contains(site.getReference());
 	}
 
+	/** Whether the current user has the instructor role in the site. */
 	public boolean isInstructor(Site site, SecurityService securityService) {
-		return strategy.isInstructor(site, securityService);
+		if (!bulkSecurity) {
+			return securityService.unlock(INSTRUCTOR_FUNCTION, site.getReference());
+		}
+		return instructorRefs.contains(site.getReference());
 	}
 
+	/**
+	 * Whether any non-maintainer role can see the first tool on a page.
+	 * Used to mark pages as locked in the nav when students cannot access them.
+	 */
 	public boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager) {
-		return strategy.isFirstToolVisibleToAnyNonMaintainerRole(site, page, toolManager);
+		if (!bulkPageLocks) {
+			return toolManager.isFirstToolVisibleToAnyNonMaintainerRole(page);
+		}
+		return pageLockVisible(site, page, toolManager);
 	}
 
-	public static SitePermissionResolver forPageLocks(Collection<Site> sites, AuthzGroupService authzGroupService,
-			SecurityService securityService, SessionManager sessionManager) {
-		return build(sites, true, authzGroupService, securityService, sessionManager);
-	}
-
-	public static SitePermissionResolver forSecurityChecks(Collection<Site> sites, AuthzGroupService authzGroupService,
-			SecurityService securityService, SessionManager sessionManager) {
+	/**
+	 * Batch resolver for gradebook visibility, page ordering, and similar security-only checks.
+	 */
+	public static SitePermissionResolver forSecurityChecks(Collection<Site> sites,
+			AuthzGroupService authzGroupService, SecurityService securityService, SessionManager sessionManager) {
 		return build(sites, false, authzGroupService, securityService, sessionManager);
 	}
 
-	private static SitePermissionResolver build(Collection<Site> sites, boolean includeRoleFunctions,
+	/**
+	 * Batch resolver for site-map rendering, including locked-page detection.
+	 */
+	public static SitePermissionResolver forPageLocks(Collection<Site> sites,
+			AuthzGroupService authzGroupService, SecurityService securityService, SessionManager sessionManager) {
+		return build(sites, true, authzGroupService, securityService, sessionManager);
+	}
+
+	private static SitePermissionResolver build(Collection<Site> sites, boolean withPageLockData,
 			AuthzGroupService authzGroupService, SecurityService securityService, SessionManager sessionManager) {
 
-		if (sites == null || sites.isEmpty()) {
-			return EMPTY_BULK;
+		List<String> siteRefs = distinctSiteRefs(sites);
+		if (siteRefs.isEmpty()) {
+			return NO_SITES;
 		}
 
-		List<String> siteRefs = sites.stream()
+		Map<String, Collection<Set<String>>> nonMaintainerRoleFunctions = withPageLockData
+				? nonMaintainerRoleFunctions(authzGroupService.getRoleFunctions(siteRefs))
+				: Collections.emptyMap();
+
+		if (securityService.isUserRoleSwapped()) {
+			// Bulk user checks reflect the swapped role, not the real session user.
+			return create(false, withPageLockData, Collections.emptySet(), Collections.emptySet(),
+					nonMaintainerRoleFunctions);
+		}
+
+		return createForSessionUser(sessionManager.getCurrentSessionUserId(), siteRefs, withPageLockData,
+				nonMaintainerRoleFunctions, authzGroupService, securityService);
+	}
+
+	private static SitePermissionResolver createForSessionUser(String userId, List<String> siteRefs,
+			boolean withPageLockData, Map<String, Collection<Set<String>>> nonMaintainerRoleFunctions,
+			AuthzGroupService authzGroupService, SecurityService securityService) {
+
+		if (StringUtils.isBlank(userId)) {
+			return create(true, withPageLockData, Collections.emptySet(), Collections.emptySet(),
+					nonMaintainerRoleFunctions);
+		}
+
+		if (securityService.isSuperUser()) {
+			Set<String> allSites = new HashSet<>(siteRefs);
+			return create(true, withPageLockData, allSites, allSites, nonMaintainerRoleFunctions);
+		}
+
+		Set<String> siteUpdaterRefs = authzGroupService.getAuthzGroupsIsAllowed(userId,
+				SiteService.SECURE_UPDATE_SITE, siteRefs);
+		Set<String> instructorRefs = authzGroupService.getAuthzGroupsIsAllowed(userId,
+				INSTRUCTOR_FUNCTION, siteRefs);
+		return create(true, withPageLockData, siteUpdaterRefs, instructorRefs, nonMaintainerRoleFunctions);
+	}
+
+	private static SitePermissionResolver create(boolean bulkSecurity, boolean bulkPageLocks,
+			Set<String> siteUpdaterRefs, Set<String> instructorRefs,
+			Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
+		return new SitePermissionResolver(bulkSecurity, bulkPageLocks, siteUpdaterRefs, instructorRefs,
+				nonMaintainerRoleFunctionsBySiteRef);
+	}
+
+	private static List<String> distinctSiteRefs(Collection<Site> sites) {
+		if (sites == null || sites.isEmpty()) {
+			return Collections.emptyList();
+		}
+		return sites.stream()
 				.filter(Objects::nonNull)
 				.map(Site::getReference)
 				.distinct()
 				.collect(Collectors.toList());
-
-		if (siteRefs.isEmpty()) {
-			return EMPTY_BULK;
-		}
-
-		Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef = includeRoleFunctions
-				? filterNonMaintainerRoleFunctions(authzGroupService.getRoleFunctions(siteRefs))
-				: Collections.emptyMap();
-
-		if (securityService.isUserRoleSwapped()) {
-			return new SitePermissionResolver(includeRoleFunctions
-					? SitePermissionStrategy.bulkRoleFunctionsOnly(nonMaintainerRoleFunctionsBySiteRef)
-					: SitePermissionStrategy.direct());
-		}
-
-		String userId = sessionManager.getCurrentSessionUserId();
-		if (StringUtils.isBlank(userId)) {
-			return new SitePermissionResolver(includeRoleFunctions
-					? SitePermissionStrategy.bulkAll(Collections.emptySet(), Collections.emptySet(), nonMaintainerRoleFunctionsBySiteRef)
-					: SitePermissionStrategy.bulkSecurityOnly(Collections.emptySet(), Collections.emptySet()));
-		}
-
-		if (securityService.isSuperUser()) {
-			Set<String> refs = new HashSet<>(siteRefs);
-			return new SitePermissionResolver(includeRoleFunctions
-					? SitePermissionStrategy.bulkAll(refs, refs, nonMaintainerRoleFunctionsBySiteRef)
-					: SitePermissionStrategy.bulkSecurityOnly(refs, refs));
-		}
-
-		Set<String> siteUpdaterRefs = authzGroupService.getAuthzGroupsIsAllowed(userId, SiteService.SECURE_UPDATE_SITE, siteRefs);
-		Set<String> instructorRefs = authzGroupService.getAuthzGroupsIsAllowed(userId, "section.role.instructor", siteRefs);
-		return new SitePermissionResolver(includeRoleFunctions
-				? SitePermissionStrategy.bulkAll(siteUpdaterRefs, instructorRefs, nonMaintainerRoleFunctionsBySiteRef)
-				: SitePermissionStrategy.bulkSecurityOnly(siteUpdaterRefs, instructorRefs));
 	}
 
-	private static Map<String, Collection<Set<String>>> filterNonMaintainerRoleFunctions(
+	/** Strip maintainer roles; portal page-lock logic only considers everyone else. */
+	private static Map<String, Collection<Set<String>>> nonMaintainerRoleFunctions(
 			Map<String, Map<String, Set<String>>> roleFunctionsBySiteRef) {
 		if (roleFunctionsBySiteRef == null || roleFunctionsBySiteRef.isEmpty()) {
 			return Collections.emptyMap();
 		}
 
-		Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef = new HashMap<>();
-		roleFunctionsBySiteRef.forEach((siteRef, roleFunctions) -> {
-			List<Set<String>> nonMaintainerRoleFunctions = Optional.ofNullable(roleFunctions)
-					.orElse(Collections.emptyMap())
-					.values().stream()
+		Map<String, Collection<Set<String>>> result = new HashMap<>();
+		for (Map.Entry<String, Map<String, Set<String>>> entry : roleFunctionsBySiteRef.entrySet()) {
+			Map<String, Set<String>> roleFunctions = entry.getValue();
+			if (roleFunctions == null || roleFunctions.isEmpty()) {
+				result.put(entry.getKey(), Collections.emptyList());
+				continue;
+			}
+			List<Set<String>> nonMaintainer = roleFunctions.values().stream()
 					.filter(functions -> !functions.contains(SiteService.SECURE_UPDATE_SITE))
 					.collect(Collectors.toList());
-			nonMaintainerRoleFunctionsBySiteRef.put(siteRef, nonMaintainerRoleFunctions);
-		});
-
-		return nonMaintainerRoleFunctionsBySiteRef;
+			result.put(entry.getKey(), nonMaintainer);
+		}
+		return result;
 	}
 
-	private interface SitePermissionStrategy {
-
-		boolean canUpdate(Site site, SecurityService securityService);
-
-		boolean isInstructor(Site site, SecurityService securityService);
-
-		boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager);
-
-		static SitePermissionStrategy direct() {
-			return new DirectSecurityStrategy();
-		}
-
-		static SitePermissionStrategy bulkSecurityOnly(Set<String> siteUpdaterRefs, Set<String> instructorRefs) {
-			return new BulkSecurityStrategy(siteUpdaterRefs, instructorRefs);
-		}
-
-		static SitePermissionStrategy bulkRoleFunctionsOnly(
-				Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
-			return new BulkRoleFunctionsStrategy(nonMaintainerRoleFunctionsBySiteRef);
-		}
-
-		static SitePermissionStrategy bulkAll(Set<String> siteUpdaterRefs, Set<String> instructorRefs,
-				Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
-			return new BulkAllStrategy(siteUpdaterRefs, instructorRefs, nonMaintainerRoleFunctionsBySiteRef);
-		}
-	}
-
-	private static boolean canUpdateViaSecurity(Site site, SecurityService securityService) {
-		return securityService.unlock(SiteService.SECURE_UPDATE_SITE, site.getReference());
-	}
-
-	private static boolean isInstructorViaSecurity(Site site, SecurityService securityService) {
-		return securityService.unlock("section.role.instructor", site.getReference());
-	}
-
-	private static final class DirectSecurityStrategy implements SitePermissionStrategy {
-
-		@Override
-		public boolean canUpdate(Site site, SecurityService securityService) {
-			return canUpdateViaSecurity(site, securityService);
-		}
-
-		@Override
-		public boolean isInstructor(Site site, SecurityService securityService) {
-			return isInstructorViaSecurity(site, securityService);
-		}
-
-		@Override
-		public boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager) {
-			return toolManager.isFirstToolVisibleToAnyNonMaintainerRole(page);
-		}
-	}
-
-	private static final class BulkSecurityStrategy implements SitePermissionStrategy {
-
-		private final Set<String> siteUpdaterRefs;
-		private final Set<String> instructorRefs;
-
-		private BulkSecurityStrategy(Set<String> siteUpdaterRefs, Set<String> instructorRefs) {
-			this.siteUpdaterRefs = siteUpdaterRefs;
-			this.instructorRefs = instructorRefs;
-		}
-
-		@Override
-		public boolean canUpdate(Site site, SecurityService securityService) {
-			return siteUpdaterRefs.contains(site.getReference());
-		}
-
-		@Override
-		public boolean isInstructor(Site site, SecurityService securityService) {
-			return instructorRefs.contains(site.getReference());
-		}
-
-		@Override
-		public boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager) {
-			return toolManager.isFirstToolVisibleToAnyNonMaintainerRole(page);
-		}
-	}
-
-	private static final class BulkRoleFunctionsStrategy implements SitePermissionStrategy {
-
-		private final Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef;
-
-		private BulkRoleFunctionsStrategy(Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
-			this.nonMaintainerRoleFunctionsBySiteRef = nonMaintainerRoleFunctionsBySiteRef;
-		}
-
-		@Override
-		public boolean canUpdate(Site site, SecurityService securityService) {
-			return canUpdateViaSecurity(site, securityService);
-		}
-
-		@Override
-		public boolean isInstructor(Site site, SecurityService securityService) {
-			return isInstructorViaSecurity(site, securityService);
-		}
-
-		@Override
-		public boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager) {
-			return matchesBulkRoleFunctions(site, page, toolManager, nonMaintainerRoleFunctionsBySiteRef);
-		}
-	}
-
-	private static final class BulkAllStrategy implements SitePermissionStrategy {
-
-		private final Set<String> siteUpdaterRefs;
-		private final Set<String> instructorRefs;
-		private final Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef;
-
-		private BulkAllStrategy(Set<String> siteUpdaterRefs, Set<String> instructorRefs,
-				Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
-			this.siteUpdaterRefs = siteUpdaterRefs;
-			this.instructorRefs = instructorRefs;
-			this.nonMaintainerRoleFunctionsBySiteRef = nonMaintainerRoleFunctionsBySiteRef;
-		}
-
-		@Override
-		public boolean canUpdate(Site site, SecurityService securityService) {
-			return siteUpdaterRefs.contains(site.getReference());
-		}
-
-		@Override
-		public boolean isInstructor(Site site, SecurityService securityService) {
-			return instructorRefs.contains(site.getReference());
-		}
-
-		@Override
-		public boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager) {
-			return matchesBulkRoleFunctions(site, page, toolManager, nonMaintainerRoleFunctionsBySiteRef);
-		}
-	}
-
-	private static boolean matchesBulkRoleFunctions(Site site, SitePage page, ToolManager toolManager,
-			Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
+	/**
+	 * Bulk equivalent of {@link ToolManager#isFirstToolVisibleToAnyNonMaintainerRole(SitePage)}.
+	 */
+	private boolean pageLockVisible(Site site, SitePage page, ToolManager toolManager) {
 		List<ToolConfiguration> pageTools = page.getTools();
-		List<Set<String>> requiredPermissions = pageTools.size() == 1
-				? toolManager.getRequiredPermissions(pageTools.get(0))
-				: Collections.emptyList();
+		if (pageTools.size() != 1) {
+			return true;
+		}
 
+		List<Set<String>> requiredPermissions = toolManager.getRequiredPermissions(pageTools.get(0));
 		if (requiredPermissions.isEmpty()) {
 			return true;
 		}
 
-		Collection<Set<String>> nonMaintainerRoleFunctions = nonMaintainerRoleFunctionsBySiteRef.getOrDefault(
+		Collection<Set<String>> roleFunctions = nonMaintainerRoleFunctionsBySiteRef.getOrDefault(
 				site.getReference(), Collections.emptyList());
-
-		for (Set<String> permissionSet : requiredPermissions) {
-			for (Set<String> roleFunctions : nonMaintainerRoleFunctions) {
-				if (roleFunctions.containsAll(permissionSet)) {
+		for (Set<String> required : requiredPermissions) {
+			for (Set<String> allowed : roleFunctions) {
+				if (allowed.containsAll(required)) {
 					return true;
 				}
 			}
 		}
-
 		return false;
 	}
 }
