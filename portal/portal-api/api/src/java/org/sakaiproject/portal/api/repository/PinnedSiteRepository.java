@@ -33,12 +33,8 @@ public interface PinnedSiteRepository extends SpringCrudRepository<PinnedSite, L
     List<PinnedSite> findByUserIdAndHasBeenUnpinnedOrderByPosition(String userId, boolean hasBeenUnpinned);
     Optional<PinnedSite> findByUserIdAndSiteId(String userId, String siteId);
     List<PinnedSite> findBySiteId(String siteId);
-
     Integer deleteByUserId(String userId);
-
     Integer deleteBySiteId(String siteId);
-
     Integer deleteByUserIdAndSiteId(String userId, String siteId);
-
     Integer deleteByUserIdAndSiteIds(String userId, List<String> siteIds);
 }
