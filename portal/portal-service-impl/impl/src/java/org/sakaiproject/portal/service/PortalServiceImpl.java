@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
@@ -38,16 +37,9 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.LockSupport;
-import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -91,7 +83,6 @@ import org.sakaiproject.portal.api.model.PinnedSite;
 import org.sakaiproject.portal.api.model.RecentSite;
 import org.sakaiproject.portal.api.repository.PinnedSiteRepository;
 import org.sakaiproject.portal.api.repository.RecentSiteRepository;
-import org.sakaiproject.scheduling.api.SchedulingService;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SiteService;
 import org.sakaiproject.site.api.ToolConfiguration;
@@ -101,8 +92,6 @@ import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.user.api.Preferences;
 import org.sakaiproject.user.api.PreferencesService;
 import org.sakaiproject.user.api.UserDirectoryService;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.Setter;
@@ -110,13 +99,9 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Default portal service implementation.
- *
- * All pinned/recent site mutations must go through this service so the
- * per-user in-memory navigation state stays consistent with the backing
- * repositories.
  */
 @Slf4j
-public class PortalServiceImpl implements PortalService, Observer, DisposableBean, SmartInitializingSingleton
+public class PortalServiceImpl implements PortalService, Observer
 {
 	/**
 	 * Parameter to force state reset
@@ -130,7 +115,6 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 	@Setter private PinnedSiteRepository pinnedSiteRepository;
 	@Setter private PreferencesService preferencesService;
 	@Setter private RecentSiteRepository recentSiteRepository;
-	@Setter private SchedulingService schedulingService;
 	@Setter private SecurityService securityService;
 	@Setter private ServerConfigurationService serverConfigurationService;
 	@Setter private SessionManager sessionManager;
@@ -142,20 +126,12 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 	private Editor noopEditor = new BaseEditor("noop", "noop", "", "");
 	private Map<String, Portal> portals = new ConcurrentHashMap<>();
 	private Map<String, PortalRenderEngine> renderEngines = new ConcurrentHashMap<>();
-	private Map<String, UserPortalNavContext> portalNavContexts = new ConcurrentHashMap<>();
 	private Collection<PortalSubPageNavProvider> portalSubPageNavProviders;
-	private ScheduledFuture<?> portalNavContextEvictionTask;
-	private volatile boolean destroyed;
 
 	public static final int DEFAULT_MAX_RECENT_SITES = 3;
 	public static final int DEFAULT_MAX_PINNED_SITES = 100;
-	private static final int PORTAL_NAV_FLUSH_DELAY_MS = 60 * 1000;
-	private static final int PORTAL_NAV_FLUSH_RETRY_DELAY_MS = 60 * 1000;
-	private static final int PORTAL_NAV_CONTEXT_IDLE_MS = 15 * 60 * 1000;
-	private static final int PORTAL_NAV_DESTROY_DRAIN_TIMEOUT_MS = 5 * 1000;
 
 	public void init() {
-		destroyed = false;
 		try {
 			// configure the parser for castor, before anything else get a chance
 			Properties castorProperties = LocalConfiguration.getDefault();
@@ -169,62 +145,6 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 		}
 		eventTrackingService.addLocalObserver(this);
 		portalSubPageNavProviders = new HashSet<>();
-	}
-
-	@Override
-	public void afterSingletonsInstantiated() {
-		if (destroyed) {
-			return;
-		}
-		portalNavContextEvictionTask = schedulingService.scheduleWithFixedDelay(this::evictIdlePortalNavContexts,
-				PORTAL_NAV_CONTEXT_IDLE_MS,
-				PORTAL_NAV_CONTEXT_IDLE_MS,
-				TimeUnit.MILLISECONDS);
-	}
-
-	@Override
-	public void destroy() {
-		destroyed = true;
-		if (eventTrackingService != null) {
-			eventTrackingService.deleteObserver(this);
-		}
-		if (portalNavContextEvictionTask != null) {
-			portalNavContextEvictionTask.cancel(false);
-			portalNavContextEvictionTask = null;
-		}
-		List<UserPortalNavContext> contextsToDrain = new ArrayList<>(portalNavContexts.values());
-		contextsToDrain.forEach(this::drainPortalNavContextOnDestroy);
-		portalNavContexts.clear();
-	}
-
-	private void drainPortalNavContextOnDestroy(UserPortalNavContext context) {
-		cancelScheduledPortalNavFlush(context);
-		long deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(PORTAL_NAV_DESTROY_DRAIN_TIMEOUT_MS);
-		while (true) {
-			if (!waitForPortalNavFlush(context, deadlineNanos)) {
-				log.warn("Timed out waiting for in-flight portal navigation flush during shutdown for user [{}]", context.userId);
-				return;
-			}
-			if (!hasPendingPortalNavFlush(context)) {
-				return;
-			}
-			if (System.nanoTime() >= deadlineNanos) {
-				log.warn("Timed out draining portal navigation state during shutdown for user [{}]", context.userId);
-				return;
-			}
-			flushPortalNavContext(context, true);
-		}
-	}
-
-	private boolean waitForPortalNavFlush(UserPortalNavContext context, long deadlineNanos) {
-		while (context.flushInProgress.get()) {
-			long remainingNanos = deadlineNanos - System.nanoTime();
-			if (remainingNanos <= 0) {
-				return false;
-			}
-			LockSupport.parkNanos(Math.min(TimeUnit.MILLISECONDS.toNanos(1), remainingNanos));
-		}
-		return true;
 	}
 
 	@Override
@@ -246,20 +166,10 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 				}
 				break;
 			}
-			case UsageSessionService.EVENT_LOGOUT: {
-				String userId = event.getUserId();
-				if (StringUtils.isNotBlank(userId)) {
-					UserPortalNavContext context = portalNavContexts.get(userId);
-					if (context != null) {
-						flushPortalNavContext(context, true);
-					}
-				}
-				break;
-			}
 			case SiteService.EVENT_USER_SITE_MEMBERSHIP_ADD: {
                 String userId = userDirectoryService.idFromReference(event.getResource());
                 if (canUserUpdateSite(userId, event.getContext()) || isUserActiveMemberInPublishedSite(userId, event.getContext())) {
-                    addPinnedSite(userId, event.getContext(), true, false);
+                    addPinnedSite(userId, event.getContext(), true);
                 }
 				break;
 			}
@@ -270,7 +180,7 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 					AuthzGroup azg = authzGroupService.getAuthzGroup(event.getResource());
 					azg.getUsers().stream()
 							.filter(u -> !isSiteUnpinnedByUser(u, siteId) && (canUserUpdateSite(u, siteId) || isUserActiveMemberInSite(u, siteId)))
-							.forEach(u -> addPinnedSite(u, siteId, true, false));
+							.forEach(u -> addPinnedSite(u, siteId, true));
 				} catch (GroupNotDefinedException gnde) {
 					log.warn("Could not access AuthzGroup with id [{}], {}", event.getResource(), gnde.toString());
 				}
@@ -282,13 +192,16 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 					AuthzGroup azg = authzGroupService.getAuthzGroup(event.getResource());
 					azg.getUsers().forEach(u -> {
 						if (!canUserUpdateSite(u, siteId)) {
-							// Remove pinned site if it actually exists and was not explicitly unpinned
 							if (!isSiteUnpinnedByUser(u, siteId)) {
-								removePinnedSite(u, siteId, false);
+								removePinnedSite(u, siteId);
 							}
 
-							if (hasRecentSite(u, siteId)) {
-								removeRecentSite(u, siteId, false);
+							List<RecentSite> recentSites = recentSiteRepository.findByUserId(u);
+							for (RecentSite recentSite : recentSites) {
+								if (StringUtils.equals(recentSite.getSiteId(), siteId)) {
+									removeRecentSite(u, siteId);
+									break;
+								}
 							}
 						}
 					});
@@ -306,16 +219,6 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 						.map(RecentSite::getUserId)
 						.collect(Collectors.toSet());
 
-				portalNavContexts.values().forEach(context -> {
-					PortalNavState portalNavState = context.portalNavContextState.get().portalNavState;
-					if (portalNavState.pinnedSitesBySiteId.containsKey(event.getContext())) {
-						pinnedUserIds.add(context.userId);
-					}
-					if (portalNavState.recentSitesBySiteId.containsKey(event.getContext())) {
-						recentUserIds.add(context.userId);
-					}
-				});
-
 				if (recentUserIds.isEmpty() && pinnedUserIds.isEmpty()) {
 					return;
 				}
@@ -326,18 +229,18 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 
 					pinnedUserIds.forEach(userId -> {
 						if (!siteUsers.contains(userId)) {
-							removePinnedSite(userId, event.getContext(), false);
+							pinnedSiteRepository.deleteByUserIdAndSiteId(userId, event.getContext());
 						}
 					});
 					recentUserIds.forEach(userId -> {
 						if (!siteUsers.contains(userId)) {
-							removeRecentSite(userId, event.getContext(), false);
+							recentSiteRepository.deleteByUserIdAndSiteId(userId, event.getContext());
 						}
 					});
 					siteUsers.forEach(userId -> {
 						if (!pinnedUserIds.contains(userId)
 								&& (canUserUpdateSite(userId, event.getContext()) || isUserActiveMemberInPublishedSite(userId, event.getContext()))) {
-							addPinnedSite(userId, event.getContext(), true, false);
+							addPinnedSite(userId, event.getContext(), true);
 						}
 					});
 				} catch (IdUnusedException idue) {
@@ -347,17 +250,8 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 			}
 			case SiteService.SECURE_REMOVE_SITE:
 			case SiteService.SOFT_DELETE_SITE: {
-				String siteId = event.getContext();
-				List<String> siteIdsToRemove = Collections.singletonList(siteId);
-				List<UserPortalNavContext> contextsToFlush = new ArrayList<>();
-				portalNavContexts.values().forEach(context -> {
-					if (mutatePortalNavContext(context, portalNavState -> removeSitesFromPortalNavState(siteIdsToRemove, portalNavState))) {
-						contextsToFlush.add(context);
-					}
-				});
-				contextsToFlush.forEach(this::schedulePortalNavFlush);
-				pinnedSiteRepository.deleteBySiteId(siteId);
-				recentSiteRepository.deleteBySiteId(siteId);
+				pinnedSiteRepository.deleteBySiteId(event.getContext());
+				recentSiteRepository.deleteBySiteId(event.getContext());
 				break;
 			}
 			default:
@@ -912,407 +806,124 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 		}
 	}
 
-	private PortalNavState readPortalNavState(String userId) {
+	@Transactional
+	@Override
+	public void addPinnedSite(final String userId, final String siteId, final boolean isPinned) {
 
-		List<PinnedSite> pinnedSiteRows = pinnedSiteRepository.findByUserId(userId);
-		Map<String, PinnedNavSite> pinnedSitesBySiteId = new HashMap<>();
-		List<String> pinnedSiteIds = new ArrayList<>();
-		List<String> unpinnedSiteIds = new ArrayList<>();
-
-		for (PinnedSite pinnedSite : pinnedSiteRows) {
-			PinnedNavSite pinnedNavSite = toPinnedNavSite(pinnedSite);
-			pinnedSitesBySiteId.put(pinnedSite.getSiteId(), pinnedNavSite);
-			if (pinnedNavSite.hasBeenUnpinned()) {
-				unpinnedSiteIds.add(pinnedSite.getSiteId());
-			} else {
-				pinnedSiteIds.add(pinnedSite.getSiteId());
-			}
-		}
-
-		List<RecentSite> recentSites = recentSiteRepository.findByUserId(userId);
-		Map<String, RecentNavSite> recentSitesBySiteId = new HashMap<>();
-		List<String> recentSiteIds = new ArrayList<>();
-		for (RecentSite recentSite : recentSites) {
-			recentSitesBySiteId.put(recentSite.getSiteId(), new RecentNavSite(recentSite.getCreated()));
-			recentSiteIds.add(recentSite.getSiteId());
-		}
-
-		return new PortalNavState(pinnedSitesBySiteId, pinnedSiteIds, unpinnedSiteIds, recentSitesBySiteId, recentSiteIds);
-	}
-
-	private UserPortalNavContext getOrCreatePortalNavContext(String userId) {
-		return portalNavContexts.computeIfAbsent(userId, id -> new UserPortalNavContext(id, readPortalNavState(id)));
-	}
-
-	private void mutatePortalNavState(String userId, boolean createContextIfAbsent, Consumer<MutablePortalNavState> mutation) {
-		mutatePortalNavStateWithFlushFlag(userId, createContextIfAbsent, portalNavState -> {
-			mutation.accept(portalNavState);
-			return false;
-		});
-	}
-
-	private void mutatePortalNavStateWithFlushFlag(String userId, boolean createContextIfAbsent, Function<MutablePortalNavState, Boolean> mutation) {
-		UserPortalNavContext context = portalNavContexts.get(userId);
-
-		if (context == null && createContextIfAbsent) {
-			context = getOrCreatePortalNavContext(userId);
-		}
-
-		if (context == null) {
-			UserPortalNavContext created = new UserPortalNavContext(userId, readPortalNavState(userId));
-			UserPortalNavContext existing = portalNavContexts.putIfAbsent(userId, created);
-			context = existing != null ? existing : created;
-			boolean changed = mutatePortalNavContextWithFlushFlag(context, mutation);
-			if (existing == null) {
-				if (changed) {
-					flushPortalNavContext(context, true);
-				} else {
-					portalNavContexts.remove(userId, context);
-				}
-			} else if (changed) {
-				schedulePortalNavFlush(context);
-			}
-			return;
-		}
-
-		if (mutatePortalNavContextWithFlushFlag(context, mutation)) {
-			schedulePortalNavFlush(context);
-		}
-	}
-
-	private boolean mutatePortalNavContext(UserPortalNavContext context, Consumer<MutablePortalNavState> mutation) {
-		return mutatePortalNavContextWithFlushFlag(context, portalNavState -> {
-			mutation.accept(portalNavState);
-			return false;
-		});
-	}
-
-	private boolean mutatePortalNavContextWithFlushFlag(UserPortalNavContext context, Function<MutablePortalNavState, Boolean> mutation) {
-		touchPortalNavContext(context);
-
-		while (true) {
-			PortalNavContextState current = context.portalNavContextState.get();
-			MutablePortalNavState mutablePortalNavState = current.portalNavState.toMutable();
-			boolean removeFavoriteSiteDataAfterFlush = Boolean.TRUE.equals(mutation.apply(mutablePortalNavState));
-			PortalNavState updatedPortalNavState = mutablePortalNavState.toImmutable();
-			boolean portalNavChanged = !portalNavStatesEqual(current.portalNavState, updatedPortalNavState);
-			boolean favoriteFlagChanged = removeFavoriteSiteDataAfterFlush && !current.removeFavoriteSiteDataAfterFlush;
-
-			if (!portalNavChanged && !favoriteFlagChanged) {
-				return false;
-			}
-
-			PortalNavContextState updated = new PortalNavContextState(
-					portalNavChanged ? updatedPortalNavState : current.portalNavState,
-					current.version + 1,
-					current.removeFavoriteSiteDataAfterFlush || removeFavoriteSiteDataAfterFlush);
-
-			if (context.portalNavContextState.compareAndSet(current, updated)) {
-				return true;
-			}
-		}
-	}
-
-	private void schedulePortalNavFlush(UserPortalNavContext context) {
-		schedulePortalNavFlush(context, PORTAL_NAV_FLUSH_DELAY_MS);
-	}
-
-	private void schedulePortalNavFlush(UserPortalNavContext context, int delayMs) {
-		if (destroyed) {
-			return;
-		}
-
-		touchPortalNavContext(context);
-		if (!hasPendingPortalNavFlush(context)) {
-			cancelScheduledPortalNavFlush(context);
-			removePortalNavContextIfEligible(context);
-			return;
-		}
-		if (context.flushInProgress.get()) {
-			return;
-		}
-
-		boolean flushNow = delayMs <= 0 || schedulingService == null;
-		if (flushNow) {
-			cancelScheduledPortalNavFlush(context);
-			flushPortalNavContext(context, false);
-			return;
-		}
-
-		ScheduledFuture<?> scheduledFlush = schedulingService.schedule(() -> flushPortalNavContext(context, false), delayMs, TimeUnit.MILLISECONDS);
-		ScheduledFuture<?> previous = context.scheduledFlush.getAndSet(scheduledFlush);
-		if (previous != null) {
-			previous.cancel(false);
-		}
-	}
-
-	private void evictIdlePortalNavContexts() {
-		long idleBefore = System.currentTimeMillis() - PORTAL_NAV_CONTEXT_IDLE_MS;
-		portalNavContexts.values().forEach(context -> {
-			if (context.lastAccess.get() < idleBefore) {
-				flushPortalNavContext(context, true);
-			}
-		});
-	}
-
-	private void flushPortalNavContext(UserPortalNavContext context, boolean evictAfterFlush) {
-		touchPortalNavContext(context);
-		if (evictAfterFlush) {
-			context.evictAfterFlush.set(true);
-		}
-		cancelScheduledPortalNavFlush(context);
-
-		if (!hasPendingPortalNavFlush(context)) {
-			removePortalNavContextIfEligible(context);
-			return;
-		}
-
-		if (!context.flushInProgress.compareAndSet(false, true)) {
-			return;
-		}
-
-		PortalNavContextState portalNavContextState = context.portalNavContextState.get();
-		if (portalNavContextState.version <= context.flushedVersion.get()) {
-			context.flushInProgress.set(false);
-			removePortalNavContextIfEligible(context);
-			return;
-		}
-
-		boolean success = false;
-		try {
-			persistPortalNavState(context.userId, portalNavContextState.portalNavState);
-			success = true;
-		} catch (Exception e) {
-			log.warn("Could not persist portal navigation state for user [{}], {}", context.userId, e.toString(), e);
-		}
-		boolean favoriteSiteDataRemoved = false;
-		if (success && portalNavContextState.removeFavoriteSiteDataAfterFlush) {
-			try {
-				removeFavoriteSiteData(context.userId);
-				favoriteSiteDataRemoved = true;
-			} catch (Exception e) {
-				log.warn("Could not clear legacy favorite site data for user [{}], {}", context.userId, e.toString(), e);
-			}
-		}
-
-		int nextDelay = PORTAL_NAV_FLUSH_DELAY_MS;
-		if (success) {
-			updateFlushedVersion(context, portalNavContextState.version);
-			if (portalNavContextState.removeFavoriteSiteDataAfterFlush) {
-				if (favoriteSiteDataRemoved) {
-					clearRemoveFavoriteSiteDataAfterFlush(context);
-				} else {
-					nextDelay = PORTAL_NAV_FLUSH_RETRY_DELAY_MS;
-					markPortalNavFlushRetryNeeded(context, true);
-				}
-			}
-		} else {
-			nextDelay = PORTAL_NAV_FLUSH_RETRY_DELAY_MS;
-		}
-
-		context.flushInProgress.set(false);
-
-		if (destroyed) {
-			return;
-		}
-
-		if (hasPendingPortalNavFlush(context)) {
-			schedulePortalNavFlush(context, nextDelay);
-			return;
-		}
-
-		removePortalNavContextIfEligible(context);
-	}
-
-	private void persistPortalNavState(String userId, PortalNavState portalNavState) {
-		persistPinnedSites(userId, portalNavState);
-		persistRecentSites(userId, portalNavState);
-	}
-
-	private void persistPinnedSites(String userId, PortalNavState portalNavState) {
-		Map<String, PinnedSite> existingPinnedSitesBySiteId = pinnedSiteRepository.findByUserId(userId).stream()
-				.collect(Collectors.toMap(PinnedSite::getSiteId, Function.identity()));
-
-		for (Map.Entry<String, PinnedNavSite> entry : portalNavState.pinnedSitesBySiteId.entrySet()) {
-			String siteId = entry.getKey();
-			PinnedNavSite pinnedSite = entry.getValue();
-			PinnedSite existing = existingPinnedSitesBySiteId.remove(siteId);
-			PinnedSite entity = toPinnedSite(userId, siteId, pinnedSite, existing != null ? existing.getId() : null);
-
-			if (existing == null) {
-				pinnedSiteRepository.save(entity);
-				continue;
-			}
-
-			if (existing.getPosition() != pinnedSite.position()
-					|| Boolean.TRUE.equals(existing.getHasBeenUnpinned()) != pinnedSite.hasBeenUnpinned()) {
-				pinnedSiteRepository.save(entity);
-			}
-		}
-
-		existingPinnedSitesBySiteId.values()
-				.forEach(pinnedSite -> pinnedSiteRepository.deleteByUserIdAndSiteId(userId, pinnedSite.getSiteId()));
-	}
-
-	private void persistRecentSites(String userId, PortalNavState portalNavState) {
-		Map<String, RecentSite> existingRecentSitesBySiteId = recentSiteRepository.findByUserId(userId).stream()
-				.collect(Collectors.toMap(RecentSite::getSiteId, Function.identity()));
-
-		for (String siteId : portalNavState.recentSiteIds) {
-			RecentNavSite recentSite = portalNavState.recentSitesBySiteId.get(siteId);
-			if (recentSite == null) {
-				continue;
-			}
-
-			RecentSite existing = existingRecentSitesBySiteId.remove(siteId);
-			RecentSite entity = toRecentSite(userId, siteId, recentSite, existing != null ? existing.getId() : null);
-
-			if (existing == null) {
-				recentSiteRepository.save(entity);
-				continue;
-			}
-
-			if (!existing.getCreated().equals(recentSite.created())) {
-				recentSiteRepository.save(entity);
-			}
-		}
-
-		existingRecentSitesBySiteId.values()
-				.forEach(recentSite -> recentSiteRepository.deleteByUserIdAndSiteId(userId, recentSite.getSiteId()));
-	}
-
-	private void addRecentSite(String userId, String siteId, Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
-
-		if (StringUtils.isAnyBlank(userId, siteId)
-				|| siteService.isUserSite(siteId)
-				|| SiteService.SITE_ERROR.equals(siteId)) {
-			return;
-		}
-
-		portalNavState.recentSiteIds.remove(siteId);
-
-		int maxRecentSites = serverConfigurationService.getInt("portal.max.recent.sites", DEFAULT_MAX_RECENT_SITES);
-		if (maxRecentSites <= 0) {
-			portalNavState.recentSitesBySiteId.remove(siteId);
-			return;
-		}
-
-		portalNavState.recentSitesBySiteId.put(siteId, new RecentNavSite(recentSiteTimestamp));
-		portalNavState.recentSiteIds.add(0, siteId);
-		while (portalNavState.recentSiteIds.size() > maxRecentSites) {
-			String removedSiteId = portalNavState.recentSiteIds.remove(portalNavState.recentSiteIds.size() - 1);
-			portalNavState.recentSitesBySiteId.remove(removedSiteId);
-		}
-	}
-
-	private void removeRecentSiteFromPortalNavState(String siteId, MutablePortalNavState portalNavState) {
-		portalNavState.recentSiteIds.remove(siteId);
-		portalNavState.recentSitesBySiteId.remove(siteId);
-	}
-
-	private void persistPinnedSiteOrder(String userId, List<String> pinnedSiteIds, MutablePortalNavState portalNavState) {
-
-		for (int i = 0; i < pinnedSiteIds.size(); i++) {
-			String siteId = pinnedSiteIds.get(i);
-			portalNavState.pinnedSitesBySiteId.put(siteId, new PinnedNavSite(i, false));
-			portalNavState.unpinnedSiteIds.remove(siteId);
-		}
-
-		portalNavState.pinnedSiteIds.clear();
-		portalNavState.pinnedSiteIds.addAll(pinnedSiteIds);
-	}
-
-	private void markSitesUnpinned(String userId, List<String> desiredPinnedSiteIds, Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
-
-		List<String> sitesToUnpin = new ArrayList<>(portalNavState.pinnedSiteIds);
-		sitesToUnpin.removeIf(desiredPinnedSiteIds::contains);
-
-		for (String siteId : sitesToUnpin) {
-			portalNavState.pinnedSitesBySiteId.put(siteId, new PinnedNavSite(PinnedSite.UNPINNED_POSITION, true));
-			if (!portalNavState.unpinnedSiteIds.contains(siteId)) {
-				portalNavState.unpinnedSiteIds.add(siteId);
-			}
-			addRecentSite(userId, siteId, recentSiteTimestamp, portalNavState);
-		}
-	}
-
-	private void addPinnedSite(String userId, String siteId, boolean isPinned, Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
-		List<String> pinnedSiteIds = new ArrayList<>(portalNavState.pinnedSiteIds);
+		if (StringUtils.isAnyBlank(userId, siteId) || siteService.isUserSite(siteId)) return;
 
 		if (isPinned) {
-			pinnedSiteIds.remove(siteId);
-			pinnedSiteIds.add(siteId);
-			savePinnedSites(userId, pinnedSiteIds, recentSiteTimestamp, portalNavState);
-			return;
-		}
-
-		portalNavState.pinnedSitesBySiteId.put(siteId, new PinnedNavSite(PinnedSite.UNPINNED_POSITION, true));
-
-		pinnedSiteIds.remove(siteId);
-		if (!portalNavState.unpinnedSiteIds.contains(siteId)) {
-			portalNavState.unpinnedSiteIds.add(siteId);
-		}
-		persistPinnedSiteOrder(userId, pinnedSiteIds, portalNavState);
-		addRecentSite(userId, siteId, recentSiteTimestamp, portalNavState);
-	}
-
-	private void addPinnedSite(String userId, String siteId, boolean isPinned, boolean createContextIfAbsent) {
-		if (!isValidPinnedSiteRequest(userId, siteId)) {
-			return;
-		}
-
-		Instant recentSiteTimestamp = Instant.now();
-		mutatePortalNavState(userId, createContextIfAbsent,
-				portalNavState -> addPinnedSite(userId, siteId, isPinned, recentSiteTimestamp, portalNavState));
-	}
-
-	private void unpinSites(String userId, Collection<String> siteIds, Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
-
-		List<String> pinnedSiteIds = new ArrayList<>(portalNavState.pinnedSiteIds);
-		List<String> newlyUnpinnedSiteIds = new ArrayList<>();
-
-		for (String siteId : siteIds) {
-			if (!isValidPinnedSiteRequest(userId, siteId)) {
-				continue;
+			int maxPinnedSites = getMaxPinnedSites();
+			if (maxPinnedSites <= 0) {
+				return;
 			}
-
-			portalNavState.pinnedSitesBySiteId.put(siteId, new PinnedNavSite(PinnedSite.UNPINNED_POSITION, true));
-
-			pinnedSiteIds.remove(siteId);
-			if (!portalNavState.unpinnedSiteIds.contains(siteId)) {
-				portalNavState.unpinnedSiteIds.add(siteId);
+			List<PinnedSite> pinned = pinnedSiteRepository.findByUserIdOrderByPosition(userId);
+			boolean alreadyPinned = pinned.stream().anyMatch(p -> siteId.equals(p.getSiteId()));
+			if (!alreadyPinned) {
+				while (pinned.size() >= maxPinnedSites) {
+					addPinnedSite(userId, pinned.remove(0).getSiteId(), false);
+				}
 			}
-			newlyUnpinnedSiteIds.add(siteId);
 		}
 
-		if (newlyUnpinnedSiteIds.isEmpty()) {
+		PinnedSite pin = pinnedSiteRepository.findByUserIdAndSiteId(userId, siteId)
+			.orElseGet(() -> new PinnedSite(userId, siteId));
+
+		int position = PinnedSite.UNPINNED_POSITION;
+		if (isPinned) {
+			List<PinnedSite> pinned = pinnedSiteRepository.findByUserIdOrderByPosition(userId);
+			position = !pinned.isEmpty() ? pinned.get(pinned.size() - 1).getPosition() + 1 : 1;
+		}
+
+		pin.setPosition(position);
+		pin.setHasBeenUnpinned(!isPinned);
+		pinnedSiteRepository.save(pin);
+
+		if (!isPinned) {
+			addRecentSite(userId, siteId);
+			List<PinnedSite> pinnedSites = pinnedSiteRepository.findByUserIdOrderByPosition(userId);
+			for (int i = 0; i < pinnedSites.size(); i++) {
+				PinnedSite pinnedSite = pinnedSites.get(i);
+				pinnedSite.setPosition(i);
+			}
+		}
+	}
+
+	private boolean isSiteUnpinnedByUser(String userId, String siteId) {
+		return pinnedSiteRepository.findByUserIdAndSiteId(userId, siteId)
+				.map(PinnedSite::getHasBeenUnpinned)
+				.orElse(false);
+	}
+
+	@Transactional
+	@Override
+	public void removePinnedSite(String userId, String siteId) {
+
+		if (StringUtils.isBlank(userId)) {
 			return;
 		}
 
-		persistPinnedSiteOrder(userId, pinnedSiteIds, portalNavState);
-		newlyUnpinnedSiteIds.forEach(siteId -> addRecentSite(userId, siteId, recentSiteTimestamp, portalNavState));
+		pinnedSiteRepository.deleteByUserIdAndSiteId(userId, siteId);
+
+		List<PinnedSite> pinnedSites = pinnedSiteRepository.findByUserIdOrderByPosition(userId);
+		for (int i = 0; i < pinnedSites.size(); i++) {
+			PinnedSite pinnedSite = pinnedSites.get(i);
+			pinnedSite.setPosition(i);
+		}
 	}
 
-	private void savePinnedSites(String userId, List<String> siteIds, Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
+	@Transactional
+	@Override
+	public void savePinnedSites(String userId, List<String> siteIds) {
+		if (StringUtils.isBlank(userId) || siteIds == null) return;
+
 		List<String> desiredPinnedSiteIds = normalizePinnedSiteIds(siteIds);
+		List<String> currentPinned = getPinnedSites(userId);
 
-		List<String> currentPinnedSiteIds = new ArrayList<>(portalNavState.pinnedSiteIds);
-		List<String> finalPinnedSiteIds = currentPinnedSiteIds.stream()
-				.filter(desiredPinnedSiteIds::contains)
+		List<String> sitesToUnpin = new ArrayList<>();
+		currentPinned.stream()
+				.filter(Predicate.not(desiredPinnedSiteIds::contains))
+				.forEach(sitesToUnpin::add);
+
+		List<String> sitesToPin = desiredPinnedSiteIds.stream()
+				.filter(Predicate.not(currentPinned::contains))
 				.collect(Collectors.toCollection(ArrayList::new));
 
-		desiredPinnedSiteIds.stream()
-				.filter(Predicate.not(finalPinnedSiteIds::contains))
-				.forEach(finalPinnedSiteIds::add);
+		sitesToUnpin.forEach(siteId -> addPinnedSite(userId, siteId, false));
 
-		markSitesUnpinned(userId, desiredPinnedSiteIds, recentSiteTimestamp, portalNavState);
-		persistPinnedSiteOrder(userId, finalPinnedSiteIds, portalNavState);
+		int start = currentPinned.size() - sitesToUnpin.size();
+		IntStream.range(0, sitesToPin.size()).forEach(i -> {
+			String siteId = sitesToPin.get(i);
+			PinnedSite pin = pinnedSiteRepository.findByUserIdAndSiteId(userId, siteId).orElseGet(() -> new PinnedSite(userId, siteId));
+			pin.setPosition(i + start);
+			pin.setHasBeenUnpinned(false);
+			pinnedSiteRepository.save(pin);
+		});
 	}
 
-	private void savePinnedSitesForUser(String userId, List<String> siteIds, Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
-		List<String> desiredPinnedSiteIds = normalizePinnedSiteIds(siteIds);
-		markSitesUnpinned(userId, desiredPinnedSiteIds, recentSiteTimestamp, portalNavState);
-		persistPinnedSiteOrder(userId, desiredPinnedSiteIds, portalNavState);
+	@Transactional
+	@Override
+	public void reorderPinnedSites(String userId, List<String> siteIds) {
+		if (StringUtils.isBlank(userId) || siteIds == null) return;
+
+		List<String> orderedSiteIds = new ArrayList<>(normalizePinnedSiteIds(siteIds));
+		if (serverConfigurationService.getBoolean("portal.new.pinned.sites.top", false)) {
+			Collections.reverse(orderedSiteIds);
+		}
+
+		pinnedSiteRepository.deleteByUserId(userId);
+
+		for (int i = 0; i < orderedSiteIds.size(); i++) {
+			PinnedSite pin = new PinnedSite();
+			pin.setUserId(userId);
+			pin.setSiteId(orderedSiteIds.get(i));
+			pin.setPosition(i);
+			pinnedSiteRepository.save(pin);
+		}
+	}
+
+	private int getMaxPinnedSites() {
+		return serverConfigurationService.getInt("portal.max.pinned.sites", DEFAULT_MAX_PINNED_SITES);
 	}
 
 	private List<String> normalizePinnedSiteIds(List<String> siteIds) {
@@ -1321,7 +932,7 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 				|| siteService.isSpecialSite(siteId)
 				|| siteService.isUserSite(siteId));
 
-		int maxPinnedSites = serverConfigurationService.getInt("portal.max.pinned.sites", DEFAULT_MAX_PINNED_SITES);
+		int maxPinnedSites = getMaxPinnedSites();
 		if (maxPinnedSites <= 0) {
 			return new ArrayList<>();
 		}
@@ -1338,103 +949,6 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 		return normalizedPinnedSiteIds;
 	}
 
-	private void removePinnedSiteFromPortalNavState(String userId, String siteId, MutablePortalNavState portalNavState) {
-		portalNavState.pinnedSiteIds.remove(siteId);
-		portalNavState.unpinnedSiteIds.remove(siteId);
-		portalNavState.pinnedSitesBySiteId.remove(siteId);
-		persistPinnedSiteOrder(userId, new ArrayList<>(portalNavState.pinnedSiteIds), portalNavState);
-	}
-
-	private void removePinnedSite(String userId, String siteId, boolean createContextIfAbsent) {
-		if (StringUtils.isBlank(userId)) {
-			return;
-		}
-
-		mutatePortalNavState(userId, createContextIfAbsent,
-				portalNavState -> removePinnedSiteFromPortalNavState(userId, siteId, portalNavState));
-	}
-
-	private void removeSitesFromPortalNavState(List<String> siteIds, MutablePortalNavState portalNavState) {
-		siteIds.forEach(siteId -> {
-			portalNavState.pinnedSiteIds.remove(siteId);
-			portalNavState.unpinnedSiteIds.remove(siteId);
-			portalNavState.pinnedSitesBySiteId.remove(siteId);
-			portalNavState.recentSiteIds.remove(siteId);
-			portalNavState.recentSitesBySiteId.remove(siteId);
-		});
-
-		for (int i = 0; i < portalNavState.pinnedSiteIds.size(); i++) {
-			String pinnedSiteId = portalNavState.pinnedSiteIds.get(i);
-			portalNavState.pinnedSitesBySiteId.put(pinnedSiteId, new PinnedNavSite(i, false));
-		}
-	}
-
-	private boolean isValidPinnedSiteRequest(String userId, String siteId) {
-		return StringUtils.isNoneBlank(userId, siteId) && !siteService.isUserSite(siteId);
-	}
-
-	@Transactional
-	@Override
-	public void addPinnedSite(final String userId, final String siteId, final boolean isPinned) {
-		addPinnedSite(userId, siteId, isPinned, true);
-	}
-
-	private boolean isSiteUnpinnedByUser(String userId, String siteId) {
-		UserPortalNavContext context = portalNavContexts.get(userId);
-		if (context != null) {
-			PortalNavState portalNavState = context.portalNavContextState.get().portalNavState;
-			PinnedNavSite pinnedSite = portalNavState.pinnedSitesBySiteId.get(siteId);
-			return pinnedSite != null && pinnedSite.hasBeenUnpinned();
-		}
-
-		return pinnedSiteRepository.findByUserIdAndSiteId(userId, siteId)
-				.map(PinnedSite::getHasBeenUnpinned)
-				.orElse(false);
-	}
-
-	private boolean hasRecentSite(String userId, String siteId) {
-		UserPortalNavContext context = portalNavContexts.get(userId);
-		if (context != null) {
-			return context.portalNavContextState.get().portalNavState.recentSitesBySiteId.containsKey(siteId);
-		}
-
-		return recentSiteRepository.findByUserId(userId).stream()
-				.anyMatch(recentSite -> StringUtils.equals(recentSite.getSiteId(), siteId));
-	}
-
-	@Transactional
-	@Override
-	public void removePinnedSite(String userId, String siteId) {
-		removePinnedSite(userId, siteId, true);
-	}
-
-	@Transactional
-	@Override
-	public void savePinnedSites(String userId, List<String> siteIds) {
-		if (StringUtils.isBlank(userId) || siteIds == null) return;
-
-		Instant recentSiteTimestamp = Instant.now();
-		mutatePortalNavState(userId, true,
-				portalNavState -> savePinnedSites(userId, siteIds, recentSiteTimestamp, portalNavState));
-	}
-
-	@Transactional
-	@Override
-	public void reorderPinnedSites(String userId, List<String> siteIds) {
-		if (StringUtils.isBlank(userId) || siteIds == null) return;
-
-		Instant recentSiteTimestamp = Instant.now();
-		mutatePortalNavState(userId, true, portalNavState -> {
-			List<String> siteIdsToPersist = siteIds;
-			if (serverConfigurationService.getBoolean("portal.new.pinned.sites.top", false)) {
-				List<String> reversedSiteIds = new ArrayList<>(siteIds);
-				Collections.reverse(reversedSiteIds);
-				siteIdsToPersist = reversedSiteIds;
-			}
-			savePinnedSitesForUser(userId, siteIdsToPersist, recentSiteTimestamp, portalNavState);
-		});
-	}
-
 	@Override
 	public List<String> getPinnedSites() {
 		String userId = sessionManager.getCurrentSessionUserId();
@@ -1445,9 +959,11 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 	public List<String> getPinnedSites(String userId) {
 		if (StringUtils.isBlank(userId)) return Collections.emptyList();
 
-		UserPortalNavContext context = getOrCreatePortalNavContext(userId);
-		touchPortalNavContext(context);
-		List<String> pinned = new ArrayList<>(context.portalNavContextState.get().portalNavState.pinnedSiteIds);
+		List<String> pinned = pinnedSiteRepository
+				.findByUserIdAndHasBeenUnpinnedOrderByPosition(userId, false)
+				.stream()
+				.map(PinnedSite::getSiteId)
+				.collect(Collectors.toList());
 		if (serverConfigurationService.getBoolean("portal.new.pinned.sites.top", false)) {
 			Collections.reverse(pinned);
 		}
@@ -1464,30 +980,49 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 	public List<String> getUnpinnedSites(String userId) {
 		if (StringUtils.isBlank(userId)) return Collections.emptyList();
 
-		UserPortalNavContext context = getOrCreatePortalNavContext(userId);
-		touchPortalNavContext(context);
-		return Collections.unmodifiableList(new ArrayList<>(context.portalNavContextState.get().portalNavState.unpinnedSiteIds));
+		return pinnedSiteRepository.findByUserIdAndHasBeenUnpinnedOrderByPosition(userId, true).stream()
+				.map(PinnedSite::getSiteId)
+				.collect(Collectors.toUnmodifiableList());
 	}
 
 	@Override
 	public List<String> getRecentSites(String userId) {
 		if (StringUtils.isBlank(userId)) return Collections.emptyList();
 
-		UserPortalNavContext context = getOrCreatePortalNavContext(userId);
-		touchPortalNavContext(context);
-		return Collections.unmodifiableList(new ArrayList<>(context.portalNavContextState.get().portalNavState.recentSiteIds));
+		return recentSiteRepository.findByUserId(userId).stream()
+				.map(RecentSite::getSiteId)
+				.collect(Collectors.toUnmodifiableList());
 	}
 
 	@Transactional
 	@Override
 	public void addRecentSite(String userId, String siteId) {
-		if (StringUtils.isBlank(userId)) {
+
+		if (StringUtils.isAnyBlank(userId, siteId)
+				|| siteService.isUserSite(siteId)
+				|| SiteService.SITE_ERROR.equals(siteId)) {
 			return;
 		}
 
-		Instant recentSiteTimestamp = Instant.now();
-		mutatePortalNavState(userId, true,
-				portalNavState -> addRecentSite(userId, siteId, recentSiteTimestamp, portalNavState));
+		int maxRecentSites = serverConfigurationService.getInt("portal.max.recent.sites", DEFAULT_MAX_RECENT_SITES);
+		if (maxRecentSites <= 0) {
+			return;
+		}
+
+		recentSiteRepository.deleteByUserIdAndSiteId(userId, siteId);
+
+		List<String> current = new ArrayList<>(getRecentSites(userId));
+
+		while (current.size() >= maxRecentSites && !current.isEmpty()) {
+			String last = current.remove(current.size() - 1);
+			recentSiteRepository.deleteByUserIdAndSiteId(userId, last);
+		}
+
+		RecentSite recentSite = new RecentSite();
+		recentSite.setUserId(userId);
+		recentSite.setSiteId(siteId);
+		recentSite.setCreated(Instant.now());
+		recentSiteRepository.save(recentSite);
 	}
 
 	@Transactional
@@ -1496,19 +1031,17 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 
 		if (StringUtils.isBlank(userId) || siteIds == null || siteIds.isEmpty()) return;
 
-		mutatePortalNavState(userId, true, portalNavState -> removeSitesFromPortalNavState(siteIds, portalNavState));
-	}
-
-	private void removeRecentSite(String userId, String siteId, boolean createContextIfAbsent) {
-		if (StringUtils.isAnyBlank(userId, siteId)) return;
-
-		mutatePortalNavState(userId, createContextIfAbsent, portalNavState -> removeRecentSiteFromPortalNavState(siteId, portalNavState));
+		pinnedSiteRepository.deleteByUserIdAndSiteIds(userId, siteIds);
+		recentSiteRepository.deleteByUserIdAndSiteIds(userId, siteIds);
 	}
 
 	@Transactional
 	@Override
 	public void removeRecentSite(String userId, String siteId) {
-		removeRecentSite(userId, siteId, true);
+
+		if (StringUtils.isAnyBlank(userId, siteId)) return;
+
+		recentSiteRepository.deleteByUserIdAndSiteId(userId, siteId);
 	}
 
 	@Override
@@ -1516,83 +1049,6 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 	public void syncUserSitesWithPortalNav(final String userId) {
 		if (StringUtils.isBlank(userId) || securityService.isSuperUser(userId)) return;
 
-		UserPortalNavContext context = getOrCreatePortalNavContext(userId);
-		PortalNavSyncInputs syncInputs = readPortalNavSyncInputs(userId);
-		Instant recentSiteTimestamp = Instant.now();
-		if (mutatePortalNavContextWithFlushFlag(context,
-				portalNavState -> syncUserSitesWithPortalNavInternal(userId, syncInputs, recentSiteTimestamp, portalNavState))) {
-			schedulePortalNavFlush(context);
-		}
-	}
-
-	private boolean syncUserSitesWithPortalNavInternal(final String userId, PortalNavSyncInputs syncInputs,
-			Instant recentSiteTimestamp, MutablePortalNavState portalNavState) {
-
-		List<String> excludedSites = syncInputs.excludedSites();
-		List<String> favoriteSiteIds = syncInputs.favoriteSiteIds();
-		List<String> seenSiteIds = syncInputs.seenSiteIds();
-		boolean removeFavoriteSiteDataAfterFlush = false;
-
-		List<String> pinnedSites = new ArrayList<>(portalNavState.pinnedSiteIds);
-		List<String> unPinnedSites =  new ArrayList<>(portalNavState.unpinnedSiteIds);
-		List<String> recentSites = new ArrayList<>(portalNavState.recentSiteIds);
-
-		List<String> pinnedList = new ArrayList<>();
-		Set<String> pinnedSiteIds = new HashSet<>();
-		Set<String> sitesToUnpin = new HashSet<>(unPinnedSites);
-		Set<String> sitesToRemove = new HashSet<>(excludedSites);
-		Set<String> combinedSiteIds = new LinkedHashSet<>(excludedSites);
-		combinedSiteIds.addAll(pinnedSites);
-		combinedSiteIds.addAll(unPinnedSites);
-		combinedSiteIds.addAll(recentSites);
-
-		// if the user has favorites data in preferences lets migrate
-		if (!favoriteSiteIds.isEmpty() || !seenSiteIds.isEmpty()) {
-			log.debug("Found favorites data performing migration for user [{}]", userId);
-			log.debug("Adding {} sites from favorites to pinned sites for user [{}]", favoriteSiteIds.size(), userId);
-			combinedSiteIds.addAll(favoriteSiteIds);
-
-			seenSiteIds.stream()
-					.filter(Predicate.not(favoriteSiteIds::contains))
-					.forEach(sitesToUnpin::add);
-
-			log.debug("Adding {} sites from unseen to unpinned sites for user [{}]", seenSiteIds.size(), userId);
-			combinedSiteIds.addAll(sitesToUnpin);
-			removeFavoriteSiteDataAfterFlush = true;
-		}
-
-		List<String> userSiteIds = syncInputs.userSiteIds();
-		combinedSiteIds.addAll(userSiteIds);
-
-		Set<String> accessibleSiteIds = syncInputs.accessibleSiteIds();
-		for (String id : favoriteSiteIds) {
-			if (accessibleSiteIds.contains(id) && !sitesToUnpin.contains(id) && pinnedSiteIds.add(id)) {
-				pinnedList.add(id);
-			}
-		}
-		for (String id : combinedSiteIds) {
-			if (accessibleSiteIds.contains(id)) {
-				if (!sitesToUnpin.contains(id) && pinnedSiteIds.add(id)) {
-					pinnedList.add(id);
-				}
-			}
-			else sitesToRemove.add(id);
-		}
-
-		savePinnedSites(userId, pinnedList, recentSiteTimestamp, portalNavState);
-
-		sitesToUnpin.removeAll(portalNavState.unpinnedSiteIds);
-		unpinSites(userId, sitesToUnpin, recentSiteTimestamp, portalNavState);
-
-		combinedSiteIds.stream()
-				.filter(siteService::isSpecialSite)
-				.forEach(sitesToRemove::add);
-
-		removeSitesFromPortalNavState(new ArrayList<>(sitesToRemove), portalNavState);
-		return removeFavoriteSiteDataAfterFlush;
-	}
-
-	private PortalNavSyncInputs readPortalNavSyncInputs(String userId) {
 		List<String> excludedSites = Collections.emptyList();
 		List<String> favoriteSiteIds = Collections.emptyList();
 		List<String> seenSiteIds = Collections.emptyList();
@@ -1605,189 +1061,60 @@ public class PortalServiceImpl implements PortalService, Observer, DisposableBea
 			seenSiteIds = Optional.ofNullable(props.getPropertyList(SEEN_SITES_PROPERTY)).orElse(seenSiteIds);
 		}
 
+		List<String> pinnedSites = getPinnedSites(userId);
+		List<String> unPinnedSites = getUnpinnedSites(userId);
+		List<String> recentSites = getRecentSites(userId);
+
+		Set<String> sitesToPin = new HashSet<>();
+		Set<String> sitesToUnpin = new HashSet<>(unPinnedSites);
+		Set<String> sitesToRemove = new HashSet<>(excludedSites);
+		Set<String> combinedSiteIds = new HashSet<>(excludedSites);
+		combinedSiteIds.addAll(pinnedSites);
+		combinedSiteIds.addAll(unPinnedSites);
+		combinedSiteIds.addAll(recentSites);
+
+		if (!favoriteSiteIds.isEmpty() || !seenSiteIds.isEmpty()) {
+			log.debug("Found favorites data performing migration for user [{}]", userId);
+			log.debug("Adding {} sites from favorites to pinned sites for user [{}]", favoriteSiteIds.size(), userId);
+			combinedSiteIds.addAll(favoriteSiteIds);
+
+			seenSiteIds.stream()
+					.filter(Predicate.not(favoriteSiteIds::contains))
+					.forEach(sitesToUnpin::add);
+
+			log.debug("Adding {} sites from unseen to unpinned sites for user [{}]", seenSiteIds.size(), userId);
+			combinedSiteIds.addAll(sitesToUnpin);
+
+			removeFavoriteSiteData(userId);
+		}
+
 		List<String> userSiteIds = siteService.getSiteIds(SiteService.SelectionType.MEMBER, null, null, null,
 				null, SiteService.SortType.NONE, null, userId);
+		combinedSiteIds.addAll(userSiteIds);
+
 		Set<String> accessibleSiteIds = new HashSet<>(siteService.getSiteIds(SiteService.SelectionType.ACCESS, null, null, null,
 				null, SiteService.SortType.NONE, null, userId));
-
-		return new PortalNavSyncInputs(
-				Collections.unmodifiableList(new ArrayList<>(excludedSites)),
-				Collections.unmodifiableList(new ArrayList<>(favoriteSiteIds)),
-				Collections.unmodifiableList(new ArrayList<>(seenSiteIds)),
-				Collections.unmodifiableList(new ArrayList<>(userSiteIds)),
-				Collections.unmodifiableSet(accessibleSiteIds));
-	}
-
-	private void touchPortalNavContext(UserPortalNavContext context) {
-		context.lastAccess.set(System.currentTimeMillis());
-	}
-
-	private boolean hasPendingPortalNavFlush(UserPortalNavContext context) {
-		return context.portalNavContextState.get().version > context.flushedVersion.get();
-	}
-
-	private void cancelScheduledPortalNavFlush(UserPortalNavContext context) {
-		ScheduledFuture<?> scheduledFlush = context.scheduledFlush.getAndSet(null);
-		if (scheduledFlush != null) {
-			scheduledFlush.cancel(false);
-		}
-	}
-
-	private void updateFlushedVersion(UserPortalNavContext context, long version) {
-		while (true) {
-			long current = context.flushedVersion.get();
-			if (current >= version) {
-				return;
-			}
-			if (context.flushedVersion.compareAndSet(current, version)) {
-				return;
+		for (String id : combinedSiteIds) {
+			if (accessibleSiteIds.contains(id)) {
+				if (!sitesToUnpin.contains(id)) {
+					sitesToPin.add(id);
+				}
+			} else {
+				sitesToRemove.add(id);
 			}
 		}
-	}
 
-	// Force a subsequent flush cycle even when the in-memory nav snapshot is unchanged.
-	private void markPortalNavFlushRetryNeeded(UserPortalNavContext context, boolean removeFavoriteSiteDataAfterFlush) {
-		while (true) {
-			PortalNavContextState current = context.portalNavContextState.get();
-			PortalNavContextState updated = new PortalNavContextState(
-					current.portalNavState,
-					current.version + 1,
-					current.removeFavoriteSiteDataAfterFlush || removeFavoriteSiteDataAfterFlush);
-			if (context.portalNavContextState.compareAndSet(current, updated)) {
-				return;
-			}
-		}
-	}
+		sitesToPin.removeAll(sitesToUnpin);
+		savePinnedSites(userId, new ArrayList<>(sitesToPin));
 
-	private void clearRemoveFavoriteSiteDataAfterFlush(UserPortalNavContext context) {
-		while (true) {
-			PortalNavContextState current = context.portalNavContextState.get();
-			if (!current.removeFavoriteSiteDataAfterFlush) {
-				return;
-			}
-			PortalNavContextState updated = new PortalNavContextState(current.portalNavState, current.version, false);
-			if (context.portalNavContextState.compareAndSet(current, updated)) {
-				return;
-			}
-		}
-	}
+		sitesToUnpin.removeAll(unPinnedSites);
+		sitesToUnpin.forEach(id -> addPinnedSite(userId, id, false));
 
-	private void removePortalNavContextIfEligible(UserPortalNavContext context) {
-		if (!context.evictAfterFlush.get() || context.flushInProgress.get() || hasPendingPortalNavFlush(context)) {
-			return;
-		}
+		combinedSiteIds.stream()
+				.filter(siteService::isSpecialSite)
+				.forEach(sitesToRemove::add);
 
-		portalNavContexts.remove(context.userId, context);
-		context.evictAfterFlush.set(false);
-		cancelScheduledPortalNavFlush(context);
-	}
-
-	private static boolean portalNavStatesEqual(PortalNavState left, PortalNavState right) {
-		return left.pinnedSiteIds.equals(right.pinnedSiteIds)
-				&& left.unpinnedSiteIds.equals(right.unpinnedSiteIds)
-				&& left.recentSiteIds.equals(right.recentSiteIds)
-				&& left.pinnedSitesBySiteId.equals(right.pinnedSitesBySiteId)
-				&& left.recentSitesBySiteId.equals(right.recentSitesBySiteId);
-	}
-
-	private static PinnedNavSite toPinnedNavSite(PinnedSite pinnedSite) {
-		return new PinnedNavSite(pinnedSite.getPosition(), Boolean.TRUE.equals(pinnedSite.getHasBeenUnpinned()));
-	}
-
-	private static PinnedSite toPinnedSite(String userId, String siteId, PinnedNavSite pinnedNavSite, Long id) {
-		PinnedSite pinnedSite = new PinnedSite(userId, siteId);
-		pinnedSite.setId(id);
-		pinnedSite.setPosition(pinnedNavSite.position());
-		pinnedSite.setHasBeenUnpinned(pinnedNavSite.hasBeenUnpinned());
-		return pinnedSite;
-	}
-
-	private static RecentSite toRecentSite(String userId, String siteId, RecentNavSite recentNavSite, Long id) {
-		RecentSite recentSite = new RecentSite();
-		recentSite.setId(id);
-		recentSite.setUserId(userId);
-		recentSite.setSiteId(siteId);
-		recentSite.setCreated(recentNavSite.created());
-		return recentSite;
-	}
-
-	private static final class PortalNavState {
-
-		private final Map<String, PinnedNavSite> pinnedSitesBySiteId;
-		private final List<String> pinnedSiteIds;
-		private final List<String> unpinnedSiteIds;
-		private final Map<String, RecentNavSite> recentSitesBySiteId;
-		private final List<String> recentSiteIds;
-
-		private PortalNavState(Map<String, PinnedNavSite> pinnedSitesBySiteId, List<String> pinnedSiteIds,
-				List<String> unpinnedSiteIds, Map<String, RecentNavSite> recentSitesBySiteId, List<String> recentSiteIds) {
-			this.pinnedSitesBySiteId = Collections.unmodifiableMap(new HashMap<>(pinnedSitesBySiteId));
-			this.pinnedSiteIds = Collections.unmodifiableList(new ArrayList<>(pinnedSiteIds));
-			this.unpinnedSiteIds = Collections.unmodifiableList(new ArrayList<>(unpinnedSiteIds));
-			this.recentSitesBySiteId = Collections.unmodifiableMap(new HashMap<>(recentSitesBySiteId));
-			this.recentSiteIds = Collections.unmodifiableList(new ArrayList<>(recentSiteIds));
-		}
-
-		private MutablePortalNavState toMutable() {
-			return new MutablePortalNavState(this);
-		}
-	}
-
-	private static final class MutablePortalNavState {
-
-		private final Map<String, PinnedNavSite> pinnedSitesBySiteId;
-		private final List<String> pinnedSiteIds;
-		private final List<String> unpinnedSiteIds;
-		private final Map<String, RecentNavSite> recentSitesBySiteId;
-		private final List<String> recentSiteIds;
-
-		private MutablePortalNavState(PortalNavState portalNavState) {
-			pinnedSitesBySiteId = new HashMap<>(portalNavState.pinnedSitesBySiteId);
-			recentSitesBySiteId = new HashMap<>(portalNavState.recentSitesBySiteId);
-			pinnedSiteIds = new ArrayList<>(portalNavState.pinnedSiteIds);
-			unpinnedSiteIds = new ArrayList<>(portalNavState.unpinnedSiteIds);
-			recentSiteIds = new ArrayList<>(portalNavState.recentSiteIds);
-		}
-
-		private PortalNavState toImmutable() {
-			return new PortalNavState(pinnedSitesBySiteId, pinnedSiteIds, unpinnedSiteIds, recentSitesBySiteId, recentSiteIds);
-		}
-	}
-
-	private record PinnedNavSite(int position, boolean hasBeenUnpinned) {}
-
-	private record RecentNavSite(Instant created) {}
-
-	private record PortalNavSyncInputs(List<String> excludedSites, List<String> favoriteSiteIds, List<String> seenSiteIds,
-			List<String> userSiteIds, Set<String> accessibleSiteIds) {}
-
-	private static final class PortalNavContextState {
-
-		private final PortalNavState portalNavState;
-		private final long version;
-		private final boolean removeFavoriteSiteDataAfterFlush;
-
-		private PortalNavContextState(PortalNavState portalNavState, long version, boolean removeFavoriteSiteDataAfterFlush) {
-			this.portalNavState = portalNavState;
-			this.version = version;
-			this.removeFavoriteSiteDataAfterFlush = removeFavoriteSiteDataAfterFlush;
-		}
-	}
-
-	private static final class UserPortalNavContext {
-
-		private final String userId;
-		private final AtomicReference<PortalNavContextState> portalNavContextState;
-		private final AtomicLong lastAccess = new AtomicLong(System.currentTimeMillis());
-		private final AtomicLong flushedVersion = new AtomicLong(0L);
-		private final AtomicBoolean flushInProgress = new AtomicBoolean(false);
-		private final AtomicBoolean evictAfterFlush = new AtomicBoolean(false);
-		private final AtomicReference<ScheduledFuture<?>> scheduledFlush = new AtomicReference<>();
-
-		private UserPortalNavContext(String userId, PortalNavState portalNavState) {
-			this.userId = userId;
-			this.portalNavContextState = new AtomicReference<>(new PortalNavContextState(portalNavState, 0L, false));
-		}
+		removeSitesfromPinnedAndRecent(userId, new ArrayList<>(sitesToRemove));
 	}
 
 	private void removeFavoriteSiteData(String userId) {

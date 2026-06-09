@@ -24,10 +24,7 @@ import org.sakaiproject.springframework.data.SpringCrudRepository;
 /**
  * Repository for pinned site rows.
  *
- * Pinned site mutations must be coordinated with the in-memory portal
- * navigation state managed by {@code PortalServiceImpl}. External callers
- * should not invoke mutating methods directly. Use {@code PortalServiceImpl}
- * APIs so updates stay consistent.
+ * External callers should use {@code PortalService} APIs so updates stay consistent.
  */
 public interface PinnedSiteRepository extends SpringCrudRepository<PinnedSite, Long> {
 
@@ -37,8 +34,6 @@ public interface PinnedSiteRepository extends SpringCrudRepository<PinnedSite, L
     Optional<PinnedSite> findByUserIdAndSiteId(String userId, String siteId);
     List<PinnedSite> findBySiteId(String siteId);
 
-    // Internal portal navigation mutations should go through PortalServiceImpl
-    // so the authoritative in-memory navigation state stays consistent.
     Integer deleteByUserId(String userId);
 
     Integer deleteBySiteId(String siteId);

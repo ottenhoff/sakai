@@ -2557,6 +2557,7 @@ public class DbAuthzGroupService extends BaseAuthzGroupService implements Observ
 			Map<String, Set<String>> cachedRoleFunctions = new HashMap<>();
 			for (Map.Entry<String, SimpleRole> roleEntry : roleProperties.entrySet()) {
 				Set<String> functions = new HashSet<>();
+				// SimpleRole stores allowed functions in getLocks() for Terracotta cache compatibility.
 				if (roleEntry.getValue().getLocks() != null) {
 					for (Object function : roleEntry.getValue().getLocks()) {
 						functions.add((String) function);

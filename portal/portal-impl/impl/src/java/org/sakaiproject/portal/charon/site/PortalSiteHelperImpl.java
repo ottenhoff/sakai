@@ -159,85 +159,6 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 	private boolean lookForPageAliases;
 	private Portal portal;
 
-	private static final class SitePermissionLookup {
-		private final Set<String> siteUpdaterRefs;
-		private final Set<String> instructorRefs;
-		private final Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef;
-		private final boolean useBulkSecurityLookup;
-		private final boolean useBulkRoleLookup;
-
-		private SitePermissionLookup(Set<String> siteUpdaterRefs, Set<String> instructorRefs,
-				Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef,
-				boolean useBulkSecurityLookup, boolean useBulkRoleLookup) {
-			this.siteUpdaterRefs = siteUpdaterRefs;
-			this.instructorRefs = instructorRefs;
-			this.nonMaintainerRoleFunctionsBySiteRef = nonMaintainerRoleFunctionsBySiteRef;
-			this.useBulkSecurityLookup = useBulkSecurityLookup;
-			this.useBulkRoleLookup = useBulkRoleLookup;
-		}
-
-		private static SitePermissionLookup bulk(Set<String> siteUpdaterRefs, Set<String> instructorRefs,
-				Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
-			return new SitePermissionLookup(siteUpdaterRefs, instructorRefs, nonMaintainerRoleFunctionsBySiteRef, true, true);
-		}
-
-		private static SitePermissionLookup bulkSecurityOnly(Set<String> siteUpdaterRefs, Set<String> instructorRefs) {
-			return new SitePermissionLookup(siteUpdaterRefs, instructorRefs, Collections.emptyMap(), true, false);
-		}
-
-		private static SitePermissionLookup bulkRoleFunctionsOnly(
-				Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef) {
-			return new SitePermissionLookup(Collections.emptySet(), Collections.emptySet(),
-					nonMaintainerRoleFunctionsBySiteRef, false, true);
-		}
-
-		private static SitePermissionLookup directSecurityChecks() {
-			return new SitePermissionLookup(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap(), false, false);
-		}
-
-		private boolean canUpdate(Site site, SecurityService securityService) {
-			return useBulkSecurityLookup ? siteUpdaterRefs.contains(site.getReference())
-				: securityService.unlock(SiteService.SECURE_UPDATE_SITE, site.getReference());
-		}
-
-		private boolean isInstructor(Site site, SecurityService securityService) {
-			return useBulkSecurityLookup ? instructorRefs.contains(site.getReference())
-				: securityService.unlock("section.role.instructor", site.getReference());
-		}
-
-		private boolean isFirstToolVisibleToAnyNonMaintainerRole(Site site, SitePage page, ToolManager toolManager) {
-			if (!useBulkRoleLookup) {
-				return toolManager.isFirstToolVisibleToAnyNonMaintainerRole(page);
-			}
-
-			List<ToolConfiguration> pageTools = page.getTools();
-			List<Set<String>> requiredPermissions = pageTools.size() == 1
-				? toolManager.getRequiredPermissions(pageTools.get(0))
-				: Collections.emptyList();
-
-			if (requiredPermissions.isEmpty()) {
-				return true;
-			}
-
-			Collection<Set<String>> nonMaintainerRoleFunctions = nonMaintainerRoleFunctionsBySiteRef.getOrDefault(
-				site.getReference(), Collections.emptyList());
-
-			for (Set<String> permissionSet : requiredPermissions) {
-				for (Set<String> roleFunctions : nonMaintainerRoleFunctions) {
-					if (roleFunctions.containsAll(permissionSet)) {
-						return true;
-					}
-				}
-			}
-
-			return false;
-		}
-	}
-
-	private static final SitePermissionLookup DIRECT_SECURITY_CHECKS = SitePermissionLookup.directSecurityChecks();
-	private static final SitePermissionLookup EMPTY_SITE_PERMISSION_LOOKUP =
-		SitePermissionLookup.bulk(Collections.emptySet(), Collections.emptySet(), Collections.emptyMap());
-
 	public PortalSiteHelperImpl(Portal portal, boolean lookForPageAliases) {
 		this.portal = portal;
 		this.lookForPageAliases = lookForPageAliases;
@@ -388,98 +309,25 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 				.collect(Collectors.joining());
     }
 
-	private SitePermissionLookup buildPageLockSitePermissionLookup(Collection<Site> sites) {
-		return buildSitePermissionLookup(sites, true);
+	private SitePermissionResolver buildPageLockPermissionResolver(Collection<Site> sites) {
+		return SitePermissionResolver.forPageLocks(sites, authzGroupService, securityService, sessionManager);
 	}
 
-	private SitePermissionLookup buildPageLockSitePermissionLookup(Site site) {
-		return site == null ? EMPTY_SITE_PERMISSION_LOOKUP : buildPageLockSitePermissionLookup(List.of(site));
+	private SitePermissionResolver buildPageLockPermissionResolver(Site site) {
+		return site == null ? SitePermissionResolver.EMPTY_BULK : buildPageLockPermissionResolver(List.of(site));
 	}
 
-	private SitePermissionLookup buildSecuritySitePermissionLookup(Collection<Site> sites) {
-		return buildSitePermissionLookup(sites, false);
+	private SitePermissionResolver buildSecurityPermissionResolver(Collection<Site> sites) {
+		return SitePermissionResolver.forSecurityChecks(sites, authzGroupService, securityService, sessionManager);
 	}
 
-	private SitePermissionLookup buildSecuritySitePermissionLookup(Site site) {
-		return site == null ? EMPTY_SITE_PERMISSION_LOOKUP : buildSecuritySitePermissionLookup(List.of(site));
-	}
-
-	private SitePermissionLookup buildSitePermissionLookup(Collection<Site> sites, boolean includeRoleFunctions) {
-
-		if (sites == null || sites.isEmpty()) {
-			return EMPTY_SITE_PERMISSION_LOOKUP;
-		}
-
-		List<String> siteRefs = sites.stream()
-			.filter(Objects::nonNull)
-			.map(Site::getReference)
-			.distinct()
-			.collect(Collectors.toList());
-
-		if (siteRefs.isEmpty()) {
-			return EMPTY_SITE_PERMISSION_LOOKUP;
-		}
-
-		Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef = includeRoleFunctions
-			? filterNonMaintainerRoleFunctions(authzGroupService.getRoleFunctions(siteRefs))
-			: Collections.emptyMap();
-		if (securityService.isUserRoleSwapped()) {
-			return includeRoleFunctions
-				? SitePermissionLookup.bulkRoleFunctionsOnly(nonMaintainerRoleFunctionsBySiteRef)
-				: DIRECT_SECURITY_CHECKS;
-		}
-
-		String userId = sessionManager.getCurrentSessionUserId();
-		if (StringUtils.isBlank(userId)) {
-			return includeRoleFunctions
-				? SitePermissionLookup.bulk(Collections.emptySet(), Collections.emptySet(), nonMaintainerRoleFunctionsBySiteRef)
-				: SitePermissionLookup.bulkSecurityOnly(Collections.emptySet(), Collections.emptySet());
-		}
-
-		if (securityService.isSuperUser()) {
-			Set<String> refs = new HashSet<>(siteRefs);
-			return includeRoleFunctions
-				? SitePermissionLookup.bulk(refs, refs, nonMaintainerRoleFunctionsBySiteRef)
-				: SitePermissionLookup.bulkSecurityOnly(refs, refs);
-		}
-
-		Set<String> siteUpdaterRefs = authzGroupService.getAuthzGroupsIsAllowed(userId, SiteService.SECURE_UPDATE_SITE, siteRefs);
-		Set<String> instructorRefs = authzGroupService.getAuthzGroupsIsAllowed(userId, "section.role.instructor", siteRefs);
-		return includeRoleFunctions
-			? SitePermissionLookup.bulk(siteUpdaterRefs, instructorRefs, nonMaintainerRoleFunctionsBySiteRef)
-			: SitePermissionLookup.bulkSecurityOnly(siteUpdaterRefs, instructorRefs);
-	}
-
-	private Map<String, Collection<Set<String>>> filterNonMaintainerRoleFunctions(
-			Map<String, Map<String, Set<String>>> roleFunctionsBySiteRef) {
-		if (roleFunctionsBySiteRef == null || roleFunctionsBySiteRef.isEmpty()) {
-			return Collections.emptyMap();
-		}
-
-		Map<String, Collection<Set<String>>> nonMaintainerRoleFunctionsBySiteRef = new HashMap<>();
-		roleFunctionsBySiteRef.forEach((siteRef, roleFunctions) -> {
-			List<Set<String>> nonMaintainerRoleFunctions = Optional.ofNullable(roleFunctions)
-				.orElse(Collections.emptyMap())
-				.values().stream()
-				.filter(functions -> !functions.contains(SiteService.SECURE_UPDATE_SITE))
-				.collect(Collectors.toList());
-			nonMaintainerRoleFunctionsBySiteRef.put(siteRef, nonMaintainerRoleFunctions);
-		});
-
-		return nonMaintainerRoleFunctionsBySiteRef;
-	}
-
-	private boolean canUpdateSite(Site site, SitePermissionLookup sitePermissionLookup) {
-		return sitePermissionLookup.canUpdate(site, securityService);
-	}
-
-	private boolean isInstructor(Site site, SitePermissionLookup sitePermissionLookup) {
-		return sitePermissionLookup.isInstructor(site, securityService);
+	private SitePermissionResolver buildSecurityPermissionResolver(Site site) {
+		return site == null ? SitePermissionResolver.EMPTY_BULK : buildSecurityPermissionResolver(List.of(site));
 	}
 
 	private Map<String, Object> getSiteMap(Site site, String currentSiteId, String userId, boolean pinned, boolean hidden,
 			boolean includePages, Map<String, List<Map<String, String>>> parentToChildSites,
-			SitePermissionLookup sitePermissionLookup) {
+			SitePermissionResolver sitePermissionResolver) {
 
 		Map<String, Object> siteMap = new HashMap<>();
 		siteMap.put("id", site.getId());
@@ -504,8 +352,8 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		siteMap.put("isHidden", hidden);
 		siteMap.put("currentSiteId", currentSiteId);
 		if (includePages) {
-			List<SitePage> pageList = getPermittedPagesInOrder(site, sitePermissionLookup);
-			siteMap.put("pages", getPageMaps(pageList, site, sitePermissionLookup));
+			List<SitePage> pageList = getPermittedPagesInOrder(site, sitePermissionResolver);
+			siteMap.put("pages", getPageMaps(pageList, site, sitePermissionResolver));
 
 			if (Boolean.parseBoolean(site.getProperties().getProperty("subpagenav")) && !pageList.isEmpty()) {
 				siteMap.put("subPages", getSubPages(userId, site.getId(), pageList));
@@ -521,11 +369,11 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 
 	private List<Map<String, Object>> getSiteMaps(Collection<Site> sites, String currentSiteId, String userId, boolean pinned, boolean hidden, boolean includePages) {
 		return getSiteMaps(sites, currentSiteId, userId, pinned, hidden, includePages,
-				includePages ? buildPageLockSitePermissionLookup(sites) : DIRECT_SECURITY_CHECKS);
+				includePages ? buildPageLockPermissionResolver(sites) : SitePermissionResolver.DIRECT);
 	}
 
 	private List<Map<String, Object>> getSiteMaps(Collection<Site> sites, String currentSiteId, String userId, boolean pinned,
-			boolean hidden, boolean includePages, SitePermissionLookup sitePermissionLookup) {
+			boolean hidden, boolean includePages, SitePermissionResolver sitePermissionResolver) {
 
 		// Precompute a mapping from parent site IDs to child site IDs.
 		Map<String, List<Map<String, String>>> parentToChildSites;
@@ -543,12 +391,12 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 
 		return sites.stream()
 			.map(site -> getSiteMap(site, currentSiteId, userId, pinned, hidden, includePages, parentToChildSites,
-					sitePermissionLookup))
+					sitePermissionResolver))
 			.collect(Collectors.toList());
 	}
 
 	private Map<String, Object> getPageMap(Site site, SitePage page, boolean includeSubPage,
-			SitePermissionLookup sitePermissionLookup, LessonBuilderPageVisibility lessonBuilderPageVisibility) {
+			SitePermissionResolver sitePermissionResolver, LessonBuilderPageVisibility lessonBuilderPageVisibility) {
 
 		Map<String, Object> pageMap = new HashMap<>();
 		List<ToolConfiguration> toolList = page.getTools();
@@ -605,7 +453,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		} else {
 			pageMap.put("icon", "si-default-tool");
 		}
-		pageMap.put("locked", !sitePermissionLookup.isFirstToolVisibleToAnyNonMaintainerRole(site, page, toolManager));
+		pageMap.put("locked", !sitePermissionResolver.isFirstToolVisibleToAnyNonMaintainerRole(site, page, toolManager));
 		pageMap.put("isPopup", page.isPopUp());
 		pageMap.put("title", formattedText.escapeHtml(page.getTitle()));
 		pageMap.put("description", getPageDescription(page));
@@ -629,13 +477,13 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		return pageMap;
 	}
 
-	private List<Map<String, Object>> getPageMaps(Collection<SitePage> pages, Site site, SitePermissionLookup sitePermissionLookup) {
+	private List<Map<String, Object>> getPageMaps(Collection<SitePage> pages, Site site, SitePermissionResolver sitePermissionResolver) {
 
-		final boolean siteUpdater = canUpdateSite(site, sitePermissionLookup);
+		final boolean siteUpdater = sitePermissionResolver.canUpdateSite(site, securityService);
 		final LessonBuilderPageVisibility lessonBuilderPageVisibility = getLessonBuilderPageVisibility(site, pages);
 
 		boolean includeSubPage = Boolean.parseBoolean(site.getProperties().getProperty("subpagenav"));
-		return pages.stream().map(p -> getPageMap(site, p, includeSubPage, sitePermissionLookup, lessonBuilderPageVisibility))
+		return pages.stream().map(p -> getPageMap(site, p, includeSubPage, sitePermissionResolver, lessonBuilderPageVisibility))
 			.filter(m -> !((Boolean) m.get("hidden")) || siteUpdater).collect(Collectors.toList());
 	}
 
@@ -685,19 +533,19 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 			if (hiddenCurrentSite != null) {
 				sitesToMap.add(hiddenCurrentSite);
 			}
-			SitePermissionLookup sitePermissionLookup = buildPageLockSitePermissionLookup(sitesToMap);
+			SitePermissionResolver sitePermissionResolver = buildPageLockPermissionResolver(sitesToMap);
 			contextSites.put("homeSite", getSiteMap(homeSite, currentSiteId, userId, false, false, true, null,
-					sitePermissionLookup));
+					sitePermissionResolver));
             List<Map<String, Object>> pinnedSiteMaps = getSiteMaps(pinnedSites, currentSiteId, userId, true, false, true,
-                    sitePermissionLookup);
+                    sitePermissionResolver);
             contextSites.put("pinnedSites", pinnedSiteMaps);
             List<Map<String, Object>> recentSitesMaps = getSiteMaps(recentSites, currentSiteId, userId, false, false, true,
-                    sitePermissionLookup);
+                    sitePermissionResolver);
 
 			// If the current site is excluded it should appear in recent as hidden
 			if (hiddenCurrentSite != null) {
 				recentSitesMaps.add(getSiteMap(hiddenCurrentSite, currentSiteId, userId, false, true, true, null,
-						sitePermissionLookup));
+						sitePermissionResolver));
 			}
             contextSites.put("recentSites", recentSitesMaps);
 
@@ -711,9 +559,9 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 			//Get gateway site
 			Site gatewaySite = getSite(currentSiteId);
 			if (!gatewaySite.isEmpty()) {
-				SitePermissionLookup sitePermissionLookup = buildPageLockSitePermissionLookup(gatewaySite);
+				SitePermissionResolver sitePermissionResolver = buildPageLockPermissionResolver(gatewaySite);
 				contextSites.put("gatewaySite", getSiteMap(gatewaySite, currentSiteId, null, false, false, true, null,
-						sitePermissionLookup));
+						sitePermissionResolver));
 			}
 		}
 		return contextSites;
@@ -737,7 +585,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		boolean computeDepth = true;
 
 		List<String> pinned = portalService.getPinnedSites();
-		SitePermissionLookup sitePermissionLookup = expandSite ? buildPageLockSitePermissionLookup(mySites) : DIRECT_SECURITY_CHECKS;
+		SitePermissionResolver sitePermissionResolver = expandSite ? buildPageLockPermissionResolver(mySites) : SitePermissionResolver.DIRECT;
 
 		// Determine the depths of the child sites if needed
 		Map<String, List<String>> realmProviderMap = getProviderIDsForSites(mySites);
@@ -766,7 +614,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 
 			Map<String, Object> m = convertSiteToMap(req, s, prefix, currentSiteId, myWorkspaceSiteId, includeSummary,
 					expandSite, resetTools, doPages, toolContextPath, loggedIn, realmProviderMap.get(s.getReference()),
-					sitePermissionLookup);
+					sitePermissionResolver);
 
 			// Add the Depth of the site
 			m.put("depth", cDepth);
@@ -860,14 +708,14 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 												String toolContextPath, boolean loggedIn, List<String> siteProviders) {
 		return convertSiteToMap(req, s, prefix, currentSiteId, myWorkspaceSiteId, includeSummary, expandSite, resetTools,
 				doPages, toolContextPath, loggedIn, siteProviders,
-				expandSite ? buildPageLockSitePermissionLookup(s) : DIRECT_SECURITY_CHECKS);
+				expandSite ? buildPageLockPermissionResolver(s) : SitePermissionResolver.DIRECT);
 	}
 
 	private Map<String, Object> convertSiteToMap(HttpServletRequest req, Site s, String prefix,
 												String currentSiteId, String myWorkspaceSiteId, boolean includeSummary,
 												boolean expandSite, boolean resetTools, boolean doPages,
 												String toolContextPath, boolean loggedIn, List<String> siteProviders,
-												SitePermissionLookup sitePermissionLookup) {
+												SitePermissionResolver sitePermissionResolver) {
 		if (s == null) return null;
 		Map<String, Object> m = new HashMap<>();
 
@@ -921,7 +769,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		if (expandSite)
 		{
 			Map<String, Object> pageMap = pageListToMap(req, loggedIn, s, null, toolContextPath, prefix, doPages,
-					resetTools, includeSummary, sitePermissionLookup);
+					resetTools, includeSummary, sitePermissionResolver);
 			m.put("sitePages", pageMap);
 		}
 
@@ -1012,12 +860,12 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 	public Map<String, Object> pageListToMap(HttpServletRequest req, boolean loggedIn, Site site, SitePage page, String toolContextPath,
 											 String portalPrefix, boolean doPages, boolean resetTools, boolean includeSummary) {
 		return pageListToMap(req, loggedIn, site, page, toolContextPath, portalPrefix, doPages, resetTools,
-				includeSummary, buildPageLockSitePermissionLookup(site));
+				includeSummary, buildPageLockPermissionResolver(site));
 	}
 
 	private Map<String, Object> pageListToMap(HttpServletRequest req, boolean loggedIn, Site site, SitePage page,
 			String toolContextPath, String portalPrefix, boolean doPages, boolean resetTools, boolean includeSummary,
-			SitePermissionLookup sitePermissionLookup) {
+			SitePermissionResolver sitePermissionResolver) {
 		Map<String, Object> theMap = new HashMap<>();
 
 		String effectiveSiteId = getSiteEffectiveId(site);
@@ -1062,7 +910,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		String htmlInclude = site.getProperties().getProperty(PROP_HTML_INCLUDE);
 		if (htmlInclude != null) theMap.put("siteHTMLInclude", htmlInclude);
 
-		boolean canUpdateSite = canUpdateSite(site, sitePermissionLookup);
+		boolean canUpdateSite = sitePermissionResolver.canUpdateSite(site, securityService);
 
 		List<Map<String, Object>> l = new ArrayList<>();
 
@@ -1070,7 +918,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 		String manageOverviewUrl = null;
 		String manageOverviewUrlInHome = null;
 
-		List<SitePage> sitePages = getPermittedPagesInOrder(site, sitePermissionLookup);
+		List<SitePage> sitePages = getPermittedPagesInOrder(site, sitePermissionResolver);
 		for (SitePage p : sitePages) {
 			// check if current user has permission to see page
 			// one tool on the page
@@ -1164,7 +1012,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 				m.put("toolpopupurl", source);
 				m.put("description",  desc);
 				m.put("hidden", Boolean.valueOf(hidden));
-				m.put("locked", Boolean.valueOf(!sitePermissionLookup.isFirstToolVisibleToAnyNonMaintainerRole(site, p, toolManager)));
+				m.put("locked", Boolean.valueOf(!sitePermissionResolver.isFirstToolVisibleToAnyNonMaintainerRole(site, p, toolManager)));
 
 				if (includeSummary) summarizePage(m, site, p);
 				if (firstTool != null)
@@ -1582,14 +1430,14 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 	*/
 	protected List<SitePage> getPermittedPagesInOrder(Site site)
 	{
-		return getPermittedPagesInOrder(site, buildSecuritySitePermissionLookup(site));
+		return getPermittedPagesInOrder(site, buildSecurityPermissionResolver(site));
 	}
 
-	protected List<SitePage> getPermittedPagesInOrder(Site site, SitePermissionLookup sitePermissionLookup)
+	protected List<SitePage> getPermittedPagesInOrder(Site site, SitePermissionResolver sitePermissionResolver)
 	{
 		// Get all of the pages
 		List<SitePage> pages = site.getOrderedPages();
-		boolean siteUpdate = canUpdateSite(site, sitePermissionLookup);
+		boolean siteUpdate = sitePermissionResolver.canUpdateSite(site, securityService);
 
 		List<SitePage> newPages = new ArrayList<>();
 
@@ -1600,7 +1448,7 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 			for (ToolConfiguration tc : p.getTools()) {
 				boolean thisTool = allowTool(site, tc);
 				boolean unHidden = siteUpdate || ! isHidden(tc);
-				boolean checkGradebookVisibility = checkGradebookVisibility(tc, site, sitePermissionLookup);
+				boolean checkGradebookVisibility = checkGradebookVisibility(tc, site, sitePermissionResolver);
 				allowPage = thisTool && unHidden && checkGradebookVisibility;
 			}
 			if (allowPage) newPages.add(p);
@@ -1634,13 +1482,13 @@ public class PortalSiteHelperImpl implements PortalSiteHelper
 
 	@Override
 	public boolean checkGradebookVisibility(ToolConfiguration tc, Site site) {
-		return checkGradebookVisibility(tc, site, buildSecuritySitePermissionLookup(site));
+		return checkGradebookVisibility(tc, site, buildSecurityPermissionResolver(site));
 	}
 
-	private boolean checkGradebookVisibility(ToolConfiguration tc, Site site, SitePermissionLookup sitePermissionLookup) {
+	private boolean checkGradebookVisibility(ToolConfiguration tc, Site site, SitePermissionResolver sitePermissionResolver) {
 		//1 if tool is not gb or has no property or user is instructor
 		if (!GRADEBOOK_TOOL_ID.equals(tc.getToolId()) || tc.getPlacementConfig().getProperty(GRADEBOOK_GROUP_PROPERTY) == null
-				|| isInstructor(site, sitePermissionLookup)) {
+				|| sitePermissionResolver.isInstructor(site, securityService)) {
 			return true;
 		}
 		//2 check user groups match

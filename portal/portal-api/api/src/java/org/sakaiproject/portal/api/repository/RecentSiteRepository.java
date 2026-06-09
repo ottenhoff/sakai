@@ -24,10 +24,7 @@ import org.sakaiproject.springframework.data.SpringCrudRepository;
 /**
  * Repository for recent site rows.
  *
- * Recent site mutations must be coordinated with the in-memory portal
- * navigation state managed by {@code PortalServiceImpl}. External callers
- * should use {@code PortalServiceImpl} for mutating operations so state and
- * persistence remain consistent.
+ * External callers should use {@code PortalService} APIs so state and persistence remain consistent.
  */
 public interface RecentSiteRepository extends SpringCrudRepository<RecentSite, Long> {
 
@@ -46,14 +43,6 @@ public interface RecentSiteRepository extends SpringCrudRepository<RecentSite, L
      * @return all matching recent sites
      */
     List<RecentSite> findBySiteId(String siteId);
-
-    /**
-     * Delete all recent sites for a user
-     *
-     * @param userId the user whose recent sites will be deleted
-     * @return the number of rows deleted
-     */
-    Integer deleteByUserId(String userId);
 
     /**
      * Delete a recent site for all users
