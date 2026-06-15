@@ -1126,7 +1126,7 @@ public class ExtractionHelper
 	AssessmentService assessmentService = new AssessmentService();
     for (int i = 0; i < attachmentArray.length; i++) {
     	String[] attachmentInfo = attachmentArray[i].split("\\|");
-    	String fullFilePath = unzipLocation + "/" + attachmentInfo[0];
+        String fullFilePath = getImportedFilePath(attachmentInfo[0]);
     	String filename = attachmentInfo[1];
     	ContentResource contentResource = attachmentHelper.createContentResource(fullFilePath, filename, attachmentInfo[2]);
     	if (contentResource == null) {
@@ -1166,7 +1166,7 @@ public class ExtractionHelper
 	AssessmentService assessmentService = new AssessmentService();
     for (int i = 0; i < attachmentArray.length; i++) {
     	String[] attachmentInfo = attachmentArray[i].split("\\|");
-    	String fullFilePath = unzipLocation + "/" + attachmentInfo[0];
+        String fullFilePath = getImportedFilePath(attachmentInfo[0]);
     	String filename = attachmentInfo[1];
     	ContentResource contentResource = attachmentHelper.createContentResource(fullFilePath, filename, attachmentInfo[2]);
     	if (contentResource == null) {
@@ -1217,7 +1217,7 @@ public class ExtractionHelper
 			  }
 			  itemAttachment = assessmentService.createItemAttachment(item, contentResource.getId(), filename, ServerConfigurationService.getServerUrl());
 		  } else {
-			  String fullFilePath = unzipLocation + "/" + attachmentInfo[0];
+			  String fullFilePath = getImportedFilePath(attachmentInfo[0]);
 			  ContentResource contentResource = attachmentHelper.createContentResource(fullFilePath, filename, attachmentInfo[2]);
 			  if (contentResource == null) {
 			    log.warn("QTI Import - Physical file not found in ZIP package for item attachment {}. Migration of this resource will be skipped.", attachmentInfo[0]);
@@ -1624,12 +1624,10 @@ public class ExtractionHelper
   
   private ContentResource makeContentResource(String filename) {
 	  AttachmentHelper attachmentHelper = new AttachmentHelper();
-	  StringBuffer fullFilePath = new StringBuffer(unzipLocation);
-	  fullFilePath.append("/");
-	  fullFilePath.append(filename);
+	  String fullFilePath = getImportedFilePath(filename);
 	  MimetypesFileTypeMap mimetypesFileTypeMap = new MimetypesFileTypeMap();
 	  String contentType = mimetypesFileTypeMap.getContentType(filename);
-	  ContentResource contentResource = attachmentHelper.createContentResource(fullFilePath.toString(), filename, contentType);
+	  ContentResource contentResource = attachmentHelper.createContentResource(fullFilePath, filename, contentType);
 	  
 	  return contentResource;
   }
@@ -1648,7 +1646,6 @@ public class ExtractionHelper
 
 	  String contentType = "";
 	  String filename = "";
-	  StringBuffer fullFilePath = null;
 
 	  Iterator iter = respondueTextList.iterator();
 	  String itemText = "";
@@ -1667,10 +1664,7 @@ public class ExtractionHelper
 		  else if ("matimage".equals(splittedText[0])) {
 			  contentType = splittedText[1];
 			  filename = splittedText[2];
-			  fullFilePath = new StringBuffer(unzipLocation);
-			  fullFilePath.append("/");
-			  fullFilePath.append(filename);
-			  contentResource = attachmentHelper.createContentResource(fullFilePath.toString(), filename, contentType);
+			  contentResource = attachmentHelper.createContentResource(getImportedFilePath(filename), filename, contentType);
 			  if (contentResource != null) {
 				  resourceId = contentResource.getId();
 				  updatedText.append("<img src=\"");
@@ -1685,6 +1679,22 @@ public class ExtractionHelper
 	  }
 
 	  return updatedText.toString();
+  }
+
+  private String getImportedFilePath(String filename)
+  {
+    return new File(unzipLocation, stripLeadingFileSeparator(filename)).getPath();
+  }
+
+  private String stripLeadingFileSeparator(String path)
+  {
+    if (path == null) {
+      return null;
+    }
+    while (path.startsWith("/") || path.startsWith("\\")) {
+      path = path.substring(1);
+    }
+    return path;
   }
 
   public List<String> getSkippedAttachments()

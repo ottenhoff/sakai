@@ -170,7 +170,7 @@ public class XMLImportBean implements Serializable {
 	if (isCP) {
 		ImportService importService = new ImportService();
 		unzipLocation = importService.unzipImportFile(uploadFile);
-		filename = unzipLocation + "/" + importService.getQtiFilename();
+		filename = new File(unzipLocation, importService.getQtiFilename()).getPath();
 	}
     try
     {
@@ -386,7 +386,7 @@ public class XMLImportBean implements Serializable {
   }
   
   private String getImportedFilename(String filename) {
-	  String temp_filename_1 = filename.substring(filename.lastIndexOf("/") + 1);
+	  String temp_filename_1 = new File(filename).getName();
 	  String temp_filename_2 = temp_filename_1.substring(temp_filename_1.indexOf("."));
 	  String temp_filename_3 = temp_filename_1.substring(0, temp_filename_1.substring(0, temp_filename_1.indexOf(".")).lastIndexOf("_"));
 	  String final_filename = temp_filename_3 + temp_filename_2;
