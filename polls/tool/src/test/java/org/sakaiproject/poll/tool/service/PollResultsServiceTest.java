@@ -23,38 +23,46 @@ import java.util.Locale;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.sakaiproject.poll.api.model.Option;
 import org.sakaiproject.poll.api.model.Poll;
 import org.sakaiproject.poll.api.model.Vote;
 import org.sakaiproject.poll.api.service.PollsService;
-import org.sakaiproject.poll.tool.service.PollResultsService;
 import org.sakaiproject.util.api.FormattedText;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.support.StaticMessageSource;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = PollResultsServiceTest.TestConfiguration.class)
 public class PollResultsServiceTest {
 
+    @Autowired
     private PollsService pollsService;
+
+    @Autowired
+    private FormattedText formattedText;
+
+    @Autowired
     private PollResultsService pollResultsService;
 
     @Before
     public void setUp() {
-        pollsService = mock(PollsService.class);
-        FormattedText formattedText = mock(FormattedText.class);
+        reset(pollsService, formattedText);
+
         when(formattedText.escapeHtml(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(formattedText.convertFormattedTextToPlaintext(anyString())).thenAnswer(invocation ->
-                ((String) invocation.getArgument(0))
-                        .replace("&nbsp;", " ")
-                        .replaceAll("<[^>]+>", ""));
-
-        StaticMessageSource messageSource = new StaticMessageSource();
-        messageSource.addMessage("result_novote", Locale.US, "No vote");
-        messageSource.addMessage("deleted_option_tag_html", Locale.US, "&nbsp;<i>(deleted)</i>");
-
-        pollResultsService = new PollResultsService(pollsService, formattedText, messageSource);
+        when(formattedText.convertFormattedTextToPlaintext(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -125,11 +133,15 @@ public class PollResultsServiceTest {
         Option option = option(1L, "Deleted option", true);
         poll.setOptions(List.of(option));
 
+        when(formattedText.convertFormattedTextToPlaintext("Deleted option&nbsp;<i>(deleted)</i>"))
+                .thenReturn("Deleted option (deleted)");
+
         PollResultsService.PollResults results = buildResults(poll, List.of(vote(option, "user1")), 1, 1);
         List<PollResultsService.ResultRow> rows = results.getRows();
 
         Assert.assertTrue(rows.get(0).isDeleted());
         Assert.assertEquals("Deleted option (deleted)", rows.get(0).getChartLabel());
+        verify(formattedText).convertFormattedTextToPlaintext("Deleted option&nbsp;<i>(deleted)</i>");
     }
 
     private PollResultsService.PollResults buildResults(Poll poll, List<Vote> votes, int distinctVoters, int potentialVoters) {
@@ -154,5 +166,28 @@ public class PollResultsServiceTest {
         vote.setSubmissionId(userId);
         vote.setVoteDate(Instant.now());
         return vote;
+    }
+
+    @Configuration
+    @Import(PollResultsService.class)
+    public static class TestConfiguration {
+
+        @Bean
+        public PollsService pollsService() {
+            return mock(PollsService.class);
+        }
+
+        @Bean
+        public FormattedText formattedText() {
+            return mock(FormattedText.class);
+        }
+
+        @Bean
+        public MessageSource messageSource() {
+            StaticMessageSource messageSource = new StaticMessageSource();
+            messageSource.addMessage("result_novote", Locale.US, "No vote");
+            messageSource.addMessage("deleted_option_tag_html", Locale.US, "&nbsp;<i>(deleted)</i>");
+            return messageSource;
+        }
     }
 }

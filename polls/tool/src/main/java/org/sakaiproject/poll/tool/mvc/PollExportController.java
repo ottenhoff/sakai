@@ -44,6 +44,8 @@ import org.sakaiproject.poll.tool.service.PollPermissionsService;
 import org.sakaiproject.poll.tool.service.PollResultsService;
 import org.sakaiproject.time.api.UserTimeService;
 import org.sakaiproject.tool.api.ToolManager;
+import org.sakaiproject.util.Validator;
+import org.sakaiproject.util.Web;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpHeaders;
@@ -112,14 +114,14 @@ public class PollExportController {
         }
 
         PollResultsService.PollResults results = pollResultsService.buildResults(poll, currentSiteId, locale);
-        ZonedDateTime now = nowInSakaiZone();
+        ZonedDateTime exportedAt = nowInUserTimeZone();
 
         try {
             byte[] fileBytes = switch (format) {
-                case XLSX -> buildXlsx(poll, results, now, locale);
-                case CSV -> buildCsv(poll, results, now, locale);
+                case XLSX -> buildXlsx(poll, results, exportedAt, locale);
+                case CSV -> buildCsv(poll, results, exportedAt, locale);
             };
-            String filename = buildExportFilename(poll.getText(), format.extension, now);
+            String filename = buildExportFilename(poll.getText(), format.extension, exportedAt);
             return buildFileResponse(fileBytes, filename, format.mediaType);
         } catch (IOException | RuntimeException e) {
             log.error("Error generating {} for poll {}", format.extension.toUpperCase(Locale.ROOT), pollId, e);
@@ -129,7 +131,7 @@ public class PollExportController {
         }
     }
 
-    private byte[] buildXlsx(Poll poll, PollResultsService.PollResults results, ZonedDateTime now, Locale locale) throws IOException {
+    private byte[] buildXlsx(Poll poll, PollResultsService.PollResults results, ZonedDateTime exportedAt, Locale locale) throws IOException {
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
 
             String sheetName = messageSource.getMessage("poll_export_sheet_name", null, locale);
@@ -160,7 +162,7 @@ public class PollExportController {
             );
             title2.getCell(0).setCellStyle(titleStyle);
 
-            String formattedDate = now.format(
+            String formattedDate = exportedAt.format(
                     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale)
             );
 
@@ -205,7 +207,7 @@ public class PollExportController {
         }
     }
 
-    private byte[] buildCsv(Poll poll, PollResultsService.PollResults results, ZonedDateTime now, Locale locale) throws IOException {
+    private byte[] buildCsv(Poll poll, PollResultsService.PollResults results, ZonedDateTime exportedAt, Locale locale) throws IOException {
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
             Writer writer = new OutputStreamWriter(bos, StandardCharsets.UTF_8);
             CSVWriter csvWriter = new CSVWriter(writer,
@@ -213,7 +215,7 @@ public class PollExportController {
                     CSVWriter.DEFAULT_QUOTE_CHARACTER,
                     CSVWriter.DEFAULT_ESCAPE_CHARACTER,
                     CSVWriter.RFC4180_LINE_END)) {
-            String formattedDate = now.format(
+            String formattedDate = exportedAt.format(
                     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(locale)
             );
 
@@ -252,17 +254,14 @@ public class PollExportController {
         }
     }
 
-    private String buildExportFilename(String pollText, String extension, ZonedDateTime now) {
-        String safePollText = StringUtils.defaultString(pollText, "poll").replaceAll("[^a-zA-Z0-9_-]", "_");
-        if (safePollText.length() > 30) {
-            safePollText = safePollText.substring(0, 30);
-        }
+    private String buildExportFilename(String pollText, String extension, ZonedDateTime exportedAt) {
+        String safePollText = StringUtils.left(Validator.cleanFilename(StringUtils.defaultString(pollText, "poll")), 30);
 
-        String timestamp = now.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmm"));
+        String timestamp = exportedAt.format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmm"));
         return "Poll_" + safePollText + "_" + timestamp + "." + extension;
     }
 
-    private ZonedDateTime nowInSakaiZone() {
+    private ZonedDateTime nowInUserTimeZone() {
         return ZonedDateTime.now(userTimeService.getLocalTimeZone().toZoneId());
     }
 
@@ -277,7 +276,7 @@ public class PollExportController {
 
     private ResponseEntity<byte[]> buildFileResponse(byte[] fileBytes, String filename, String mediaType) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, Web.buildContentDisposition(filename, true))
                 .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(fileBytes.length))
                 .header(HttpHeaders.CACHE_CONTROL, "no-store")
                 .header(X_CONTENT_TYPE_OPTIONS, "nosniff")
