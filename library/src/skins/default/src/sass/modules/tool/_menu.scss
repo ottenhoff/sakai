@@ -51,7 +51,7 @@
 			}
 		}
 		
-		// Current state styles for spans and direct anchors
+		// Current tab is the selected page, not a control — keep the active look without hover/pointer
 		span.current, span a.current, > a.current {
 			display: inline-block;
 			margin: 0;
@@ -62,7 +62,8 @@
 			color: var(--tool-tab-active-text-color);
 			text-decoration: none;
 			text-transform: none;
-			cursor: pointer;
+			cursor: default;
+			pointer-events: none;
 			-moz-appearance: none;
 			-webkit-appearance: none;
 			box-shadow: var(--button-shadow);
@@ -73,24 +74,15 @@
 				padding: 7px 16px;
 				border: 1px solid var(--tool-tab-border-color);
 				border-radius: 4px;
-				background: var(--tool-tab-hover-background-color);
-				color: var(--tool-tab-text-color);
+				background: var(--tool-tab-active-background-color);
+				color: var(--tool-tab-active-text-color);
 				text-decoration: none;
 				text-transform: none;
-				cursor: pointer;
+				cursor: default;
 				-moz-appearance: none;
 				-webkit-appearance: none;
 				box-shadow: var(--button-shadow);
 			}
-		}
-		
-		// Specific styling for span.current > a
-		span.current a{
-			border: 0px none;
-			font-size: 1em;
-			margin: 0;
-			padding: 0;
-			top: 1px;
 		}
 		
 		span{
@@ -179,6 +171,8 @@
 					border: none;
 					border-radius: 0;
 					box-shadow: none;
+					cursor: default;
+					pointer-events: none;
 					&:hover,
 					&:focus {
 						display: block;
@@ -186,6 +180,7 @@
 						border: none;
 						border-radius: 0;
 						box-shadow: none;
+						cursor: default;
 					}
 				}
 			}

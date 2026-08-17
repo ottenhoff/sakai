@@ -22,13 +22,17 @@
 	## use the standard menu reference
 	#set ($mnu=$sakai_menu)
 	#set($hasItems="false")
+	#set($hasNavigableItems="false")
 	#foreach ($item in $mnu.Items)
 		#if ($item.IsEnabled || $item.IsChecked || $mnu.Showdisabled)
 			#set($hasItems="true")
+			#if (!$item.IsCurrent)
+				#set($hasNavigableItems="true")
+			#end
 		#end	
 	#end
 
-	#if (($mnu) && (!$mnu.isEmpty())  && ($hasItems=="true"))
+	#if (($mnu) && (!$mnu.isEmpty())  && ($hasItems=="true") && ($hasNavigableItems=="true"))
 		<div class="dropdown-toggle dropdown-navIntraTool">$toolOptions</div>
 		<ul class="navIntraTool actionToolBar navIntraToolMobile">
 			#set ($toolbaritemCount=0)	
@@ -58,20 +62,32 @@
 								#if($item.IsChecked)
 									#set( $toolbaritemCount=$toolbaritemCount + 1)
 									<li #if ($toolbaritemCount ==1) class="firstToolBarItem" #end>
-										<span class="chefToolBarToggle $prevItemWasField $current">#if(!$item.IsCurrent)<a href="#" title="$item.AccessibilityLabel" onclick="location = '$base'#if($item.Form)+buildQueryString('$item.Form')#end;return false;">#end$item.Title#if(!$item.IsCurrent)</a>#end</span>
+										#if($item.IsCurrent)
+											<span class="chefToolBarToggle $prevItemWasField current" aria-current="page">$item.Title</span>
+										#else
+											<span class="chefToolBarToggle $prevItemWasField"><a href="#" title="$item.AccessibilityLabel" onclick="location = '$base'#if($item.Form)+buildQueryString('$item.Form')#end;return false;">$item.Title</a></span>
+										#end
 									</li>
 								## unchecked item support
 								#else
 									#set( $toolbaritemCount=$toolbaritemCount + 1)
 									<li #if ($toolbaritemCount ==1) class="firstToolBarItem" #end>
-										<span class="$prevItemWasField $current">#if(!$item.IsCurrent)<a href="#" title="$item.AccessibilityLabel" onclick="location = '$base'#if($item.Form)+buildQueryString('$item.Form')#end;return false;">#end$item.Title#if(!$item.IsCurrent)</a>#end</span>
+										#if($item.IsCurrent)
+											<span class="$prevItemWasField current" aria-current="page">$item.Title</span>
+										#else
+											<span class="$prevItemWasField"><a href="#" title="$item.AccessibilityLabel" onclick="location = '$base'#if($item.Form)+buildQueryString('$item.Form')#end;return false;">$item.Title</a></span>
+										#end
 									</li>
 								#end
 							## url support (i.e. to another place, another window)
 							#else
 								#set( $toolbaritemCount=$toolbaritemCount + 1)
 								<li #if ($toolbaritemCount ==1) class="firstToolBarItem" #end>
-									<span class="externalLink $prevItemWasField $current">#if(!$item.IsCurrent)<a href="$item.Url" title="$item.AccessibilityLabel" target="_blank">#end$item.Title#if(!$item.IsCurrent)</a>#end</span>
+									#if($item.IsCurrent)
+										<span class="externalLink $prevItemWasField current" aria-current="page">$item.Title</span>
+									#else
+										<span class="externalLink $prevItemWasField"><a href="$item.Url" title="$item.AccessibilityLabel" target="_blank">$item.Title</a></span>
+									#end
 								</li>	
 							#end
 							#set ($formItem=0)
@@ -96,7 +112,7 @@
 			## not enabled - could be checked
 			#elseif ($item.IsChecked)
 				#set( $toolbaritemCount=$toolbaritemCount + 1)
-				<li #if ($toolbaritemCount ==1) class="firstToolBarItem" #end><span class="current $prevItemWasField $current">$item.Title</span></li>
+				<li #if ($toolbaritemCount ==1) class="firstToolBarItem" #end><span class="current $prevItemWasField $current" aria-current="page">$item.Title</span></li>
 
 			## not enabled - not checked - show if we are showing disabled
 			#elseif ($mnu.Showdisabled)

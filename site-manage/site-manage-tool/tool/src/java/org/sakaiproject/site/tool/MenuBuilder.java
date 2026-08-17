@@ -21,6 +21,7 @@ import org.sakaiproject.cheftool.Context;
 import org.sakaiproject.cheftool.RunData;
 import org.sakaiproject.cheftool.VelocityPortlet;
 import org.sakaiproject.cheftool.api.Menu;
+import org.sakaiproject.cheftool.api.MenuItem;
 import org.sakaiproject.cheftool.menu.MenuEntry;
 import org.sakaiproject.cheftool.menu.MenuImpl;
 import org.sakaiproject.component.cover.ComponentManager;
@@ -110,7 +111,7 @@ public class MenuBuilder
         // Joinable sites
         menu.add( buildMenuEntry( rl.getString( "mb.joisit" ), "doGoto_joinable", activeTab.equals( MembershipActiveTab.JOINABLE_SITES ) ) );
 
-        // Add the menu to the context if it's not empty
+        // Add the menu to the context when it contains navigable tabs
         addMenuToContext( menu, context );
     }
 
@@ -159,7 +160,7 @@ public class MenuBuilder
             menu.add( buildMenuEntry( rl.getString( "java.new" ), "doNew_site", false ) );
         }
 
-        // Add the menu to the context if it's not empty
+        // Add the menu to the context when it contains navigable tabs
         addMenuToContext( menu, context );
     }
 
@@ -330,7 +331,7 @@ public class MenuBuilder
             }
         }
 
-        // Add the menu to the context if it's not empty
+        // Add the menu to the context when it contains navigable tabs
         addMenuToContext( menu, context );
     }
 
@@ -350,16 +351,37 @@ public class MenuBuilder
     }
 
     /**
-     * Utility method to add the menu to the context under the parameter name "menu", only if the menu contains items.
+     * Utility method to add the menu to the context under the parameter name "menu", only if the menu contains
+     * at least one enabled item that is not the current tab.
+     * A toolbar that only repeats the page the user is already on is not useful navigation and should not be shown.
      *
-     * @param menu the {@link Menu} to add to the context if not empty
+     * @param menu the {@link Menu} to add to the context if it contains navigable items
      * @param context the {@link Context} to add the menu to
      */
     public static void addMenuToContext( Menu menu, Context context )
     {
-        if( !menu.isEmpty() )
+        if( hasNavigableItems( menu ) )
         {
             context.put( Menu.CONTEXT_MENU, menu );
         }
+    }
+
+    /**
+     * True when the menu contains at least one enabled item that is not the currently selected tab.
+     */
+    static boolean hasNavigableItems( Menu menu )
+    {
+        if( menu == null || menu.isEmpty() )
+        {
+            return false;
+        }
+        for( MenuItem item : menu.getItems() )
+        {
+            if( item.getIsEnabled() && !item.getIsCurrent() )
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
