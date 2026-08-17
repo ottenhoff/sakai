@@ -15,15 +15,44 @@
  */
 package org.sakaiproject.site.tool;
 
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.sakaiproject.cheftool.Context;
 import org.sakaiproject.cheftool.api.Menu;
 import org.sakaiproject.cheftool.menu.MenuEntry;
 import org.sakaiproject.cheftool.menu.MenuImpl;
+import org.sakaiproject.component.cover.ComponentManager;
+import org.sakaiproject.site.api.SiteService;
+import org.sakaiproject.tool.api.ToolManager;
 
+@RunWith(MockitoJUnitRunner.class)
 public class MenuBuilderTest {
+
+    @Mock private SiteService siteService;
+    @Mock private ToolManager toolManager;
+
+    private MockedStatic<ComponentManager> componentManagerMock;
+
+    @Before
+    public void setUp() {
+        componentManagerMock = Mockito.mockStatic(ComponentManager.class);
+        componentManagerMock.when(() -> ComponentManager.get(SiteService.class)).thenReturn(siteService);
+        componentManagerMock.when(() -> ComponentManager.get(ToolManager.class)).thenReturn(toolManager);
+    }
+
+    @After
+    public void tearDown() {
+        if (componentManagerMock != null) {
+            componentManagerMock.close();
+        }
+    }
 
     @Test
     public void addMenuToContextOmitsToolbarWithOnlyTheCurrentTab() {
