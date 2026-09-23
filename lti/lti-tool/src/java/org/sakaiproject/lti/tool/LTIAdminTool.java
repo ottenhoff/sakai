@@ -45,6 +45,7 @@ import java.text.MessageFormat;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.tsugi.lti.ContentItem;
@@ -2573,6 +2574,7 @@ public List<LtiToolBean> getAvailableToolsAsBeans(String ourSite, String context
 
 		state.removeAttribute(STATE_LINE_ITEM);
 		Long contentKey = null;  // Save for later
+		List<Long> contentKeys = new ArrayList<>();
 		if ( isDeepLink ) {
 			// Parse and validate the incoming DeepLink
 			String keyset = (String) tool.get(LTIService.LTI13_TOOL_KEYSET);
@@ -2679,6 +2681,7 @@ public List<LtiToolBean> getAvailableToolsAsBeans(String ourSite, String context
 				item.put("tool_title", (String) tool.get(LTIService.LTI_TITLE));
 				item.put("tool_newpage", LTIUtil.toLong(tool.get(LTIService.LTI_NEWPAGE)));
 				new_content.add(item);
+				contentKeys.add(contentKey);
 				goodcount++;
 			}
 
@@ -2780,6 +2783,7 @@ public List<LtiToolBean> getAvailableToolsAsBeans(String ourSite, String context
 				item.put("tool_title", (String) tool.get(LTIService.LTI_TITLE));
 				item.put("tool_newpage", LTIUtil.toLong(tool.get(LTIService.LTI_NEWPAGE)));
 				new_content.add(item);
+				contentKeys.add(contentKey);
 				goodcount++;
 			}
 		}
@@ -2793,10 +2797,16 @@ public List<LtiToolBean> getAvailableToolsAsBeans(String ourSite, String context
 				switchPanel(state, errorPanel);
 				return;
 			}
-			if (returnUrl.indexOf("?") > 0) {
-			   returnUrl += "&ltiItemId=/blti/" + contentKey;
+			String nextChar = (Strings.CS.indexOf(returnUrl, "?") > 0) ? "&" : "?";
+			// If there's more than one reference to add, make ltiItemId a comma-separated value
+			if (contentKeys.size() > 1) {
+			    returnUrl += nextChar + "ltiItemId=";
+			    for (int i = 0; i < contentKeys.size(); i++) {
+				    String ref = "/blti/" + contentKeys.get(i);
+				    returnUrl += (i < contentKeys.size() - 1) ? ref + "," : ref;
+			    }
 			} else {
-				returnUrl += "?ltiItemId=/blti/" + contentKey;
+			    returnUrl += nextChar + "ltiItemId=/blti/" + contentKey;
 			}
 
 			log.debug("Lessons flow, redirecting to returnUrl {}", returnUrl);
@@ -3518,9 +3528,12 @@ public List<LtiToolBean> getAvailableToolsAsBeans(String ourSite, String context
 		Properties contentData = new Properties();
 
 		// Lessons and Assignments only want one returned value
-		if ( flow.equals(FLOW_PARAMETER_ASSIGNMENT) || flow.equals(FLOW_PARAMETER_LESSONS) ) {
+		if (flow.equals(FLOW_PARAMETER_ASSIGNMENT)) {
 			contentData.setProperty(ContentItem.ACCEPT_MEDIA_TYPES, ContentItem.MEDIA_LTILINKITEM);
 			contentData.setProperty(ContentItem.ACCEPT_MULTIPLE, "false");
+		} else if (flow.equals(FLOW_PARAMETER_LESSONS)) {
+			contentData.setProperty(ContentItem.ACCEPT_MEDIA_TYPES, ContentItem.MEDIA_LTILINKITEM);
+			contentData.setProperty(ContentItem.ACCEPT_MULTIPLE, "true");
 		} else {
 			contentData.setProperty(ContentItem.ACCEPT_MEDIA_TYPES, ContentItem.MEDIA_ALL);
 			contentData.setProperty(ContentItem.ACCEPT_MULTIPLE, "true");
