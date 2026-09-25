@@ -3757,6 +3757,10 @@ public class SimplePageBean {
 				    if (! saveItem(i)) {
 					    return "failure";
 				    }
+				    // Advance the insert-after anchor to preserve the returned LTI item order.
+				    if (addBefore != null && addBefore.startsWith("-")) {
+					addBefore = "-" + i.getId();
+				    }
 				    // Clear the cache so that the correct sequencing is applied to each item appended
 				    itemsCache.remove(getCurrentPage().getPageId());
 				}
