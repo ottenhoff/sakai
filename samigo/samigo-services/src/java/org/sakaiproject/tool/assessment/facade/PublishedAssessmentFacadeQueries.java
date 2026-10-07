@@ -2493,7 +2493,7 @@ public class PublishedAssessmentFacadeQueries implements PublishedAssessmentFaca
 			CriteriaQuery<PublishedSectionData> cq = cb.createQuery(PublishedSectionData.class);
 
 			Root<PublishedSectionData> sRoot = cq.from(PublishedSectionData.class);
-			Join<PublishedSectionData, PublishedSectionMetaData> mJoin = sRoot.join("section");
+			Join<PublishedSectionData, PublishedSectionMetaData> mJoin = sRoot.join("sectionMetaDataSet");
 
 			cq.select(sRoot);
 
