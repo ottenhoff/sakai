@@ -82,6 +82,14 @@ The app compiled and packaged successfully; the WAR contains all five changed
 JSPs and all five JS assets byte-for-byte. Full live Sakai flows were unavailable
 because `https://sakai.example` returned HTTP 502. No server was started or restarted.
 
+## Parser follow-up
+
+The [quoted-attribute parser change](../samigo-openrewrite-parser/README.md#quoted-jsp-attributes-october-16-2026)
+raises this pilot's coverage to **167/245 JSPs** and **171/250 templates** without
+further Samigo source edits. On the original sources it reaches 165/245 JSPs.
+`results.json` above retains the historical measurements for the first parser
+patch so the effects of source cleanup and parser changes can be compared.
+
 ## Remaining blockers
 
 The three remaining failures are after the extracted script blocks: JSP/JSF

@@ -179,10 +179,62 @@ incomplete documents. This uses the same public 8.90.4 core dependencies. When
 measuring a different source revision, set `-Dcoverage.parser.label=...` to record
 the correct provenance in the generated report.
 
+## Quoted JSP attributes: October 16, 2026
+
+The second parser change handles literal markup and backslash-quoted delimiters
+in standard JSP attributes, plus Java output expressions inside quoted template
+HTML attributes. It preserves their original spelling in `Xml.Attribute.Value`,
+including EL and Java expression text. These expressions are accessible through
+the attribute value; they are not separate Java or JSP-expression child nodes.
+XML, JSPX, and HTML keep their existing lexer rules. The quoting distinction
+follows [JSP 3.1 sections 1.3.5 and 1.6](https://jakarta.ee/specifications/pages/3.1/jakarta-server-pages-spec-3.1.pdf).
+
+The parser rejects an embedded JSP action in an HTML attribute rather than
+hiding that executable component in a string. Custom-tag attributes can contain
+literal markup for their tag handler, but their enclosing quote still requires
+escaping, including inside a request-time expression. Unterminated scripting
+constructs remain errors. This adds a JSP-only lexer mode and keeps the checked-in
+lexer token vocabulary synchronized with the generated Java sources.
+
+| Corpus | JSP root patch | Plus quoted attributes |
+| --- | ---: | ---: |
+| Original, unchanged Samigo JSPs | 82/245 | **165/245 (67.3%)** |
+| With the five-script cleanup pilot | 84/245 | **167/245 (68.2%)** |
+
+All 250 original source hashes match the earlier corpus. No previous successful
+parse regresses. Across all original sources, including fragments, 169/250 fully
+parse; 81 return explicit errors. All successes have zero diagnostics, zero
+unparsed trailing content, and byte-identical output. The five-script pilot has
+171/250 successes and 79 errors.
+
+**364 XML module tests pass**, including positive and negative controls for JSP
+quotes, template Java expressions, literal markup, embedded executable actions,
+unterminated attributes, visitor edits, and unchanged XML/JSPX/HTML strictness.
+The source build still uses public 8.90.4 core; the full current Gradle dependency
+graph remains unvalidated.
+
+- Implementation: `11ebb8ece1c57ae3aa9347edf41080b71c41ee39`, following
+  `8d77476afc1a9f50f044ba0cf744f6a0c91b073e` on the current-main contribution branch.
+- Portable follow-up: [0002-jsp-quoted-attributes.patch](patches/0002-jsp-quoted-attributes.patch).
+- [Per-file comparison](results/jsp-quoted-attributes-comparison.json).
+- This step changes no Samigo application source. The earlier
+  [five-script cleanup pilot](../samigo-jsp-cleanup/README.md) remains separate.
+
+After applying patch 0001 using the commands above, apply patch 0002 and measure:
+
+```sh
+git -C /tmp/rewrite-jsp am "$PWD/build-tools/samigo-openrewrite-parser/patches/0002-jsp-quoted-attributes.patch"
+mvn -B -ntp -f build-tools/samigo-openrewrite-parser/pom.xml \
+    -Dopenrewrite.source.dir=/tmp/rewrite-jsp/rewrite-xml \
+    '-Dcoverage.parser.label=JSP root plus quoted attributes; 8.90.4 core' test exec:java
+```
+
 ### Next parser work
 
-Add typed support for JSP expressions and embedded markup inside attributes,
-then raw script bodies and non-nested template output. Preserve the original
-IDs, bean expressions, and source bytes in every successful parse. Only then
-build the structural JSP-to-Facelets recipe. Parsing and byte preservation do
-not establish JSF lifecycle or rendered-behavior equivalence.
+Represent executable JSP actions inside HTML attributes as structured nodes,
+then handle raw script bodies and template output crossing element boundaries.
+For example, `submitted.jsp` writes an opening `div` through `h:outputText` and
+its closing tag as template text. A static XML element tree cannot pair those
+correctly. The three remaining pilot pages continue to fail explicitly on these
+constructs. Preserve IDs, bindings, and source bytes throughout. Parsing and byte
+preservation do not establish JSF lifecycle or rendered-behavior equivalence.
