@@ -1,8 +1,19 @@
 {
   "baseCommit": "a2f52bae02d4c31792f1f4868a7facb71b3974c9",
-  "recipeCommit": "015f7d2a20cbaa2f67ac2003dffc136193b33317",
+  "recipeBaseCommit": "e2747ec5ed776e3e3a69ef8f4c81b00d38f2633a",
+  "recipeClassFilesSha256": {
+    "org/apache/jasper/compiler/JspxCompiler$Emitter.class": "49136da1e8fd3354001d898f2d983f06c10983db3adf655490130bcb0513ed10",
+    "org/apache/jasper/compiler/JspxCompiler.class": "fabea21061bc2c35e5fba211a97d21fd173602384de3dc2882a2cc5a780aba9c",
+    "org/sakaiproject/buildtools/jspx/ConversionJspC.class": "4ce57ac166434ac3b756302372b9ca2558bbd3fd5cc5482211d957bf2fdfd1c1",
+    "org/sakaiproject/buildtools/jspx/ConvertJsp$1.class": "f502935f8ff4ad4b6c7fec1252b2763494d4ec028f4dfc93b8a13042d060f62c",
+    "org/sakaiproject/buildtools/jspx/ConvertJsp.class": "33574363c84824fa730c0cd5760f22bd440ce878b4240397b578831053c2512e",
+    "org/sakaiproject/buildtools/jspx/JspToJspx$1.class": "8dc0f358f26c7b3f70cf52a1831883f7ad061248d341a0a1748b279d52cb9b1b",
+    "org/sakaiproject/buildtools/jspx/JspToJspx.class": "f86fc9a9d7d5efd229d68febe1d30cd1fe7d9495df3e1dd5ba289af88a32d5aa",
+    "org/sakaiproject/buildtools/jspx/XmlValidation.class": "983541b1a7db3c1dac304a4699dbd4c96d9a97efc8a4282b5c8863c44fdade9b"
+  },
   "jasperVersion": "10.1.60",
   "openRewriteVersion": "8.90.4",
+  "defaultResponseCharset": "UTF-8",
   "totalJspFiles": 245,
   "validation": [
     "namespace-aware XML",
@@ -13,14 +24,10 @@
   "fragmentContext": "Include-only files, with the union of nonconflicting source taglib declarations. Parent Java variables are not synthesized.",
   "limitations": [
     "Per-file conversions retain original .jsp include targets.",
-    "Generated-Java equivalence is measured separately by the five-page pilot.",
+    "Generated-Java equivalence is measured separately by the 16-page pilot.",
     "Literal HTML in jsp:text is not HTML-validated.",
     "JSPF and INC files are dependencies, not conversion targets in this census."
   ],
-  "summary": {
-    "passed": 232,
-    "failed": 13
-  },
   "results": [
     {
       "view": "jsf/author/allHeadings.jsp",
@@ -36,7 +43,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "c06ecf8339929dba3da577531f4916f03a00540e5df010b5cd487d371c3c7bed",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 2.21
     },
     {
       "view": "jsf/author/assessmentHeadings.jsp",
@@ -48,7 +55,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "3288227bd15492c71495483f6f7e1531901be790f7235f871be415300700a9b8",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.38
     },
     {
       "view": "jsf/author/audioRecordingPopup.jsp",
@@ -60,7 +67,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "084340a7342e3ab6dd6172670f9cc0018e0b4e694b40daf562c8826bf99228c3",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.37
     },
     {
       "view": "jsf/author/authorIndex_container.jsp",
@@ -68,9 +75,9 @@
       "includedBy": [],
       "sourceSha256": "6aba2c2ecf02c335a04883a735d0dfc1b25a4c7ddf15329ae7b311b2ecf60b47",
       "validatingConversionPassed": true,
-      "jspxSha256": "1fe76cf9418e70342a1064ce00a2f604b2267ba627f0528657edce2d98a5e580",
+      "jspxSha256": "c9fd5141edd7a96178698748186d32015e27dffb8e7e6db7fbc8527713d60054",
       "diagnostic": null,
-      "seconds": 2.71
+      "seconds": 2.73
     },
     {
       "view": "jsf/author/authorIndex_content.jsp",
@@ -83,7 +90,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4a603bbea8115962b30e6d3dead9023861353d96b23e6f0ad07bddaed0bdbcef",
       "diagnostic": null,
-      "seconds": 3.11
+      "seconds": 2.78
     },
     {
       "view": "jsf/author/authorSettings.jsp",
@@ -91,9 +98,9 @@
       "includedBy": [],
       "sourceSha256": "ab6712d5a82ba9001434b3ded5d447c0c2b4101966bf53a5fe1e5f32df921215",
       "validatingConversionPassed": true,
-      "jspxSha256": "6c8d8de9dc4c1f242f5d4530cb9ffb3bbb04d9a4d274130b684780769560f57e",
+      "jspxSha256": "b3925bf4ade4fee9a0fd6a318250c95c10838a1788f725cce70825066f721e6a",
       "diagnostic": null,
-      "seconds": 3.3
+      "seconds": 3.19
     },
     {
       "view": "jsf/author/authorSettings_attachment.jsp",
@@ -105,7 +112,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "ddd001864f0513dafef75289673feeea4c110f1622a3ff9483349a4fdc6644e0",
       "diagnostic": null,
-      "seconds": 2.36
+      "seconds": 2.24
     },
     {
       "view": "jsf/author/confirmAssessmentRetract.jsp",
@@ -113,9 +120,9 @@
       "includedBy": [],
       "sourceSha256": "98c0ecb3b30bd525588f6c1cf06073ef28d8c52448522da47274f786f64448f0",
       "validatingConversionPassed": true,
-      "jspxSha256": "33a2213df07808616ad3a9762c2df9633338a03d125e4a7b535f9cbf302ab47a",
+      "jspxSha256": "1566e2e7bfac9a5ff28021b51126fe9ed401b211c27f1349b4529471ca2c9a3c",
       "diagnostic": null,
-      "seconds": 2.31
+      "seconds": 2.32
     },
     {
       "view": "jsf/author/confirmCopyAssessment.jsp",
@@ -123,9 +130,9 @@
       "includedBy": [],
       "sourceSha256": "8804cd6978a97839fc74e0b703a898eab0f830fcdf6fdd38a55e9abddd3df9b0",
       "validatingConversionPassed": true,
-      "jspxSha256": "6a333538357748acb2d053edb44f615d620fc9199474d33a78df55e8cf79c73b",
+      "jspxSha256": "29c3735f5e706f6d7e03906f6e62a50fbf294045a68e5b2bc7fd9d5ea4bdbec8",
       "diagnostic": null,
-      "seconds": 2.13
+      "seconds": 1.96
     },
     {
       "view": "jsf/author/confirmEditPublishedAssessment.jsp",
@@ -133,20 +140,19 @@
       "includedBy": [],
       "sourceSha256": "9fb6f4710c0ab9e3949ff08a74d7e7352c7f42e1ccf1589bd675ee1badfb47ca",
       "validatingConversionPassed": true,
-      "jspxSha256": "44402e090678dfe819e65d3cfee7b8bef4cb90e9d28149b3f1f58acd1b111577",
+      "jspxSha256": "53128b6e7269d6977c6aee2f15b0fba5338e755f82a41c5d50592cd2c2772882",
       "diagnostic": null,
-      "seconds": 2.19
+      "seconds": 2.02
     },
     {
       "view": "jsf/author/createAssessment_title.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "0ab4a3dc5e45e240760dbb99f082622d827ae9dd40ccf4a8f72dedc8e5eedca1",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: Full JSP page needs an explicit response charset before JSPX conversion",
-      "seconds": 1.48,
-      "failureCategory": "response-charset-required"
+      "validatingConversionPassed": true,
+      "jspxSha256": "61152056ff9acc660ce0d2c18c449862b300409cc296481178c19d7ab2445e72",
+      "diagnostic": null,
+      "seconds": 2.23
     },
     {
       "view": "jsf/author/editAssessment.jsp",
@@ -154,9 +160,9 @@
       "includedBy": [],
       "sourceSha256": "cd365366184d89013ca32b774df75fc22c491edcfe46cffcebdd9ecdb59d7b48",
       "validatingConversionPassed": true,
-      "jspxSha256": "fd8587f3e0e8e0b155e41137b6311a894081006de5b239e8cbb3c6ee95f3f550",
+      "jspxSha256": "90c15486b0ca3193c10aca1a4002f1aabbfa574d332245489f2a030f1da4605b",
       "diagnostic": null,
-      "seconds": 4.37
+      "seconds": 3.87
     },
     {
       "view": "jsf/author/editAssessmentHeadings.jsp",
@@ -171,18 +177,17 @@
       "validatingConversionPassed": true,
       "jspxSha256": "9b4b961b07ba54d9868e60b7030fd67ef105ef558fc2158b5066187663754516",
       "diagnostic": null,
-      "seconds": 2.34
+      "seconds": 2.12
     },
     {
       "view": "jsf/author/editLink.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "831161584012363c3500233d813c754f90714041fb6145456b13ec01f381cc73",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: Full JSP page needs an explicit response charset before JSPX conversion",
-      "seconds": 1.15,
-      "failureCategory": "response-charset-required"
+      "validatingConversionPassed": true,
+      "jspxSha256": "e1f682cfd314ab3a1468c689792ba49e1d91176722ef02161626a99567c09713",
+      "diagnostic": null,
+      "seconds": 1.91
     },
     {
       "view": "jsf/author/editPart.jsp",
@@ -190,9 +195,9 @@
       "includedBy": [],
       "sourceSha256": "fb7e48162032a783954ee6399f7f3e2eadde28e8926c86003ab03c1a22f12cc7",
       "validatingConversionPassed": true,
-      "jspxSha256": "eb68f4808e88ef21d97d1118e7cfc6e1194bac6dd37bba02e8d1625cba79114f",
+      "jspxSha256": "ecc524b1c9a75054afb76a3229b667963df3802ee95a0269743d6bed11152935",
       "diagnostic": null,
-      "seconds": 2.74
+      "seconds": 2.54
     },
     {
       "view": "jsf/author/editPart_attachment.jsp",
@@ -204,7 +209,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "ccba24ec43f6727031caeed5756447ba1a74772d8d5ae483693480b5f59c8da9",
       "diagnostic": null,
-      "seconds": 2.33
+      "seconds": 2.01
     },
     {
       "view": "jsf/author/editPublishedAssessmentError.jsp",
@@ -212,9 +217,9 @@
       "includedBy": [],
       "sourceSha256": "c9c82339a9c3f8cd9ddacffc9fe8580a4fe8c7f632920d055c69baa29849697f",
       "validatingConversionPassed": true,
-      "jspxSha256": "d2963343545da458704ee4747eee1645932ef611a2245a81080cc2a921d8ab73",
+      "jspxSha256": "5af07fad2b66a33705010a8cbc42702be56a717565a072fa4d157d9ee383baf1",
       "diagnostic": null,
-      "seconds": 1.91
+      "seconds": 1.8
     },
     {
       "view": "jsf/author/item/attachment.jsp",
@@ -237,7 +242,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "fcec025b9dceef4b7bddc5edc3530e579ff00c70873e9e5a70092e52b023f38b",
       "diagnostic": null,
-      "seconds": 2.13
+      "seconds": 2.01
     },
     {
       "view": "jsf/author/item/audioRecording.jsp",
@@ -245,9 +250,9 @@
       "includedBy": [],
       "sourceSha256": "6fc78475c40b770aa3b1ddf36c2d7f8dcb85214e291c270f3e4ddcd88015cb9c",
       "validatingConversionPassed": true,
-      "jspxSha256": "fd81b537e957818ee99e5ddac7ee48af5df195d6bb59e0323aeda4f3e2aedc63",
+      "jspxSha256": "9d843ab5e4f70ce27dcdeb20a960e27566b3995fa4c25d22b41436d60b291215",
       "diagnostic": null,
-      "seconds": 2.53
+      "seconds": 2.6
     },
     {
       "view": "jsf/author/item/calculatedQuestion.jsp",
@@ -255,9 +260,9 @@
       "includedBy": [],
       "sourceSha256": "19a719653a7d35b2dd7f5824f9de9eed3248a4c61e36e618ef4496172245579c",
       "validatingConversionPassed": true,
-      "jspxSha256": "a66d6e53d309694c88d2ab42311444d454207e97ec570c9aad8579156b837963",
+      "jspxSha256": "c6bfcf182170729daacf696a4236782ff511cfe9c4db28cf3408be072e6b62c7",
       "diagnostic": null,
-      "seconds": 2.82
+      "seconds": 2.76
     },
     {
       "view": "jsf/author/item/emiWhatsThis.jsp",
@@ -265,9 +270,9 @@
       "includedBy": [],
       "sourceSha256": "ac9260fc03b514953eb688f7e29e55abacd808a014b8e5f84285463de0cd1272",
       "validatingConversionPassed": true,
-      "jspxSha256": "4ce34831911ee3d97d0992867504db4bdb6590fc5871bdbb017dde13fa4438e4",
+      "jspxSha256": "6d8d6d4ef45b7e098fb037c330de9f2cc57d2471a075219336b1bc9a63413e76",
       "diagnostic": null,
-      "seconds": 2.01
+      "seconds": 2.03
     },
     {
       "view": "jsf/author/item/extendedMatchingItems.jsp",
@@ -275,9 +280,9 @@
       "includedBy": [],
       "sourceSha256": "d6fd16c4386fd44704c7065958ce6de2e2fba9e0818cafee036e60a9103d8613",
       "validatingConversionPassed": true,
-      "jspxSha256": "5d665d04cd48443b15973a1037d3f67da5731e355d249a7758234a4de151fe10",
+      "jspxSha256": "a5c7a15d6b900dc89e288191e0f29db4e2226daf5a06e453e8991466d68e5f5d",
       "diagnostic": null,
-      "seconds": 3.07
+      "seconds": 2.81
     },
     {
       "view": "jsf/author/item/fileUpload.jsp",
@@ -285,9 +290,9 @@
       "includedBy": [],
       "sourceSha256": "abb5dc8c0f39ec6c66ee679b65ed1134e73ea6f020226e3aa20b63913e561bd2",
       "validatingConversionPassed": true,
-      "jspxSha256": "bed7288d5fe3b9f0f17347e0eac377888f6693d45afdcbce1408dfc33befc124",
+      "jspxSha256": "3ac9e8cdc3f7f7d87c227632f6a03c679165c570b63c6a39b54c2b0b7e75b387",
       "diagnostic": null,
-      "seconds": 2.77
+      "seconds": 2.51
     },
     {
       "view": "jsf/author/item/fillInNumeric.jsp",
@@ -295,9 +300,9 @@
       "includedBy": [],
       "sourceSha256": "f102ba55c9cba9624eaa5f010b21da54d3db45eadb06b8004a2f59974a4d9e42",
       "validatingConversionPassed": true,
-      "jspxSha256": "8867df47f93a437c93f87833cdd614509e55fa93f9a2bebdbe0e67c7f6144871",
+      "jspxSha256": "f61627851e6fc30c91dd37d00489531a9a91a5e4f4a5aa776805eb63b72b4cb3",
       "diagnostic": null,
-      "seconds": 2.97
+      "seconds": 2.72
     },
     {
       "view": "jsf/author/item/fillInTheBlank.jsp",
@@ -305,9 +310,9 @@
       "includedBy": [],
       "sourceSha256": "d3c6cdea5bc6b3fc396f2f22ee939d3b87a0b2abda27e6b40c6bcfdb4693aebb",
       "validatingConversionPassed": true,
-      "jspxSha256": "59d562725946816d56971fc1093f6f1989d418c55e5c0978c2b6eba2211ee8e3",
+      "jspxSha256": "2dfbf49caeb3ed49915e93b393c10ec713b15f062ca85b2f8a8127cd059f9af1",
       "diagnostic": null,
-      "seconds": 2.83
+      "seconds": 2.77
     },
     {
       "view": "jsf/author/item/imageMapQuestion.jsp",
@@ -315,9 +320,9 @@
       "includedBy": [],
       "sourceSha256": "969ec5482eede33e1d8794c1abbd995255950e202bfe829c1c03d95736fa9cc9",
       "validatingConversionPassed": true,
-      "jspxSha256": "0097fe19154ce239dc2ee4d7424ec7bb6b3eab87ba098a4e99386220e7e8db2c",
+      "jspxSha256": "f5337f677174cd752fb1c99d6ae2175f8943a9a12b3c6b0b5bb6b7fc43c955bf",
       "diagnostic": null,
-      "seconds": 2.78
+      "seconds": 2.69
     },
     {
       "view": "jsf/author/item/itemHeadings.jsp",
@@ -341,7 +346,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "f7c5ebc45adb19c89987e9aaec35602dee028a3a45954805361385aa1606d8a6",
       "diagnostic": null,
-      "seconds": 2.44
+      "seconds": 2.29
     },
     {
       "view": "jsf/author/item/matching.jsp",
@@ -349,9 +354,9 @@
       "includedBy": [],
       "sourceSha256": "891b852b8d409eabe3e34c3ed6ea3b80c51009e02078cca80d153074e19f198f",
       "validatingConversionPassed": true,
-      "jspxSha256": "e4ce64497d7c821e26d545266b88898f1e09652be63b572ed6cb528f4e16472a",
+      "jspxSha256": "38b8eededb8f3365b307fb285e59eefd4c2194c0366ab7d397ca67497049edd7",
       "diagnostic": null,
-      "seconds": 2.76
+      "seconds": 2.75
     },
     {
       "view": "jsf/author/item/matrixChoicesSurvey.jsp",
@@ -359,9 +364,9 @@
       "includedBy": [],
       "sourceSha256": "b66281232a50a35a358dff15637cecb2a9be7b55e8c09cc064aca0aa6b074c2e",
       "validatingConversionPassed": true,
-      "jspxSha256": "cc18c9635145fc869f96c5abf33a551428fc84fcb24c41eab713ad5eb8bb3735",
+      "jspxSha256": "da41588630aa6393c821201b6288e233083c61ac87f43e3178e6f8b6e46b1228",
       "diagnostic": null,
-      "seconds": 2.79
+      "seconds": 2.69
     },
     {
       "view": "jsf/author/item/multipleChoice.jsp",
@@ -369,9 +374,9 @@
       "includedBy": [],
       "sourceSha256": "64ee3e428867591b2ea8fd8dca38f7bb33467d3dbd1e7630b0ab96afbcf0b117",
       "validatingConversionPassed": true,
-      "jspxSha256": "76e2a1d9a7dd509df5d9b0723f1b917c19e61fa562bdbecc244a6385afd525f8",
+      "jspxSha256": "8f166d15b3fb25eb877575a500ef21356181a85ec0f074f27f5f5d4df4648f74",
       "diagnostic": null,
-      "seconds": 2.82
+      "seconds": 2.76
     },
     {
       "view": "jsf/author/item/multipleChoiceSurvey.jsp",
@@ -379,7 +384,7 @@
       "includedBy": [],
       "sourceSha256": "5e6c186385f2b120f40b80bc44e5ee6c6a57a3110d1e655b93323c86de86dacb",
       "validatingConversionPassed": true,
-      "jspxSha256": "a01229a82cdcdcf0acf21339e7dbd32107e9173e0e6811708b70b3135eed7929",
+      "jspxSha256": "7c51e2378b8312a65d16936dbb1fa7bd9282818175e9e8b33132fd8507356861",
       "diagnostic": null,
       "seconds": 2.55
     },
@@ -395,7 +400,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "5b416f36f491e14567424c3c27b7ceecd8c946bce15a1e3d3581060b49f3a275",
       "diagnostic": null,
-      "seconds": 1.94
+      "seconds": 2.01
     },
     {
       "view": "jsf/author/item/shortAnswer.jsp",
@@ -403,9 +408,9 @@
       "includedBy": [],
       "sourceSha256": "baca0d9ef982e07cba2ecf204081b2fc90e1e60dec125825b895ea207e6eb4ba",
       "validatingConversionPassed": true,
-      "jspxSha256": "7cc9ee63e9168b891f47d9482e8faf301b7c325047bdff1bed86d3123f0f6a8b",
+      "jspxSha256": "d09bd88116044d9ee6b560665086229bbc50d7a8c434ad59e6509c5fe6ba2c6b",
       "diagnostic": null,
-      "seconds": 2.54
+      "seconds": 2.68
     },
     {
       "view": "jsf/author/item/tags.jsp",
@@ -429,7 +434,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "c75d0ff3fbeacb9ee4b46a06970b8b8fa729b147cd422a17a86d64fbc28b62e7",
       "diagnostic": null,
-      "seconds": 1.91
+      "seconds": 2.17
     },
     {
       "view": "jsf/author/item/timed.jsp",
@@ -453,7 +458,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "212c0a295609205e14a5b166988c9d0552d267868f285d3f5df956152a97c1d2",
       "diagnostic": null,
-      "seconds": 1.95
+      "seconds": 2.13
     },
     {
       "view": "jsf/author/item/trueFalse.jsp",
@@ -461,9 +466,9 @@
       "includedBy": [],
       "sourceSha256": "97c71d59d8ab393862c0a02a676343e81d8583e8787112bda8b4b88081c59501",
       "validatingConversionPassed": true,
-      "jspxSha256": "e7f65fad9334eed82a6c35e08cf5eace8dc44fbdf1fa184842c7844e165e55c0",
+      "jspxSha256": "a870f19110c3dae67711e0e338ab8e04d8e85feba99ce6ce8d4d11677a109345",
       "diagnostic": null,
-      "seconds": 2.49
+      "seconds": 2.78
     },
     {
       "view": "jsf/author/markForReviewPopUp.jsp",
@@ -471,9 +476,9 @@
       "includedBy": [],
       "sourceSha256": "b3ff59921d3753f2895568b10fef34bf9481b940f34a0d7462a9224ab20cd194",
       "validatingConversionPassed": true,
-      "jspxSha256": "e3d61abdb29fa8763ab930a38a17d0a5242d6948fa92d55d70fe2520d43ad067",
+      "jspxSha256": "929b080f76c75edb0e09ba7918b016a0b2dd7cdfa2fd34b9eec20b78ca7bed00",
       "diagnostic": null,
-      "seconds": 1.89
+      "seconds": 2.02
     },
     {
       "view": "jsf/author/mcWhatsThis.jsp",
@@ -481,9 +486,9 @@
       "includedBy": [],
       "sourceSha256": "e1ce16bba531d4e7a43109f90caf585adfc2031966b94d553d8fd7e68ef0b4a7",
       "validatingConversionPassed": true,
-      "jspxSha256": "9a354f3c2e2012f9387ef1fce8933baa7ceef2bee537678d0c746988cb1cbef8",
+      "jspxSha256": "9a5708cf647ed692df3c9137cbb8aecfe86ef9d08332e42fa13332d906c35073",
       "diagnostic": null,
-      "seconds": 2.08
+      "seconds": 2.23
     },
     {
       "view": "jsf/author/part_attachment.jsp",
@@ -496,7 +501,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "7a8cf784d8bc00550bd3d0b32f19c1bffb63389af0e43320943289aa6710ab09",
       "diagnostic": null,
-      "seconds": 2.01
+      "seconds": 2.17
     },
     {
       "view": "jsf/author/permissions.jsp",
@@ -504,9 +509,9 @@
       "includedBy": [],
       "sourceSha256": "e38f3c6c08158e364fbfc2aa0ed382b4d719b1e4c70b5eb7e4391017bcaaf18f",
       "validatingConversionPassed": true,
-      "jspxSha256": "ded8eea22b962c66d8f0da4f131c73b6ab15ece547d036379687bb20884ccaf8",
+      "jspxSha256": "d42db6043dfe70fe6155f0b89b882622a581f4e2b2d43b17538a4824d6cc9308",
       "diagnostic": null,
-      "seconds": 1.96
+      "seconds": 2.14
     },
     {
       "view": "jsf/author/permissionsHeadings.jsp",
@@ -518,7 +523,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "b3d02371cdf16813f7775ae61614a597ba08fe4c2d23f7ca129da916a75b3c13",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.07
     },
     {
       "view": "jsf/author/permissionsNav.jsp",
@@ -540,7 +545,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "33b99c72101ca5c123db3161c0e89cffb6ca0e435bf6664d27a536e6c01a0f0d",
       "diagnostic": null,
-      "seconds": 1.85
+      "seconds": 1.83
     },
     {
       "view": "jsf/author/poolUpdateError.jsp",
@@ -548,9 +553,9 @@
       "includedBy": [],
       "sourceSha256": "e2034b3a22481f89f0ec30a0a107aceaa08dc7e1aeb41808a44d70609eba6dcb",
       "validatingConversionPassed": true,
-      "jspxSha256": "3657965ccbe3bfa73e5a007be6fcf8e075c61ba57b961cb96699b55fd6a896cf",
+      "jspxSha256": "c4d77b2399fc31c42394b4f9da897ea19dfdddde1d3fb7cb7de6fc2884fd2858",
       "diagnostic": null,
-      "seconds": 1.81
+      "seconds": 1.92
     },
     {
       "view": "jsf/author/previewAssessment.jsp",
@@ -560,7 +565,7 @@
       "validatingConversionPassed": false,
       "jspxSha256": null,
       "diagnostic": "org.apache.jasper.JasperException: webapp/jsf/author/previewAssessment.jsp (line: [140], column: [10]) [#{question.itemData.typeId == 15] contains invalid expression(s): [jakarta.el.ELException: Failed to parse the expression [#{question.itemData.typeId == 15]]",
-      "seconds": 1.11,
+      "seconds": 1.21,
       "failureCategory": "invalid-source-el"
     },
     {
@@ -576,7 +581,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "0a7fd445784cf7aa0989dfd154d3784df3ca0429660bff1722415bed0cd81d20",
       "diagnostic": null,
-      "seconds": 2.08
+      "seconds": 2.04
     },
     {
       "view": "jsf/author/preview_item/CalculatedQuestion.jsp",
@@ -591,7 +596,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "b056c566d6d78420be3ddbf452182b0a174ecbe0327650e00c89c13695a58ea1",
       "diagnostic": null,
-      "seconds": 2.18
+      "seconds": 2.16
     },
     {
       "view": "jsf/author/preview_item/ExtendedMatchingItems.jsp",
@@ -606,7 +611,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "7c8b2fa25ffcdb8c7280cfd9a21922c99131e61be48bbccd89288fa267b9bd29",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 2.32
     },
     {
       "view": "jsf/author/preview_item/FileUpload.jsp",
@@ -621,7 +626,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "53ca797e43de4ceb63fa58245125b7a63cfae4ed61f927b927d94ebb441f406f",
       "diagnostic": null,
-      "seconds": 2.18
+      "seconds": 2.35
     },
     {
       "view": "jsf/author/preview_item/FillInNumeric.jsp",
@@ -636,7 +641,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "6b11c3a511c93aa6c556e7fce98c5a17494cc496b6321a2d31ece7998932a114",
       "diagnostic": null,
-      "seconds": 2.15
+      "seconds": 2.17
     },
     {
       "view": "jsf/author/preview_item/FillInTheBlank.jsp",
@@ -651,7 +656,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "a4984ca4e696dee6fe53c80620b56a64249558ce8a9d7ae864968f5295d80788",
       "diagnostic": null,
-      "seconds": 2.16
+      "seconds": 2.19
     },
     {
       "view": "jsf/author/preview_item/ImageMapQuestion.jsp",
@@ -666,7 +671,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "18718003b60eb3d13e55717420a51b282e7eee3dab0366729ce3ea36f7e12ffb",
       "diagnostic": null,
-      "seconds": 2.17
+      "seconds": 2.23
     },
     {
       "view": "jsf/author/preview_item/Matching.jsp",
@@ -681,7 +686,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4ce3efff23bf6650dbe8482782fa92c7913c58c444022893ce10346890c85cb6",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.35
     },
     {
       "view": "jsf/author/preview_item/MatrixChoicesSurvey.jsp",
@@ -696,7 +701,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "417d96e930ed7a65d94be0752777403495e37c1077749f5be90c1a8f241e49bb",
       "diagnostic": null,
-      "seconds": 2.44
+      "seconds": 2.13
     },
     {
       "view": "jsf/author/preview_item/MultipleChoiceMultipleCorrect.jsp",
@@ -730,7 +735,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "701b039f3562b9363cdd67e75bbdab446b08411363175cde2a19951c59473bc5",
       "diagnostic": null,
-      "seconds": 2.24
+      "seconds": 2.19
     },
     {
       "view": "jsf/author/preview_item/MultipleChoiceSurvey.jsp",
@@ -745,7 +750,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2dbb35629549c03f585a17e91f6572ffe02cbf873c1c6c8bd0ba16b33d18cee9",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.22
     },
     {
       "view": "jsf/author/preview_item/ShortAnswer.jsp",
@@ -760,7 +765,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "cec07bcf6a1959cb80562ae47d8cc86e5790770d20f569b1b6fff236f089be29",
       "diagnostic": null,
-      "seconds": 2.07
+      "seconds": 2.12
     },
     {
       "view": "jsf/author/preview_item/TrueFalse.jsp",
@@ -775,7 +780,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4a590407bc81d7006be62e0713982eb455198a5676c6c653a55dc259c7454404",
       "diagnostic": null,
-      "seconds": 2.33
+      "seconds": 2.38
     },
     {
       "view": "jsf/author/preview_item/attachment.jsp",
@@ -800,7 +805,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "0180be6a691b53f7f548e65fe4c647143a71625745592b81dca55be4a7b3e101",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.12
     },
     {
       "view": "jsf/author/preview_item/tags.jsp",
@@ -825,7 +830,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "df7d22c7a937541c5c37df2b87adc48350e890ea3b37e942ce19934aa8b25242",
       "diagnostic": null,
-      "seconds": 2.13
+      "seconds": 2.06
     },
     {
       "view": "jsf/author/publishAssessment.jsp",
@@ -833,9 +838,9 @@
       "includedBy": [],
       "sourceSha256": "6987a4ef457365bcf683f98f9fa244580c471b3d403679e42c2cfbad6474fe99",
       "validatingConversionPassed": true,
-      "jspxSha256": "e88dc1c98267acdd67ad33a34ddccdca14a470a4e9b8a03d303180a7b0c69870",
+      "jspxSha256": "07524d206398e4b570e204b13d98331420c4d08283c3a133556065d563bd0d8a",
       "diagnostic": null,
-      "seconds": 2.32
+      "seconds": 2.55
     },
     {
       "view": "jsf/author/publishedSettings.jsp",
@@ -843,9 +848,9 @@
       "includedBy": [],
       "sourceSha256": "9c5677a4d42deff2311b4cf76354ec01c478d13d605feb7e50199e3dbc892585",
       "validatingConversionPassed": true,
-      "jspxSha256": "7b069fcd195ecb6131c75d006265e995e236d14f540dba2fe706c5ebc0dee88d",
+      "jspxSha256": "d07657a692f76a45473ed5ed52fcf0f1c17dc04ef7cd321e9fdcb18f308ade58",
       "diagnostic": null,
-      "seconds": 2.7
+      "seconds": 3.03
     },
     {
       "view": "jsf/author/publishedSettings_attachment.jsp",
@@ -857,7 +862,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "f9d92fcb0f759ae9709b1dda58baa9d6abb26e255866d29b6c56f4beb955d0a6",
       "diagnostic": null,
-      "seconds": 2.06
+      "seconds": 2.23
     },
     {
       "view": "jsf/author/regradeRepublishPopUp.jsp",
@@ -865,9 +870,9 @@
       "includedBy": [],
       "sourceSha256": "a11d9d2697bf9177e362ef4821c9df509fa451d974fdd5ed944886ea138034be",
       "validatingConversionPassed": true,
-      "jspxSha256": "09f3cce46c8a0d178f02a20415424e70ccf780c76f47ff6897957429b4c367c6",
+      "jspxSha256": "0df6569c41d45437ebf3caa2d3ce56bb9ef3b54ff3dcaa57bbab29ddc60fde73",
       "diagnostic": null,
-      "seconds": 2.02
+      "seconds": 2.17
     },
     {
       "view": "jsf/author/removeAssessmentAttachment.jsp",
@@ -875,9 +880,9 @@
       "includedBy": [],
       "sourceSha256": "15249d42779c0b52923acffe3f6f71a5b7be68743316c87e23c347a78b6b5a42",
       "validatingConversionPassed": true,
-      "jspxSha256": "7a41bc0ca8d68eeeb73623d09f9d5201cdf91fac15c706bb1fcce5d7d7d59835",
+      "jspxSha256": "ba3affb396610a4f99b8c72ee870a0f031ec08b81d8fca6a27c593ad56f3be2c",
       "diagnostic": null,
-      "seconds": 1.84
+      "seconds": 2.07
     },
     {
       "view": "jsf/author/removePart.jsp",
@@ -885,9 +890,9 @@
       "includedBy": [],
       "sourceSha256": "63247f3627625ce9db7f6eb92634c235c41f488a3d1d694d1742ce73d0df75cf",
       "validatingConversionPassed": true,
-      "jspxSha256": "a3f9d5f05d4993fcc60e58dd8cb304c43d4a426458af3001a191ebf2a4564211",
+      "jspxSha256": "5b38ab6fcad7e2fd7709bf11b83f0edbbd45fb26ca959099ac7d5d6033511560",
       "diagnostic": null,
-      "seconds": 1.82
+      "seconds": 2.08
     },
     {
       "view": "jsf/author/removePartAttachment.jsp",
@@ -895,9 +900,9 @@
       "includedBy": [],
       "sourceSha256": "aff790accf6fd4963f470e2829e0f02f76b4e26437e8bb3c88e0e162a2b13d88",
       "validatingConversionPassed": true,
-      "jspxSha256": "7a523ae38b5f0f2542514c9c64734bd29e4690fcd25876b55b2467beb58d5ffd",
+      "jspxSha256": "b0a9bfa109b82d5b9e4d8457da8b45c8e4408ea159d34bcc21abd68c5374291c",
       "diagnostic": null,
-      "seconds": 1.75
+      "seconds": 2.07
     },
     {
       "view": "jsf/author/removeQuestion.jsp",
@@ -905,9 +910,9 @@
       "includedBy": [],
       "sourceSha256": "7b2697c883f55ffe4af32d5af5c1baee0587a61c2ca8cd2f9a9c0c34acede6c4",
       "validatingConversionPassed": true,
-      "jspxSha256": "ec5b4ed2d4221df3102d1856309c8d5c52e66c87b8effec11ee02799dafb70d4",
+      "jspxSha256": "73e652eac04c843275cc5baffdc6139ba6fbcd1c6bf6a565508086efd4f914ca",
       "diagnostic": null,
-      "seconds": 1.7
+      "seconds": 1.95
     },
     {
       "view": "jsf/author/restoreAssessments.jsp",
@@ -915,9 +920,9 @@
       "includedBy": [],
       "sourceSha256": "4f9fd5241ee341a4fd748ac0654efd9b7b4129be96c70f648809f8e7fca12164",
       "validatingConversionPassed": true,
-      "jspxSha256": "17347e218ae552c39842bbc1665e1bf830669ad4da3f5fded04bb6ce63a6beec",
+      "jspxSha256": "f179adb6c3379e007caa251ca3d4d71d1fae034f895dc0d392c3ed20fdc6e5a6",
       "diagnostic": null,
-      "seconds": 1.97
+      "seconds": 2.17
     },
     {
       "view": "jsf/author/restoreAssessmentsHeading.jsp",
@@ -929,7 +934,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4e22c793636366b277b42ed3caa02e9f0f5b1cdc34666ffcbc5695b2a2ce2b17",
       "diagnostic": null,
-      "seconds": 1.96
+      "seconds": 2.11
     },
     {
       "view": "jsf/author/searchPreview.jsp",
@@ -937,9 +942,9 @@
       "includedBy": [],
       "sourceSha256": "961b6fe920b22540626fd3a11e42aab9051336364a1c60ce63ff591de8fdabcb",
       "validatingConversionPassed": true,
-      "jspxSha256": "f75b8eb1b993d8e3a06d3e258022507c5b83f545e6080d1003ea9388edfbd29b",
+      "jspxSha256": "d7a903cf750a2da9847d30ddcfd04f08628316271513fecb16042fa99f7a881d",
       "diagnostic": null,
-      "seconds": 3.15
+      "seconds": 3.31
     },
     {
       "view": "jsf/author/searchQuestion.jsp",
@@ -947,9 +952,9 @@
       "includedBy": [],
       "sourceSha256": "d7b4d6a6e9ddaa3aa201006d27fb5adeebf07f4d49cb4dcd71f51230d1874643",
       "validatingConversionPassed": true,
-      "jspxSha256": "0e83071531345351d665f9f1925b0fd59a20d6c5f5296b3f82b80471313e6ae7",
+      "jspxSha256": "b41d10c4e93c813594ced54f5302ce942ba39e8f3534d0276424b7aa01567499",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.59
     },
     {
       "view": "jsf/author/searchResults.jsp",
@@ -961,7 +966,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2e366b875046643594c96ddf9ed70959aa38cb6208de72a8b4e46f39c9262957",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.18
     },
     {
       "view": "jsf/author/search_preview_item/AudioRecording.jsp",
@@ -973,7 +978,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "0658d662abceac1225f698bf7312c704685d399a5ce7ca2f2fd2e221e0c2f7d2",
       "diagnostic": null,
-      "seconds": 2.27
+      "seconds": 2.34
     },
     {
       "view": "jsf/author/search_preview_item/CalculatedQuestion.jsp",
@@ -985,7 +990,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "56ac5a038c91131c433b9610727eaf6f5adcd4b0f1937299418a7618e8056464",
       "diagnostic": null,
-      "seconds": 2.12
+      "seconds": 2.17
     },
     {
       "view": "jsf/author/search_preview_item/ExtendedMatchingItems.jsp",
@@ -997,7 +1002,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "98cd0685c80748f9f17f21d040dacbb57a685dda59478ff13a78c0688c11a9d7",
       "diagnostic": null,
-      "seconds": 2.23
+      "seconds": 2.36
     },
     {
       "view": "jsf/author/search_preview_item/FileUpload.jsp",
@@ -1009,7 +1014,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "35069c85f504f7ce6bf1e0f6c730ec90290d0ea4259a6c5c28ec7afa54c87dad",
       "diagnostic": null,
-      "seconds": 2.12
+      "seconds": 2.24
     },
     {
       "view": "jsf/author/search_preview_item/FillInNumeric.jsp",
@@ -1021,7 +1026,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "739ba802fece021778a236c0f814bc9d37cba33450bd49ebb6ff0f130a6e15d5",
       "diagnostic": null,
-      "seconds": 2.03
+      "seconds": 2.61
     },
     {
       "view": "jsf/author/search_preview_item/FillInTheBlank.jsp",
@@ -1033,7 +1038,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "3d08471b2ffc126834e27e35dafa72512b25bb3b83cd63f8ed0dfaeae86cc162",
       "diagnostic": null,
-      "seconds": 2.19
+      "seconds": 2.71
     },
     {
       "view": "jsf/author/search_preview_item/ImageMapQuestion.jsp",
@@ -1045,7 +1050,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "c5ec7a51bb0b183f5d06a1ad1a0cd202857169c291c916b2f4bfc39aa28bb052",
       "diagnostic": null,
-      "seconds": 2.32
+      "seconds": 2.76
     },
     {
       "view": "jsf/author/search_preview_item/Matching.jsp",
@@ -1057,7 +1062,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "29c74a333811efff2fb688feecd1b8a843846c9283fe17d7f0609da8da4bb45c",
       "diagnostic": null,
-      "seconds": 2.26
+      "seconds": 2.67
     },
     {
       "view": "jsf/author/search_preview_item/MatrixChoicesSurvey.jsp",
@@ -1069,7 +1074,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "ee9a310a414fcc22aaf5f9012a01a2c2681a35401c78540452683599804962f6",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.28
     },
     {
       "view": "jsf/author/search_preview_item/MultipleChoiceMultipleCorrect.jsp",
@@ -1082,7 +1087,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "8830a73c7c49159891fc21a94ed94785ac133e4bccb2090c8a25d29b29979177",
       "diagnostic": null,
-      "seconds": 2.27
+      "seconds": 2.22
     },
     {
       "view": "jsf/author/search_preview_item/MultipleChoiceSingleCorrect.jsp",
@@ -1094,7 +1099,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "9171703984a995fc95f4c5a37b9ec9a845d6a363dd06346f6e0268bd27604969",
       "diagnostic": null,
-      "seconds": 2.15
+      "seconds": 2.33
     },
     {
       "view": "jsf/author/search_preview_item/MultipleChoiceSurvey.jsp",
@@ -1106,7 +1111,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "9295e10a5c78208cee0895f0e3a6feda09041fb35038db504f225831bce8910c",
       "diagnostic": null,
-      "seconds": 2.16
+      "seconds": 2.22
     },
     {
       "view": "jsf/author/search_preview_item/ShortAnswer.jsp",
@@ -1118,7 +1123,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "0407f5fa596fe6998969dc6e5aee010a5c03b2cb1b8e058a528d7206d81e114c",
       "diagnostic": null,
-      "seconds": 2.15
+      "seconds": 2.27
     },
     {
       "view": "jsf/author/search_preview_item/TrueFalse.jsp",
@@ -1130,7 +1135,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "83a582de67b8d9723f520e2591d433c321e10c8c2e5983d7de96dda3d633ef8c",
       "diagnostic": null,
-      "seconds": 2.16
+      "seconds": 2.37
     },
     {
       "view": "jsf/author/search_preview_item/attachment.jsp",
@@ -1154,7 +1159,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "b24aacc3e09926f7226fdde99ba514ad400439ecdd0f9cc94d75b651b8b1cc8d",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.12
     },
     {
       "view": "jsf/author/search_preview_item/tags.jsp",
@@ -1179,7 +1184,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "202c17f107439d744f449d8bc64649b5984285d66821f50fee1560174d2b13b5",
       "diagnostic": null,
-      "seconds": 2.01
+      "seconds": 1.91
     },
     {
       "view": "jsf/delivery/accessDenied.jsp",
@@ -1187,9 +1192,9 @@
       "includedBy": [],
       "sourceSha256": "8910077521d9e0cb16100bde03eacac1a3e8b2daa6ce8ca5584d5e7d1d17485f",
       "validatingConversionPassed": true,
-      "jspxSha256": "4e5578667993bedc5a63a851f333d536210007f184558d7888b5492cdb80cfd5",
+      "jspxSha256": "0b6b332c6374011d8b6ffe1a7333d9e46caeadff2cc0deb0dd2c6908aba9118f",
       "diagnostic": null,
-      "seconds": 1.96
+      "seconds": 1.9
     },
     {
       "view": "jsf/delivery/accessError.jsp",
@@ -1197,9 +1202,9 @@
       "includedBy": [],
       "sourceSha256": "939978bf9c533ef52c724e408c85166c0a680b8980be7bdf9e6371f0423f99f9",
       "validatingConversionPassed": true,
-      "jspxSha256": "334b02e0dea57001517ce006a0c9761e2beb673fc8df3540ca93053c70730d5d",
+      "jspxSha256": "d84f7a1d9ba786bdc0fc7b520a8b62e0e87c899c7f68cd4d1aaaac8f21319b72",
       "diagnostic": null,
-      "seconds": 1.8
+      "seconds": 1.87
     },
     {
       "view": "jsf/delivery/anonymousQuitMessage.jsp",
@@ -1207,9 +1212,9 @@
       "includedBy": [],
       "sourceSha256": "a88414fadf2c0582a58fea39bd88db6b14136b6135cce09b858ef8a3c7da4fe5",
       "validatingConversionPassed": true,
-      "jspxSha256": "4590cd60af9510f4799c704e862b5116ffe2a6ae41dc078dc018f8a4dfbd5399",
+      "jspxSha256": "f405b2dffbc13bf5939cbd20fc57326d8c1610b751f33b0d5379d72bf1992d4c",
       "diagnostic": null,
-      "seconds": 1.74
+      "seconds": 1.92
     },
     {
       "view": "jsf/delivery/assessmentDeliveryHeading.jsp",
@@ -1223,7 +1228,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "1f6e08f35d7ef11debbca800a4fa93c58f465378354cc3b41e3b9b3b3d9076e7",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.19
     },
     {
       "view": "jsf/delivery/assessmentDeliveryTimer.jsp",
@@ -1237,7 +1242,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "571ec8701619a1e09f04110f64935be5b2bc4414e7c0fbcd9d123006d5a74271",
       "diagnostic": null,
-      "seconds": 2.07
+      "seconds": 2.01
     },
     {
       "view": "jsf/delivery/assessmentHasBeenSubmitted.jsp",
@@ -1245,9 +1250,9 @@
       "includedBy": [],
       "sourceSha256": "a1dffd77fb7bf43a4624ff70a4e18a30495e2e7177726e20f3d4bea8744f361c",
       "validatingConversionPassed": true,
-      "jspxSha256": "209730ebc90c6b6c573e30a46363eb2d860fa0ff9db3aad49fe62ca8cb2a2795",
+      "jspxSha256": "5c371d2c56e0c57ad59aa472d9b7d1ec59822858942230ebe0d8deed8897f755",
       "diagnostic": null,
-      "seconds": 1.95
+      "seconds": 2.34
     },
     {
       "view": "jsf/delivery/assessmentHasBeenSubmittedContent.jsp",
@@ -1260,7 +1265,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "ed58a2b67c31761a275008c13bae184395106354531b708a553dd8bed7d4f055",
       "diagnostic": null,
-      "seconds": 2.02
+      "seconds": 2.48
     },
     {
       "view": "jsf/delivery/assessmentNotAvailable.jsp",
@@ -1268,9 +1273,9 @@
       "includedBy": [],
       "sourceSha256": "4fca432cf78c67e99fc75f68680cf60448b8958b8441cbfc6d5c36d16cf399b7",
       "validatingConversionPassed": true,
-      "jspxSha256": "82d7869de206778398cc1b4879cdab6b13710fe3f79f828a206c5b49d4a4ca5a",
+      "jspxSha256": "4770ff060c7cf9458d112f826b2b676bfa3be7b3499baf0ba3e5483d8f396b51",
       "diagnostic": null,
-      "seconds": 1.8
+      "seconds": 2.45
     },
     {
       "view": "jsf/delivery/assessment_attachment.jsp",
@@ -1282,7 +1287,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "9eef36f063d5bf130e5af676d54bf025ddd44da901da75e4ace5e13bca74f5e3",
       "diagnostic": null,
-      "seconds": 2.35
+      "seconds": 2.68
     },
     {
       "view": "jsf/delivery/beginAssessment.jsp",
@@ -1290,9 +1295,9 @@
       "includedBy": [],
       "sourceSha256": "4a6c8426d799ac2cff425a64840e6de96c4a7e4bdb1c5691a160d7b8325cf4d2",
       "validatingConversionPassed": true,
-      "jspxSha256": "629231c4a86c49c0d8d7b697bb624447ad46948da8efe492955616be5f24b621",
+      "jspxSha256": "5f3532244cf4397787895c880438ce2c27b466656a5d2878fd3b675beb90e98b",
       "diagnostic": null,
-      "seconds": 1.95
+      "seconds": 2.01
     },
     {
       "view": "jsf/delivery/beginTakingAssessment.jsp",
@@ -1300,9 +1305,9 @@
       "includedBy": [],
       "sourceSha256": "5b7fddc4a1b6c19e784bb10b5a6db4a739a8c7d1e957f132b397da3949be81e9",
       "validatingConversionPassed": true,
-      "jspxSha256": "419fcc353a58a11639c34f97e78523862645bd0792bdc8142a30867e69200824",
+      "jspxSha256": "c72173485793ef7989e96cf146cc0a34dc6db6504a3c30743ec80549b2a7a898",
       "diagnostic": null,
-      "seconds": 2.43
+      "seconds": 2.61
     },
     {
       "view": "jsf/delivery/confirmSubmit.jsp",
@@ -1310,9 +1315,9 @@
       "includedBy": [],
       "sourceSha256": "69cd609805d59424f6cda8201f23f219b643e717dfcebf80b1112c88a46b2b01",
       "validatingConversionPassed": true,
-      "jspxSha256": "e00f36a27b1b338d8365775f71655824195ba47d1573b42b8d00459135c65a41",
+      "jspxSha256": "4a38f9bcd4385329ec685d0f4e91405b334299a3aac64d9ce4854a7d0dea32e4",
       "diagnostic": null,
-      "seconds": 2.24
+      "seconds": 2.45
     },
     {
       "view": "jsf/delivery/deliverAssessment.jsp",
@@ -1320,9 +1325,9 @@
       "includedBy": [],
       "sourceSha256": "68f6de46f8071605453cdc63556079dcc1a158bce275972b448924ea41117797",
       "validatingConversionPassed": true,
-      "jspxSha256": "1b7ee229389c22259411ab7e2438c9df963982fa39e11840906405bcc192f4fe",
+      "jspxSha256": "993573aa4555f436ebd68797197a2af8e5ea3ff5e2bf5a6a6cdfed6c604a7546",
       "diagnostic": null,
-      "seconds": 3.93
+      "seconds": 4.72
     },
     {
       "view": "jsf/delivery/deliveryjQuery.jsp",
@@ -1339,7 +1344,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "320bfa82055a542953675fbe4fe9c54b8774598e918f9baff37c07f3b566cbf0",
       "diagnostic": null,
-      "seconds": 2.02
+      "seconds": 2.23
     },
     {
       "view": "jsf/delivery/discrepancyInData.jsp",
@@ -1347,42 +1352,39 @@
       "includedBy": [],
       "sourceSha256": "cd31826a7751957bdec11d573425eafb8ad34dcf71bad66061851c54cf6a3c83",
       "validatingConversionPassed": true,
-      "jspxSha256": "c5acedf4ca55fb6f72a9d4595295a2705f3967a808fcf0dea6368fb5026d7d79",
+      "jspxSha256": "24e1cbb4060c59588eafa57a94810c5b58944f55c899a2dc5ce6a90e8120ea01",
       "diagnostic": null,
-      "seconds": 1.81
+      "seconds": 2.17
     },
     {
       "view": "jsf/delivery/getSubmissionStatus.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "9e21a4bdec40f85d45f075da3c9122ecb2cc89c920afdb6f46e5d8493c748bf0",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: trimDirectiveWhitespaces needs a separate conversion rule",
-      "seconds": 1.11,
-      "failureCategory": "whitespace-trimming-unsupported"
+      "validatingConversionPassed": true,
+      "jspxSha256": "6dc3af8be5844997307c25fa08292db692954c6c34f4dee76d2d445ea5d06ca3",
+      "diagnostic": null,
+      "seconds": 2.17
     },
     {
       "view": "jsf/delivery/getTimerProgress.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "1ad10e735744229578053094820e50b2e62e4a8995811a06efd9919f73a61021",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: trimDirectiveWhitespaces needs a separate conversion rule",
-      "seconds": 1.16,
-      "failureCategory": "whitespace-trimming-unsupported"
+      "validatingConversionPassed": true,
+      "jspxSha256": "c255326f9dffaec3c29066d7c755d361709db76a0e45e6626098c1cf7eb4d333",
+      "diagnostic": null,
+      "seconds": 2.55
     },
     {
       "view": "jsf/delivery/getTimerStrings.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "19c6a35b3433d535076278ef2d55622c2ae4b39048947434bf26aef47718443b",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: trimDirectiveWhitespaces needs a separate conversion rule",
-      "seconds": 1.15,
-      "failureCategory": "whitespace-trimming-unsupported"
+      "validatingConversionPassed": true,
+      "jspxSha256": "1aa5057db38e43531f8ddf3851701106569d3f07d01eca11cb1396962c38910c",
+      "diagnostic": null,
+      "seconds": 2.41
     },
     {
       "view": "jsf/delivery/ipAccessError.jsp",
@@ -1390,9 +1392,9 @@
       "includedBy": [],
       "sourceSha256": "145bab8f51722b63cb7edc2d3dff4f72879945096aa1d73ca6e284238e136c24",
       "validatingConversionPassed": true,
-      "jspxSha256": "0c6ac8ce6ff38d7c7b0e428321bd151cec88127f17eeb221493b6bd09f6c07b5",
+      "jspxSha256": "ab691e9c3e405b49cd151f964b8aa58c988a89bcdffe0972abd0db6f9de8e79a",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.56
     },
     {
       "view": "jsf/delivery/isRemoved.jsp",
@@ -1400,9 +1402,9 @@
       "includedBy": [],
       "sourceSha256": "609790564fe6ee4a8072ec4126eb807736ac1f05c3b9e5c75957d34e001dfe1c",
       "validatingConversionPassed": true,
-      "jspxSha256": "e6432c8e938b232a8fac740d7a1a4189f90231dbcb92f41a629665b85d50f56f",
+      "jspxSha256": "c24a68fe7819112b6ef067e9caffa88b472e9d7b4c53f5018b4d33a1a7301301",
       "diagnostic": null,
-      "seconds": 2.18
+      "seconds": 2.24
     },
     {
       "view": "jsf/delivery/isRetracted.jsp",
@@ -1410,9 +1412,9 @@
       "includedBy": [],
       "sourceSha256": "6e9f714ef445635f69891ea6bd6b827bf50d86deaba15a45a8a37823764250ec",
       "validatingConversionPassed": true,
-      "jspxSha256": "d76fa71542b3aca65e5a6cfc2b7eae44e2809f10a1acfdc3c2d272183f62784c",
+      "jspxSha256": "6943be585431dfe071efce4da4c8f61458b378d040f06c1eee1937265588ece3",
       "diagnostic": null,
-      "seconds": 2.24
+      "seconds": 2.11
     },
     {
       "view": "jsf/delivery/isRetractedForEdit.jsp",
@@ -1420,9 +1422,9 @@
       "includedBy": [],
       "sourceSha256": "6a2359ecd1a3e44520d549702e9a3358d5683182919ed12c335897fb437c65df",
       "validatingConversionPassed": true,
-      "jspxSha256": "54ac4aed3660371e9a9fb8260b2ddfda09817e06f896a19e5576abd5c03b011d",
+      "jspxSha256": "826a241c65637c55c4830d3d100421f187c6dc546389b25b2685d9c1141e9cc0",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 1.96
     },
     {
       "view": "jsf/delivery/isRetractedForEdit2.jsp",
@@ -1430,9 +1432,9 @@
       "includedBy": [],
       "sourceSha256": "3c24c2a8a11474efe540b84e5a7a49c518cde4f080f5630db201df144c469859",
       "validatingConversionPassed": true,
-      "jspxSha256": "f02fb9e0dd80a8670834b9b32dedf49e9b40e6b41a9f578e8c22882051c5f904",
+      "jspxSha256": "17a0dba546ccfcb72d2420015c53f3b0466c7bc575c0665ec3f0ee518a48b419",
       "diagnostic": null,
-      "seconds": 2.18
+      "seconds": 2.23
     },
     {
       "view": "jsf/delivery/item/attachment.jsp",
@@ -1458,7 +1460,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "237cb7fcd29477c4f913669686e85583a7fa581d7d6f1103e81f6ef87515acda",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.12
     },
     {
       "view": "jsf/delivery/item/audioObject.jsp",
@@ -1470,7 +1472,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "dff1d5e0a195a5070dc64afbe0c23acb8e0e2c6fef8e89f979c4582fa1c14f3b",
       "diagnostic": null,
-      "seconds": 2.17
+      "seconds": 2.11
     },
     {
       "view": "jsf/delivery/item/deliverAssessmentQuestionPoints.jsp",
@@ -1483,7 +1485,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "7f6514e142042ba33e04a7da41c3b9965d30884c790c94992dde16fc622bdfdf",
       "diagnostic": null,
-      "seconds": 1.99
+      "seconds": 2.08
     },
     {
       "view": "jsf/delivery/item/deliverAudioRecording.jsp",
@@ -1495,7 +1497,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "c30182b0e2e856a7ce6ac43c225175a50407dfb574b7bb146024ef5ae8643666",
       "diagnostic": null,
-      "seconds": 2.6
+      "seconds": 2.84
     },
     {
       "view": "jsf/delivery/item/deliverCalculatedQuestion.jsp",
@@ -1508,7 +1510,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "330d8dd868e8d2f882d0cf5425bf7595639196d0e5fefb7cd3d08aba3bfdcf6b",
       "diagnostic": null,
-      "seconds": 2.39
+      "seconds": 2.69
     },
     {
       "view": "jsf/delivery/item/deliverExtendedMatchingItems.jsp",
@@ -1521,7 +1523,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "dba42134384a51604ec733bad6cd10a6fe440c95103492138e1035f400795310",
       "diagnostic": null,
-      "seconds": 2.61
+      "seconds": 2.9
     },
     {
       "view": "jsf/delivery/item/deliverFileUpload.jsp",
@@ -1533,7 +1535,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "fd15e650460e7dde8c49fb8538cffae3e19a5efc95c79f0d49e915e50f0aeee6",
       "diagnostic": null,
-      "seconds": 2.6
+      "seconds": 2.66
     },
     {
       "view": "jsf/delivery/item/deliverFillInNumeric.jsp",
@@ -1547,7 +1549,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "86e1202aee998703fbd755c78e3971894362c3aa156d354bffe2dde9b9960799",
       "diagnostic": null,
-      "seconds": 2.46
+      "seconds": 2.68
     },
     {
       "view": "jsf/delivery/item/deliverFillInTheBlank.jsp",
@@ -1560,7 +1562,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "39be3a58f0664e8e280adaff20f349565ac2c6c6c395fbbe4e808ea468dae168",
       "diagnostic": null,
-      "seconds": 2.39
+      "seconds": 2.65
     },
     {
       "view": "jsf/delivery/item/deliverImageMapQuestion.jsp",
@@ -1573,7 +1575,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "b023c71bf5c793e84741b75a3c0ee49c2eb52c64ac08865f4c95877ee8dc329d",
       "diagnostic": null,
-      "seconds": 2.42
+      "seconds": 2.75
     },
     {
       "view": "jsf/delivery/item/deliverMatching.jsp",
@@ -1586,7 +1588,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "cfdaf4a2dd306a7640ddb77092c636388655d782a49a261f65ee278251d3590c",
       "diagnostic": null,
-      "seconds": 2.39
+      "seconds": 2.75
     },
     {
       "view": "jsf/delivery/item/deliverMatrixChoicesSurvey.jsp",
@@ -1599,7 +1601,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "302347fc89fa1b4b6e79e21011c07dee086ba70874fc1d201dffda5bdc1cf8be",
       "diagnostic": null,
-      "seconds": 2.38
+      "seconds": 2.49
     },
     {
       "view": "jsf/delivery/item/deliverMultipleChoiceMultipleCorrect.jsp",
@@ -1613,7 +1615,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "67c51ba02135c36aa5b7d158cab05cd53037ea1cefad068a6d31ba3f80fe5621",
       "diagnostic": null,
-      "seconds": 2.4
+      "seconds": 2.45
     },
     {
       "view": "jsf/delivery/item/deliverMultipleChoiceSingleCorrect.jsp",
@@ -1627,7 +1629,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2c5746e56a1b884dddf392b1b2872820430029f39d7c1ad8b4c1e4f1b49a679d",
       "diagnostic": null,
-      "seconds": 2.43
+      "seconds": 2.33
     },
     {
       "view": "jsf/delivery/item/deliverShortAnswer.jsp",
@@ -1640,7 +1642,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "45e29efc4fca529d7fb61b4857bc58c03e595a13ed52cda3b24b60226a7842e2",
       "diagnostic": null,
-      "seconds": 2.48
+      "seconds": 2.38
     },
     {
       "view": "jsf/delivery/item/deliverShortAnswerLink.jsp",
@@ -1652,7 +1654,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "8ccd96b75f492e824f9541f41d1c1e253896c6ed8fcbbda8399ad27cdabbb8a6",
       "diagnostic": null,
-      "seconds": 2.33
+      "seconds": 2.38
     },
     {
       "view": "jsf/delivery/item/deliverTrueFalse.jsp",
@@ -1665,7 +1667,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "14f4780ed1e5dea17de81c155579a5b4053ee22c972f6f08e1ab015e45df4226",
       "diagnostic": null,
-      "seconds": 2.33
+      "seconds": 2.44
     },
     {
       "view": "jsf/delivery/login.jsp",
@@ -1673,9 +1675,9 @@
       "includedBy": [],
       "sourceSha256": "b3cddf31d27cc57cf3a72630bac4cda1c9061e03a139d7f951d4cd36fe87ae21",
       "validatingConversionPassed": true,
-      "jspxSha256": "b6208b8e3161cf52661fcbe5623db6c08483b406112ec93aaba46bb315baa4f6",
+      "jspxSha256": "66c5e6956f709a3f0ee499f51c92020212a3c32659cdcb6845399d2cbd61d161",
       "diagnostic": null,
-      "seconds": 1.79
+      "seconds": 1.98
     },
     {
       "view": "jsf/delivery/mediaAccessDenied.jsp",
@@ -1683,9 +1685,9 @@
       "includedBy": [],
       "sourceSha256": "3a88dab2fbdf1910b35382e45696ec62494bea2dfbc17927c0cbe78f9a141881",
       "validatingConversionPassed": true,
-      "jspxSha256": "0a267d373036ae4881852d5331832f58c98d91aa488b44e1482dc578af16a939",
+      "jspxSha256": "02a415d36a6344e2c5fb7e0de06a8b4b353967563cd17e97faa18216f8948971",
       "diagnostic": null,
-      "seconds": 1.85
+      "seconds": 2.01
     },
     {
       "view": "jsf/delivery/noLateSubmission.jsp",
@@ -1693,9 +1695,9 @@
       "includedBy": [],
       "sourceSha256": "9cb83af16f10210ea5bd762d97012982cb77a03d0c0b360b7ced245a86276d61",
       "validatingConversionPassed": true,
-      "jspxSha256": "2cc139913afb157f8b52fb3dadcb75618658e3207867c1df6e8f8e9905c139c6",
+      "jspxSha256": "175d0f3d7b274a6379a014b29b53f1c3969d3bb4d259dbbfa74a8d111bd2892c",
       "diagnostic": null,
-      "seconds": 1.79
+      "seconds": 1.96
     },
     {
       "view": "jsf/delivery/noSubmissionLeft.jsp",
@@ -1703,9 +1705,9 @@
       "includedBy": [],
       "sourceSha256": "2b25dd70da8f8a708af14993791cbf18ffc53a5e1978528f45f122ffea4112c1",
       "validatingConversionPassed": true,
-      "jspxSha256": "3148bdf3425145a6fbb20607563f846c472a5e95bab78b7141ec65d860ae373a",
+      "jspxSha256": "0bd3478b74eed0f68561bc95d15cad61aeff198597619947df5b10f6112b3cac",
       "diagnostic": null,
-      "seconds": 1.8
+      "seconds": 1.85
     },
     {
       "view": "jsf/delivery/notSubmitted.jsp",
@@ -1713,9 +1715,9 @@
       "includedBy": [],
       "sourceSha256": "8938ceecaf25c1a227c225659c08f36541a7abb578d4f26c867a918093b9a46c",
       "validatingConversionPassed": true,
-      "jspxSha256": "98fafbba8f0627565ab6e095c556c8c97233b0b6a083b10056b6acf602eaa460",
+      "jspxSha256": "18b1a846c6931a35efc33e9babf5bc8d5c2ca9c9f253b22c9c7e064bc895af05",
       "diagnostic": null,
-      "seconds": 1.79
+      "seconds": 1.85
     },
     {
       "view": "jsf/delivery/part_attachment.jsp",
@@ -1727,7 +1729,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "f821ea29ac2f4d4e1893a469370c5d0db686e80cf2e79c7da41d55a2ff8184eb",
       "diagnostic": null,
-      "seconds": 2.26
+      "seconds": 2.13
     },
     {
       "view": "jsf/delivery/passwordAccessError.jsp",
@@ -1735,9 +1737,9 @@
       "includedBy": [],
       "sourceSha256": "3b960864c130b6f2179d630d3bd1f05f6e46cccfde7bd4a3bc59ad22ae9a401b",
       "validatingConversionPassed": true,
-      "jspxSha256": "2e0c9c75245599775d73521683c398438043f90e1796c856f5e147a2728efe86",
+      "jspxSha256": "56c8ab639cdfc70c648236b62eb14e491369fd625a2a13f1dcb3eeb503f441fb",
       "diagnostic": null,
-      "seconds": 1.85
+      "seconds": 2.0
     },
     {
       "view": "jsf/delivery/reviewAssessment.jsp",
@@ -1747,7 +1749,7 @@
       "validatingConversionPassed": false,
       "jspxSha256": null,
       "diagnostic": "org.apache.jasper.JasperException: webapp/jsf/delivery/reviewAssessment.jsp (line: [74], column: [12]) JSP file [/jsf/delivery/itemreview/deliverAudioRecording.jsp] not found",
-      "seconds": 1.03,
+      "seconds": 1.15,
       "failureCategory": "missing-source-include"
     },
     {
@@ -1756,9 +1758,9 @@
       "includedBy": [],
       "sourceSha256": "968ad493ecb79f7d5d9db3df2b14f04d672274e3ec9deaacf9b8b1191edaba6d",
       "validatingConversionPassed": true,
-      "jspxSha256": "11d233a0c2346de6bd3b91068c7e5710d96884c232937afa27c0eaf61a4158e8",
+      "jspxSha256": "fd2deaf321b92e20079e048987b9fc09ca9d1869ec338d5ad740f0b4ec41c144",
       "diagnostic": null,
-      "seconds": 2.16
+      "seconds": 2.48
     },
     {
       "view": "jsf/delivery/saveForLaterWarning.jsp",
@@ -1766,9 +1768,9 @@
       "includedBy": [],
       "sourceSha256": "944b908b1561ea8bf4443d6a9ca49c1db7de1c478c50de1f32b2b8769e2e1b53",
       "validatingConversionPassed": true,
-      "jspxSha256": "5d043d8bb51b2dd30814d36ad15478b8fd7d0d80b347e7dbe4b11a5c476ce056",
+      "jspxSha256": "90f765402c7658f742037b23a3b819f5eeac2f0866bd1de17659b92ac4cc4141",
       "diagnostic": null,
-      "seconds": 1.91
+      "seconds": 2.28
     },
     {
       "view": "jsf/delivery/secureDeliveryError.jsp",
@@ -1776,20 +1778,19 @@
       "includedBy": [],
       "sourceSha256": "208723063b9eb3e15c57391e3b8893ce3ddb5e4748347183831202822d26780c",
       "validatingConversionPassed": true,
-      "jspxSha256": "2e7be7d9f6877c9140571892a1b59cd2ddff572e793ec40491560de5064df70d",
+      "jspxSha256": "e4a7f3da706c5fde11fe959ea909db1d80539d9b675442edba83483d7d376fe7",
       "diagnostic": null,
-      "seconds": 1.9
+      "seconds": 2.22
     },
     {
       "view": "jsf/delivery/stopTimerProgress.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "2c73dbf31fe61e12f49fbf0c070c23689fe5142fe8f123283c513d92003e6aca",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: trimDirectiveWhitespaces needs a separate conversion rule",
-      "seconds": 1.15,
-      "failureCategory": "whitespace-trimming-unsupported"
+      "validatingConversionPassed": true,
+      "jspxSha256": "918a84efd20c7dc3dc437b3e0af971ca82953e2383cf7a8e90955c4f538e8c47",
+      "diagnostic": null,
+      "seconds": 2.07
     },
     {
       "view": "jsf/delivery/stub.jsp",
@@ -1797,9 +1798,9 @@
       "includedBy": [],
       "sourceSha256": "37e3e1db4ea5b7ba448edf9738a215d35dc318f297afe56105540071f717f3fa",
       "validatingConversionPassed": true,
-      "jspxSha256": "6f5d2d91721a0c33279d3ff3d93bf8e64087a28c2e5a4056fe9588b79775abaf",
+      "jspxSha256": "9b96739f5adeac83429845e71ae96fff401c33c29e147bfc1f54cc4a4a7b9048",
       "diagnostic": null,
-      "seconds": 1.8
+      "seconds": 2.01
     },
     {
       "view": "jsf/delivery/submitted.jsp",
@@ -1807,9 +1808,9 @@
       "includedBy": [],
       "sourceSha256": "265c8ad3a9ad1ad6fffc147f84b4fccd2755664d5f2794f0cdfd2273989395d3",
       "validatingConversionPassed": true,
-      "jspxSha256": "5ba3ec3d2743f82e3531dfa4c43a2b0448487b660ab1450b298731ce7a5a07da",
+      "jspxSha256": "f7dc4e1129231578d0bce1194d683b52958b932dc70b99969f0c47e07a25b6a3",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.5
     },
     {
       "view": "jsf/delivery/tableOfContents.jsp",
@@ -1817,9 +1818,9 @@
       "includedBy": [],
       "sourceSha256": "8a691708aa3dc9372ab016909ab284777a04b33e7474def1f479c62802781694",
       "validatingConversionPassed": true,
-      "jspxSha256": "f204311c583e579dff3eedc7c60964d21eef38488e2a9960932299b838b6f345",
+      "jspxSha256": "acf157aa6f0b5ec183d5b274538d393b7dc484e203ee48f5a0d1b687436134bc",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.61
     },
     {
       "view": "jsf/delivery/timeExpired.jsp",
@@ -1827,9 +1828,9 @@
       "includedBy": [],
       "sourceSha256": "2680bf86c9310af0aaf1fa9af8dcfcdb92d771aaa587880b39e4170696d99391",
       "validatingConversionPassed": true,
-      "jspxSha256": "c73ab40ebcaa8973f8b665abc2d84217f576c5158631ea8fd1dcd8bceb200922",
+      "jspxSha256": "2655cac95ecabe6f2255cb22183a2d436555cb8b9c0d6fde3ed47cc305f9c569",
       "diagnostic": null,
-      "seconds": 1.94
+      "seconds": 2.33
     },
     {
       "view": "jsf/delivery/timeout.jsp",
@@ -1837,9 +1838,9 @@
       "includedBy": [],
       "sourceSha256": "0a05b88552a80e29296152f9cab69dc2389ed0fa074a38397221fc8f7087f071",
       "validatingConversionPassed": true,
-      "jspxSha256": "acd31d8fa8c2e7838e260b8707f4e5792fdc361cb63a2adab799ae617383344e",
+      "jspxSha256": "230ee6cf6aa1396fc072d7b08e431ee981fe2e51e1c1e290e0126e2aaeb56d58",
       "diagnostic": null,
-      "seconds": 1.84
+      "seconds": 2.41
     },
     {
       "view": "jsf/delivery/welcome.jsp",
@@ -1847,9 +1848,9 @@
       "includedBy": [],
       "sourceSha256": "eb708f2e7030501e06a3d53544ee8f679e8b412d9ceaf62789126a6f679c59f3",
       "validatingConversionPassed": true,
-      "jspxSha256": "04815f589325406106a2eaa958deb868afbc20bc18ef1a08bd0f6ed0369e7dd4",
+      "jspxSha256": "ba477f128bd529308ca6af27ae8acd67701bd72d6764a2e95aa253654869a5c7",
       "diagnostic": null,
-      "seconds": 1.7
+      "seconds": 2.23
     },
     {
       "view": "jsf/evaluation/confirmRetake.jsp",
@@ -1857,9 +1858,9 @@
       "includedBy": [],
       "sourceSha256": "b9cec0088490a0333c2f1fda4ac0376ac11e52b09613744d6c65f2c9ed30c898",
       "validatingConversionPassed": true,
-      "jspxSha256": "0b5f4080ac6e7d7d2dcfc523ad95616048ba580d4e5c48807e11bce0bd9f7177",
+      "jspxSha256": "2c0531e81f769535bf7356c9a9cb75235451b9778a926f68ea1afe5925b3e13a",
       "diagnostic": null,
-      "seconds": 1.81
+      "seconds": 2.32
     },
     {
       "view": "jsf/evaluation/detailedStatistics.jsp",
@@ -1867,9 +1868,9 @@
       "includedBy": [],
       "sourceSha256": "5ac2350b947d9b7318829321bbdc3a3332d0db6469646308f25f9ffc4ecf94d7",
       "validatingConversionPassed": true,
-      "jspxSha256": "4348dba941e32d90c852387489920de96f8e2e92dc5ab5b182cc00af3ba56bed",
+      "jspxSha256": "ae4e211b97e591ae81916c8f5ab2545abcfcb34fd5ea8b80c5144fa7ed6272ca",
       "diagnostic": null,
-      "seconds": 2.39
+      "seconds": 2.71
     },
     {
       "view": "jsf/evaluation/evaluationHeadings.jsp",
@@ -1888,7 +1889,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2c8c11974437671c65c5a50868406e7c13463a98598056e828d0fb3e3e2c8ad4",
       "diagnostic": null,
-      "seconds": 1.97
+      "seconds": 2.13
     },
     {
       "view": "jsf/evaluation/evaluationSubmenu.jsp",
@@ -1906,7 +1907,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "c61149fa257c08fe4e70204fac7248dd8a448eb65e1b2f4b9caa33999e022c48",
       "diagnostic": null,
-      "seconds": 2.18
+      "seconds": 2.32
     },
     {
       "view": "jsf/evaluation/exportResponses.jsp",
@@ -1914,9 +1915,9 @@
       "includedBy": [],
       "sourceSha256": "39b83eada3df5f29e7d0703fc1a307470b086c2a77302e145d2263fc3936e363",
       "validatingConversionPassed": true,
-      "jspxSha256": "2145b77d6b700d316f31965205a44f64875dc568a35b36fc83258d00c311a06e",
+      "jspxSha256": "4efc69889f9da27642acdedb38ec89dd314bb8fc4473968f2c41839e4debc5a0",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.81
     },
     {
       "view": "jsf/evaluation/fullShortAnswer.jsp",
@@ -1924,9 +1925,9 @@
       "includedBy": [],
       "sourceSha256": "5c401d5120242253d3b16aebe543a2d1cd1e1d689edaafa1a4e7c6263bb988d7",
       "validatingConversionPassed": true,
-      "jspxSha256": "68d0c780774def93fb9129ef2f48868187958d458e5d9a57500c695af609343d",
+      "jspxSha256": "7e503206585237dc08cbc2315cb31358b9369b508a7fbc6c5eee0a42eebece64",
       "diagnostic": null,
-      "seconds": 1.75
+      "seconds": 2.38
     },
     {
       "view": "jsf/evaluation/gradeStudentResult.jsp",
@@ -1934,9 +1935,9 @@
       "includedBy": [],
       "sourceSha256": "283a52163411e39e7e515aad072e4960acd144952698512c89ee60e2f127e005",
       "validatingConversionPassed": true,
-      "jspxSha256": "83503816b80f636bfbc8662fa0ee6d26dca1d1de5b1452dcb75d381707145f94",
+      "jspxSha256": "e90e7cb1d3071c91eabec000a8511556874ba8f8f1c5f687b5257053240f6e31",
       "diagnostic": null,
-      "seconds": 3.96
+      "seconds": 4.3
     },
     {
       "view": "jsf/evaluation/gradeStudentResultAttachment.jsp",
@@ -1948,7 +1949,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4c03794f750386163143bb6745d75a4f6c2790dc30b5f976d7387333da7dda51",
       "diagnostic": null,
-      "seconds": 2.21
+      "seconds": 2.22
     },
     {
       "view": "jsf/evaluation/histogramScores.jsp",
@@ -1956,9 +1957,9 @@
       "includedBy": [],
       "sourceSha256": "eb6fba5fe542f4f38f24c1a1b4babf4fdb17a3810cf6bcb377dc5e025cf81454",
       "validatingConversionPassed": true,
-      "jspxSha256": "3e9ab297ad71a60120a2898ccd03955f5febc54d27b9e1402cefec0ae73c3f1a",
+      "jspxSha256": "7d000cdfbe5d09edee97cc9bf79c3080681591808525b8edccafe30bee6d2546",
       "diagnostic": null,
-      "seconds": 2.7
+      "seconds": 2.64
     },
     {
       "view": "jsf/evaluation/item/displayAudioRecording.jsp",
@@ -1970,7 +1971,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "e8955903e7e7272393092a9412321c35467bca9a7f53bbcc547ae0d95cba79c0",
       "diagnostic": null,
-      "seconds": 2.42
+      "seconds": 2.21
     },
     {
       "view": "jsf/evaluation/item/displayAudioRecordingAnswer.jsp",
@@ -1984,7 +1985,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "9ca1dd2fb626a7e05337b607ff5d01abee865ea07d2670b09a228803ba81407f",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.06
     },
     {
       "view": "jsf/evaluation/item/displayAudioRecordingQuestion.jsp",
@@ -1996,7 +1997,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "d73e5b75dbef1243faffa3f9ba4742b6fe1ac24f6007c1ff13e511d3963bc410",
       "diagnostic": null,
-      "seconds": 2.07
+      "seconds": 2.05
     },
     {
       "view": "jsf/evaluation/item/displayCalculatedQuestion.jsp",
@@ -2008,7 +2009,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "e6adb299b982e553033ff2bdcecade717f1d395c022b33cf14be97b980b35fd1",
       "diagnostic": null,
-      "seconds": 2.06
+      "seconds": 2.17
     },
     {
       "view": "jsf/evaluation/item/displayExtendedMatchingItems.jsp",
@@ -2020,7 +2021,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "07ebcfb66f18499dc33b03f0b859581aae1bda0dfe6528290b5199566e2324b5",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.35
     },
     {
       "view": "jsf/evaluation/item/displayFileUpload.jsp",
@@ -2032,7 +2033,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "c5579f6972757d89dfc22851c64247a2ab748f858dcca6b69df131d95f75a870",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.32
     },
     {
       "view": "jsf/evaluation/item/displayFileUploadAnswer.jsp",
@@ -2046,7 +2047,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "424efd333bd00dffc77c2b0c244044b2ce06b3dea66ae6738084c51351a09d60",
       "diagnostic": null,
-      "seconds": 2.02
+      "seconds": 1.96
     },
     {
       "view": "jsf/evaluation/item/displayFileUploadQuestion.jsp",
@@ -2058,7 +2059,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "8b286b8ebe8c49084b3a507e9908a3ec60ad8a03098222644fc271e250519d24",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.17
     },
     {
       "view": "jsf/evaluation/item/displayFillInNumeric.jsp",
@@ -2070,7 +2071,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "a7c03f68aa83647de051e15a67652fa543a795597d6ae533dea665c4d35c6e8b",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.48
     },
     {
       "view": "jsf/evaluation/item/displayFillInTheBlank.jsp",
@@ -2082,7 +2083,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "47d48d876ac7d53ed5e8c12f42373b8ee641013f565b707eeedf245fff36119e",
       "diagnostic": null,
-      "seconds": 2.18
+      "seconds": 2.28
     },
     {
       "view": "jsf/evaluation/item/displayImageMapQuestion.jsp",
@@ -2094,7 +2095,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "668da1e1be95d163e4d1b8290fb1879840fdb4572308f606b6de87a4adcdde42",
       "diagnostic": null,
-      "seconds": 2.27
+      "seconds": 2.19
     },
     {
       "view": "jsf/evaluation/item/displayMatching.jsp",
@@ -2106,7 +2107,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "5598c58d8773460ae7455d050aa3db476555b6320f759e031c1ee6e233a0d875",
       "diagnostic": null,
-      "seconds": 2.13
+      "seconds": 2.08
     },
     {
       "view": "jsf/evaluation/item/displayMatrixSurvey.jsp",
@@ -2118,7 +2119,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2a6f2f940d73629f905b934e04d015391c8bd9982d685b3a2e093b807c254014",
       "diagnostic": null,
-      "seconds": 2.27
+      "seconds": 2.09
     },
     {
       "view": "jsf/evaluation/item/displayMultipleChoiceMultipleCorrect.jsp",
@@ -2130,7 +2131,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "8ce408687657a8ae307681d2eca0ddfffe32aefc8c8c829ee9c4c0e332529c05",
       "diagnostic": null,
-      "seconds": 2.27
+      "seconds": 2.13
     },
     {
       "view": "jsf/evaluation/item/displayMultipleChoiceSingleCorrect.jsp",
@@ -2142,7 +2143,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "7908046c7603300857821502a9fe68029a26c6b9d737ed9e7067ad6a30031d7f",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 2.18
     },
     {
       "view": "jsf/evaluation/item/displayShortAnswer.jsp",
@@ -2154,7 +2155,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "5682c28f2175694e925f550ed8268cbd14bb94a55866764ae6a073c7e4d57887",
       "diagnostic": null,
-      "seconds": 2.12
+      "seconds": 2.13
     },
     {
       "view": "jsf/evaluation/item/displayTags.jsp",
@@ -2178,7 +2179,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "237c189160069b81f60ec8d781eeed047a154115ca81b92fde158706c2ca80fd",
       "diagnostic": null,
-      "seconds": 2.0
+      "seconds": 2.12
     },
     {
       "view": "jsf/evaluation/item/displayTrueFalse.jsp",
@@ -2190,7 +2191,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2e39197aa8f0db74e07139bd9ceade9ba877e58593db43d968035b726f4fcdb0",
       "diagnostic": null,
-      "seconds": 2.01
+      "seconds": 2.24
     },
     {
       "view": "jsf/evaluation/questionScore.jsp",
@@ -2198,9 +2199,9 @@
       "includedBy": [],
       "sourceSha256": "dc4b16d131888f67b72150416aa5726d69341bef79434dbc6c9bf3337a6f6549",
       "validatingConversionPassed": true,
-      "jspxSha256": "d985e02ab0aa3395ebdfa59e544730a35ef60d4af5ca8ad61c07ec6b2bc284c4",
+      "jspxSha256": "e02c0dbed091980d5cb69636844eb2c8ab7b3e38e36c9488fbecf89516354520",
       "diagnostic": null,
-      "seconds": 3.89
+      "seconds": 4.11
     },
     {
       "view": "jsf/evaluation/questionScoreAttachment.jsp",
@@ -2226,7 +2227,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "2706169d9c45af17b1d3c7af15d205076eca6b5e7d44525e12e4affa540cd3a2",
       "diagnostic": null,
-      "seconds": 2.37
+      "seconds": 2.56
     },
     {
       "view": "jsf/evaluation/rationale.jsp",
@@ -2234,9 +2235,9 @@
       "includedBy": [],
       "sourceSha256": "99b406339308e6904fc8db0d95d3fc261daef6e071ee0fc54fcb573486c7bc2c",
       "validatingConversionPassed": true,
-      "jspxSha256": "0788640ebe775687dd2a2e8a87af10db5cf7a83ccb4a79ca327ebff131c66635",
+      "jspxSha256": "da1f38d51057aab66aad8ce2db2b0a86ae858ad8cdfb47599180764b679c6908",
       "diagnostic": null,
-      "seconds": 2.02
+      "seconds": 2.31
     },
     {
       "view": "jsf/evaluation/rubricModal.jsp",
@@ -2250,7 +2251,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "8261593568fb6e4e0f1264b6afa2b98f479b245154ad91d5c5a0f40cb491c6f5",
       "diagnostic": null,
-      "seconds": 2.0
+      "seconds": 2.37
     },
     {
       "view": "jsf/evaluation/submissionNav.jsp",
@@ -2262,7 +2263,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "cc2fa614798feb0e9e11b83eb7989edf22495b454f961ecc830b6040b067c0c2",
       "diagnostic": null,
-      "seconds": 2.05
+      "seconds": 2.58
     },
     {
       "view": "jsf/evaluation/submissionStatus.jsp",
@@ -2270,9 +2271,9 @@
       "includedBy": [],
       "sourceSha256": "a2187ba21ce8d1a9b47837e50eba8fb22412b0003ee4d45437a76608d4241817",
       "validatingConversionPassed": true,
-      "jspxSha256": "b19072da1977f9302cf37a5aec5e666c11fb0928780335a2c1c2ce224df1a7f4",
+      "jspxSha256": "228a2700798a3e843c8ada7c696e2d0637e8abda9612d5efc8df0d4dbc403f91",
       "diagnostic": null,
-      "seconds": 2.64
+      "seconds": 3.0
     },
     {
       "view": "jsf/evaluation/totalScores.jsp",
@@ -2280,9 +2281,9 @@
       "includedBy": [],
       "sourceSha256": "59a5282e69b3fc7b716832fcf6fe8b3d31b6ebc399b4c1b3683d2115e5edaf7c",
       "validatingConversionPassed": true,
-      "jspxSha256": "a6adbdddec4ccc562a88dd6203f0800f5f953b09b5904babf4b737ad6c5fed58",
+      "jspxSha256": "94736d79b9328b8ced361e1e832612dd711dc8059de70587e2f90bf8070681b3",
       "diagnostic": null,
-      "seconds": 3.22
+      "seconds": 3.41
     },
     {
       "view": "jsf/evaluation/totalScoresAttachment.jsp",
@@ -2296,7 +2297,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "716c5d8558be91587089205d24f9b802136b8e5d479911b18d4050514c483533",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.44
     },
     {
       "view": "jsf/evaluation/totalScoresCommentPopUp.jsp",
@@ -2304,9 +2305,9 @@
       "includedBy": [],
       "sourceSha256": "47384559ca97d55148b6400931d7100bc458fe7509fbd1212d4a6430b164c8d4",
       "validatingConversionPassed": true,
-      "jspxSha256": "fb4fc66e11f8b28ba93f213f743bd908e9c99ff42e747a0e2a17cf3dbb172d87",
+      "jspxSha256": "d94964dc0b5a2f543b48185959fe241f6fc0a47bec6d91b1dedb456907b50760",
       "diagnostic": null,
-      "seconds": 2.37
+      "seconds": 2.38
     },
     {
       "view": "jsf/event/eventLog.jsp",
@@ -2314,9 +2315,9 @@
       "includedBy": [],
       "sourceSha256": "f4dbc43e48b7c3450966371120464de11c20adf7b728dbe421988e24582382bc",
       "validatingConversionPassed": true,
-      "jspxSha256": "e7a912830e4474750f45740dec2ee6fd230ed9b8464558426e7cb3d5abb84076",
+      "jspxSha256": "e286ea9ee91576654ce79eb0a0bdb820a9bf19fcecfcf4922848b26e9992eefd",
       "diagnostic": null,
-      "seconds": 2.39
+      "seconds": 2.51
     },
     {
       "view": "jsf/event/eventLogHeadings.jsp",
@@ -2328,7 +2329,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "0c069b9c951bbcba2ae18fe254944caf88829e790aa9387d83848a9adecf78b1",
       "diagnostic": null,
-      "seconds": 2.27
+      "seconds": 2.18
     },
     {
       "view": "jsf/index/exit.jsp",
@@ -2336,9 +2337,9 @@
       "includedBy": [],
       "sourceSha256": "2044f211fe02ed9b8318cd1dc205b1c3634ce2d022fa9cb95ae64b4246b5533e",
       "validatingConversionPassed": true,
-      "jspxSha256": "fd254e383857e910a20909791fbb444433918aa8ec0c0a320eba2635f213ce96",
+      "jspxSha256": "1979735af5f60530cdd0d87ac6d8074bc9c08f5a9e131ba06e1e9f49313284f9",
       "diagnostic": null,
-      "seconds": 1.94
+      "seconds": 2.23
     },
     {
       "view": "jsf/index/index.jsp",
@@ -2346,9 +2347,9 @@
       "includedBy": [],
       "sourceSha256": "b3cddf31d27cc57cf3a72630bac4cda1c9061e03a139d7f951d4cd36fe87ae21",
       "validatingConversionPassed": true,
-      "jspxSha256": "b6208b8e3161cf52661fcbe5623db6c08483b406112ec93aaba46bb315baa4f6",
+      "jspxSha256": "66c5e6956f709a3f0ee499f51c92020212a3c32659cdcb6845399d2cbd61d161",
       "diagnostic": null,
-      "seconds": 1.85
+      "seconds": 2.11
     },
     {
       "view": "jsf/index/mainIndex.jsp",
@@ -2356,9 +2357,9 @@
       "includedBy": [],
       "sourceSha256": "be062187a2af4e94f3bc5a8dd8d2c7bc93770b48fd515cf8602ab701275c2f28",
       "validatingConversionPassed": true,
-      "jspxSha256": "4d0f6e50563ec8e2867261b2840f5da5e12eed5fa2c35aed00bb3af0ceb65d46",
+      "jspxSha256": "94117c202169443207cd5ef26b195d5ecb9e1f7c84bb2edd8a3b87793bc27d13",
       "diagnostic": null,
-      "seconds": 2.77
+      "seconds": 3.36
     },
     {
       "view": "jsf/print/printAssessment.jsp",
@@ -2366,9 +2367,9 @@
       "includedBy": [],
       "sourceSha256": "dbf171dfa7b72410562edd976d9f043d2aeb05a18af0e559b8c8fd29417f0ef1",
       "validatingConversionPassed": true,
-      "jspxSha256": "48fe24db0a7f3516828ed687c38a008e82a5991d2dfd602d10916c55116970f3",
+      "jspxSha256": "5c53958bbd2090df638ff8c50a60579bf7f75f7b9bf45df5658eaad96c15ebdd",
       "diagnostic": null,
-      "seconds": 1.97
+      "seconds": 2.32
     },
     {
       "view": "jsf/qti/chooseExportType.jsp",
@@ -2376,9 +2377,9 @@
       "includedBy": [],
       "sourceSha256": "a8e21ce9d4f7b23efcff1ae0c1bf76a1c40140fd1d28d4a844dc4eca252bed64",
       "validatingConversionPassed": true,
-      "jspxSha256": "2dcd875430e02ba693e5488a9398612066cde9e44616087a37d023fb98a3d274",
+      "jspxSha256": "4ebc6705e0f2bdf83c37c6c9dc08d02995b0ebc1e7244dc87539aa129da5c529",
       "diagnostic": null,
-      "seconds": 2.22
+      "seconds": 2.61
     },
     {
       "view": "jsf/qti/choosePoolExportType.jsp",
@@ -2386,9 +2387,9 @@
       "includedBy": [],
       "sourceSha256": "e42e671dd382b14f72a5a9dba3f31d69a06bc9507b44e235354176ca87c6e71b",
       "validatingConversionPassed": true,
-      "jspxSha256": "8162ab1590d8efd40855fd687d87f0e588ae7bc2977122a3348fd61fba83fc21",
+      "jspxSha256": "0a8c2d26db43b8607e74fbb56e5b2f54fe716d814d8fbb909c962df0784879c9",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.38
     },
     {
       "view": "jsf/qti/exportAssessment.jsp",
@@ -2396,9 +2397,9 @@
       "includedBy": [],
       "sourceSha256": "d5a483291d9b10e34b04e9cfbfc2f3742c42663b5cf160f1b814444c52ff27c8",
       "validatingConversionPassed": true,
-      "jspxSha256": "131a1a46bd027820eda7e02c98d6393d513e6f684b70e728b68031f0ffe27756",
+      "jspxSha256": "e55b161799666a497b6799ca866d5035f68777e9d5d8457c0e638b5504c9deb2",
       "diagnostic": null,
-      "seconds": 1.79
+      "seconds": 2.11
     },
     {
       "view": "jsf/qti/exportDenied.jsp",
@@ -2406,9 +2407,9 @@
       "includedBy": [],
       "sourceSha256": "cf6adffef9d784dfb138952b6f8a2219f10aea8d34bf252d24260855aea37e89",
       "validatingConversionPassed": true,
-      "jspxSha256": "62837d308213448e3815430757695060384543f3ba46fe1b16dbf0bf80c7177e",
+      "jspxSha256": "36b54ccc5055eda29101d7047eb222611498789d84c7faf1efccec2774c83069",
       "diagnostic": null,
-      "seconds": 1.9
+      "seconds": 2.05
     },
     {
       "view": "jsf/qti/exportPool.jsp",
@@ -2416,9 +2417,9 @@
       "includedBy": [],
       "sourceSha256": "490d6ab9849f110e24949b6fdfcfe858a58844daee3678dd11ca54b7b37ad1c9",
       "validatingConversionPassed": true,
-      "jspxSha256": "46c7787562d6f240a799e38c01fa6b8b755d938301c7afd4fc555233395ec95e",
+      "jspxSha256": "29a87ad291b54b4b4a5b97238f72bcaa95cfde44e552d7e428f82e02bbe97514",
       "diagnostic": null,
-      "seconds": 2.01
+      "seconds": 2.18
     },
     {
       "view": "jsf/qti/importAssessment.jsp",
@@ -2426,9 +2427,9 @@
       "includedBy": [],
       "sourceSha256": "fda065b0b99fc8e9bb8614f7628f9549e860cb7e206997cb3118fa11699740d8",
       "validatingConversionPassed": true,
-      "jspxSha256": "bdf4ff3609a60bdced19d25069b230a8e24c8457ff01424a84640657589edc30",
+      "jspxSha256": "ce557491e765559b78500aa978ffcd40d37abd3c258f28fce6ff4537bed2ab56",
       "diagnostic": null,
-      "seconds": 2.12
+      "seconds": 2.39
     },
     {
       "view": "jsf/qti/importPool.jsp",
@@ -2436,31 +2437,29 @@
       "includedBy": [],
       "sourceSha256": "54c6934f6ae30e03979fd213468e510970f5721e8a13276ba83813d60846f27d",
       "validatingConversionPassed": true,
-      "jspxSha256": "a3dc980916af2070ef4b151867b76f14ccea07296224d63c0f4654018f94f00a",
+      "jspxSha256": "8bf11a2f6d3e4dc0d8aa9e81dce35e6d5ead7fd09acf978b7715b32d5fc59247",
       "diagnostic": null,
-      "seconds": 2.06
+      "seconds": 2.54
     },
     {
       "view": "jsf/qti/xmlDisplay.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "b204b0b03e983edf348b3f30b737601609fc7e3716402a453be1f9d786d59727",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: trimDirectiveWhitespaces needs a separate conversion rule",
-      "seconds": 1.09,
-      "failureCategory": "whitespace-trimming-unsupported"
+      "validatingConversionPassed": true,
+      "jspxSha256": "33a517b3a65fc0729edf6ba657e34a253a42167d561185be27a95daa6f772f6b",
+      "diagnostic": null,
+      "seconds": 2.24
     },
     {
       "view": "jsf/qti/xmlPoolDisplay.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "7cfd4f15830f985b4a4adaacb50de161ea5a0d1ffb495ef8b1160675b6ccf01b",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: trimDirectiveWhitespaces needs a separate conversion rule",
-      "seconds": 1.15,
-      "failureCategory": "whitespace-trimming-unsupported"
+      "validatingConversionPassed": true,
+      "jspxSha256": "0589ceeff81f80ebce159f2736f357cff9b7676824f90f91d2b6134f381a3e51",
+      "diagnostic": null,
+      "seconds": 2.03
     },
     {
       "view": "jsf/questionpool/accesstype_whatsThis.jsp",
@@ -2468,9 +2467,9 @@
       "includedBy": [],
       "sourceSha256": "3bdb128df7a5865de2668128ff35b7fc78e76aa30bf98cd7f70ed6e2eacec3ec",
       "validatingConversionPassed": true,
-      "jspxSha256": "4a252b6d77217a80be124f2e8439607919e0abe91c69051618f2b9e9a62cc2b1",
+      "jspxSha256": "1fbae8704bd6b33b71b251fa0066ca3e5a76b32fa814ed86f4206b78b7ed0a8b",
       "diagnostic": null,
-      "seconds": 2.01
+      "seconds": 2.18
     },
     {
       "view": "jsf/questionpool/addPool.jsp",
@@ -2478,9 +2477,9 @@
       "includedBy": [],
       "sourceSha256": "3dbb28a3d76562b4cdb26365c70a4b8f51390c4ec2c2c96452b48564ee984272",
       "validatingConversionPassed": true,
-      "jspxSha256": "f2dbc6b85e3f4c8aa98839860368e14bb130622edbab930ad3a61a1221734bb2",
+      "jspxSha256": "3b28ce163ada34adddd511d69518262b909784544d65765ad3a59ba41255d571",
       "diagnostic": null,
-      "seconds": 2.06
+      "seconds": 1.95
     },
     {
       "view": "jsf/questionpool/checkSolutionCalculatedQuestion.jsp",
@@ -2492,7 +2491,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4c1b470b3894ab60ffbf0bfd77e88889139fb85dc21677d549e6730f83a75bc2",
       "diagnostic": null,
-      "seconds": 2.28
+      "seconds": 2.23
     },
     {
       "view": "jsf/questionpool/copyPool.jsp",
@@ -2500,9 +2499,9 @@
       "includedBy": [],
       "sourceSha256": "bbe9776b834d74cfeeb47c3cf3ea0f63437a2982218d52213b077be995b7210d",
       "validatingConversionPassed": true,
-      "jspxSha256": "5d2d39b10bb57c393213cfd4ed4a461935eb26c0a8da361c26874e76990243cb",
+      "jspxSha256": "00ce430ae2de59c315bb3a7e2eff345efde06bbe959032416adf76839a27140c",
       "diagnostic": null,
-      "seconds": 2.38
+      "seconds": 2.39
     },
     {
       "view": "jsf/questionpool/copyPoolTree.jsp",
@@ -2514,7 +2513,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "d85a7d8c6e5d570cc23509a8f2e454a6b0c57df614ea940cba4a2aba5721867b",
       "diagnostic": null,
-      "seconds": 2.59
+      "seconds": 2.35
     },
     {
       "view": "jsf/questionpool/editPool.jsp",
@@ -2522,9 +2521,9 @@
       "includedBy": [],
       "sourceSha256": "29c3dd01312f334b957e30737488681a7931bebed8e21e6d34662a65f3207b4f",
       "validatingConversionPassed": true,
-      "jspxSha256": "153304279085828838d810c50dbc942ad034d14b63125948444bb6737489fca8",
+      "jspxSha256": "db1b09fd15c25da398327266ec44644a84de30c086f064c372a6ceb04ca8c373",
       "diagnostic": null,
-      "seconds": 3.03
+      "seconds": 2.81
     },
     {
       "view": "jsf/questionpool/movePool.jsp",
@@ -2532,9 +2531,9 @@
       "includedBy": [],
       "sourceSha256": "a86caa8e8502dc717a09491a1c286b004e20bd5f837418a9a540a3535eab244c",
       "validatingConversionPassed": true,
-      "jspxSha256": "0cfe9de9a69fe5ee1e4caa9ba6789355e044cbd24ecfab579cad6626e0924d8b",
+      "jspxSha256": "efaf1b09f4296f3fb97da84be6ba0ed994dcc6da99218f38adfaaa7ebe84d9cb",
       "diagnostic": null,
-      "seconds": 2.55
+      "seconds": 2.49
     },
     {
       "view": "jsf/questionpool/movePoolTree.jsp",
@@ -2546,7 +2545,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "054173b081db4a13c08364fc4fc60ce7de4110edc7f8a7b860e2a428741d1a21",
       "diagnostic": null,
-      "seconds": 2.66
+      "seconds": 2.42
     },
     {
       "view": "jsf/questionpool/poolList.jsp",
@@ -2554,9 +2553,9 @@
       "includedBy": [],
       "sourceSha256": "072fba3829c869cc722733987c410660bf1bc0cef16ee2c322908ed24518fb35",
       "validatingConversionPassed": true,
-      "jspxSha256": "9b40942126ef94101a0d751c400f74d69b29f85ad8e973096dd35283050eb489",
+      "jspxSha256": "eaf97b3ea535e090997a36859fd31aa029767a6fbd0bc4b10f246a8883391e91",
       "diagnostic": null,
-      "seconds": 2.54
+      "seconds": 2.93
     },
     {
       "view": "jsf/questionpool/poolTreeTable.jsp",
@@ -2568,7 +2567,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "d7378e40b2ce630394f7e48595fe0a3e2c2cf4077fe577cae12e875d3e64666a",
       "diagnostic": null,
-      "seconds": 2.5
+      "seconds": 2.94
     },
     {
       "view": "jsf/questionpool/previewPool.jsp",
@@ -2576,9 +2575,9 @@
       "includedBy": [],
       "sourceSha256": "b4c0ffdaa23fe0140cab99e671784b3fd3fd3e43b8161f40a839fd587cd4d08a",
       "validatingConversionPassed": true,
-      "jspxSha256": "8cbcb4617e35f1af09db81b07e59b17903a9217baf551b286da473f5d2a2057a",
+      "jspxSha256": "66d0474beafe2ab9e602e3464b357e4f56f221b1dea6a89270eedfcb0fc83151",
       "diagnostic": null,
-      "seconds": 3.83
+      "seconds": 4.32
     },
     {
       "view": "jsf/questionpool/previewQuestion.jsp",
@@ -2586,9 +2585,9 @@
       "includedBy": [],
       "sourceSha256": "6325abf2e65957c14d9cda9fefa12c1f61ce6f3644380850f4c9cda8a487884e",
       "validatingConversionPassed": true,
-      "jspxSha256": "e1e57b530f37f2f5d595b05b9986c552e3832ac7234447f63b7fcf5367875ac3",
+      "jspxSha256": "b0b160b2a274ecb2b93edbd9152d39ec621636a3442ebcf282cd789629219713",
       "diagnostic": null,
-      "seconds": 3.67
+      "seconds": 4.37
     },
     {
       "view": "jsf/questionpool/questionTreeTable.jsp",
@@ -2600,7 +2599,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "965b3d3a102ad0936eec02851c2e5dac6606f79ca63416e1f1129a4990265aa4",
       "diagnostic": null,
-      "seconds": 2.61
+      "seconds": 3.01
     },
     {
       "view": "jsf/questionpool/questionpoolHeadings.jsp",
@@ -2612,7 +2611,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "3228541a91ecf2dc12419db73b534e934a11e0c728a50b82547ebc6af2e3b9f1",
       "diagnostic": null,
-      "seconds": 2.31
+      "seconds": 2.61
     },
     {
       "view": "jsf/questionpool/removePool.jsp",
@@ -2620,9 +2619,9 @@
       "includedBy": [],
       "sourceSha256": "53fd74f85d283f46794c991968fc6dcc381bac496a266033e2681996d19362df",
       "validatingConversionPassed": true,
-      "jspxSha256": "4cf4a4b85fba4955201d73ed4a9812cfb880f9ce3f64c720a07f4fa4d1a5a1da",
+      "jspxSha256": "0913d0d61e505b1274a7c023348e604364dc0bbb664b249b72f633a5e33b9ae0",
       "diagnostic": null,
-      "seconds": 1.81
+      "seconds": 1.97
     },
     {
       "view": "jsf/questionpool/removeQuestion.jsp",
@@ -2630,9 +2629,9 @@
       "includedBy": [],
       "sourceSha256": "928c33c38713056eca185b9ff88753bb7ec4207052d0367f0c640290b8a2ba8c",
       "validatingConversionPassed": true,
-      "jspxSha256": "470dbe470f46aa8fb277f7c914e04ec78aa7b4f065900499ee08d0b0c4d084f9",
+      "jspxSha256": "559c7512ebcb8ff69f38b77f503af785d8b899df7b14da5bdd40a9cd7dbcf5c4",
       "diagnostic": null,
-      "seconds": 1.91
+      "seconds": 2.13
     },
     {
       "view": "jsf/questionpool/selectQuestionType.jsp",
@@ -2640,9 +2639,9 @@
       "includedBy": [],
       "sourceSha256": "0132223ad885dc4aee72862ff4dec640e794bf22edcc1315c1dca62c1b3a090e",
       "validatingConversionPassed": true,
-      "jspxSha256": "d7be3fb0fe0f6e8de6edbddbf82a3fdbe46d426e550fe177b46354c8768dc1b1",
+      "jspxSha256": "19f6beccbaab31ae229d000e0a9d5978709d2fc35098f9b5dff68c489150616f",
       "diagnostic": null,
-      "seconds": 1.97
+      "seconds": 2.06
     },
     {
       "view": "jsf/questionpool/sharePool.jsp",
@@ -2650,9 +2649,9 @@
       "includedBy": [],
       "sourceSha256": "08c9386098c0b6e5cfcb10420968651a5efaeb54687bfe2e78e03d5101533ada",
       "validatingConversionPassed": true,
-      "jspxSha256": "8dddfff351d06925cebcfd3683d640fdd9a262d6a881813f1d30dbbcce34a5ab",
+      "jspxSha256": "43e17e7d5e063115be1f071f6c929ced01fddc1101a985727aebba44cc585a9c",
       "diagnostic": null,
-      "seconds": 2.57
+      "seconds": 2.56
     },
     {
       "view": "jsf/questionpool/solution.jsp",
@@ -2660,9 +2659,9 @@
       "includedBy": [],
       "sourceSha256": "46de3c84ce6e3e3d2176f5e316aeb776d4c1696a69e888001d09afce8636a228",
       "validatingConversionPassed": true,
-      "jspxSha256": "b52748a995ab3e1c4e503b4c9f698c77351eeead6b05e72f61c96b0c29c4a1b2",
+      "jspxSha256": "878c977b0d037e60f55db156a05c2ebafebbd550ebf3bde065a091bc7b12987d",
       "diagnostic": null,
-      "seconds": 2.4
+      "seconds": 2.67
     },
     {
       "view": "jsf/questionpool/statisticsModal.jsp",
@@ -2674,7 +2673,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "a523b71f592b81c28ac4e288c6d680bf3a97e2812d3b8968f91b83191ab22af7",
       "diagnostic": null,
-      "seconds": 2.11
+      "seconds": 2.21
     },
     {
       "view": "jsf/questionpool/subpoolsTreeTable.jsp",
@@ -2686,7 +2685,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "1e538336dfdec46b16370f061a11d10f80bd31b8a798f8ecf2de8416abc623b0",
       "diagnostic": null,
-      "seconds": 2.66
+      "seconds": 2.94
     },
     {
       "view": "jsf/questionpool/tagFilter.jsp",
@@ -2698,7 +2697,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "bb5ab4f0e26eef08913b268d436460d47e289a865238a9cb6f7627ee17178764",
       "diagnostic": null,
-      "seconds": 2.23
+      "seconds": 2.3
     },
     {
       "view": "jsf/questionpool/transferPool.jsp",
@@ -2706,9 +2705,9 @@
       "includedBy": [],
       "sourceSha256": "17ff562610c9d4ab24b327c4c6867841a64dfab41d2692ae6c89e46d4befbd79",
       "validatingConversionPassed": true,
-      "jspxSha256": "4116657315d8aa56d5a560b80d46333e858d51de7e967c52189d55765a5d7ba3",
+      "jspxSha256": "67c87f959c1beabe2db8ba2d426b356000e49647d6ea8230541afbf6d20bb851",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 2.57
     },
     {
       "view": "jsf/questionpool/transferPoolConfirm.jsp",
@@ -2716,9 +2715,9 @@
       "includedBy": [],
       "sourceSha256": "37fdd1a69faf8225e50e7cfc6cb4b62923c24360be7ecf0d671f065cafe6ff91",
       "validatingConversionPassed": true,
-      "jspxSha256": "74c9c715e890886784406f270f6cd33868cfaa33f2c8dde2b1f1d13c3f0f63dd",
+      "jspxSha256": "65b5813bfdc17821a4e7bc59d255ffdc2246888c6abc0bc73c3333cacc05d071",
       "diagnostic": null,
-      "seconds": 2.21
+      "seconds": 2.51
     },
     {
       "view": "jsf/questionpool/transferPoolInputUser.jsp",
@@ -2726,9 +2725,9 @@
       "includedBy": [],
       "sourceSha256": "17e13b3a2bae8df413889e18be4a89e4d0231836da8d8821ab0dda33f1fd577d",
       "validatingConversionPassed": true,
-      "jspxSha256": "7c09d0a0297ce2a0f2bc855e8dba9daec67aa149f181150c2920294c442c08c5",
+      "jspxSha256": "c071402a1310a635308272e05f7f65cfbed4389e4a565f94ae4b4221571bf261",
       "diagnostic": null,
-      "seconds": 2.06
+      "seconds": 2.3
     },
     {
       "view": "jsf/questionpool/transferPoolTree.jsp",
@@ -2740,7 +2739,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "a30bfd2380f8bea10ad16705231fc5b8ee540971fde74d2cd69817b25017a123",
       "diagnostic": null,
-      "seconds": 2.44
+      "seconds": 2.33
     },
     {
       "view": "jsf/questionpool/unsharePool.jsp",
@@ -2748,9 +2747,9 @@
       "includedBy": [],
       "sourceSha256": "5a1ac29f57ba8713804210e2cba138bdae68e1338f4effb17cf9112c775a367b",
       "validatingConversionPassed": true,
-      "jspxSha256": "4fb828787de2d8500c745ebc75261a0e5a6108f66962f2afd726d49f384823c2",
+      "jspxSha256": "df4cc11e3de2368f953c7a18f81b1c1b7e557c3859cb2a83aaca33b084ed06d7",
       "diagnostic": null,
-      "seconds": 2.17
+      "seconds": 1.95
     },
     {
       "view": "jsf/review/reviewIndex.jsp",
@@ -2758,9 +2757,9 @@
       "includedBy": [],
       "sourceSha256": "659af4b57e50d7fc43707f1b1e24683c5d956e1f06e1314ed2d437696806a38c",
       "validatingConversionPassed": true,
-      "jspxSha256": "1beba851699c8c46669e86ea11971f12d776458e08c64b825cdecb5df3e1f4d0",
+      "jspxSha256": "14b8bc7de080204d20705e2202f7335277ce2e6e082e556c1461a1e84e10bbcf",
       "diagnostic": null,
-      "seconds": 2.38
+      "seconds": 2.33
     },
     {
       "view": "jsf/review/reviewIndex_content.jsp",
@@ -2772,7 +2771,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4447d813a75d8690dbc099aa5248c587d7c6828e53196078539559320d1b363f",
       "diagnostic": null,
-      "seconds": 2.66
+      "seconds": 2.41
     },
     {
       "view": "jsf/samlite/samLiteEntry.jsp",
@@ -2780,9 +2779,9 @@
       "includedBy": [],
       "sourceSha256": "e1e03cf076875b8b74886a03b8d6cdcd1ce88f7adcdcaf725842746194c78650",
       "validatingConversionPassed": true,
-      "jspxSha256": "35dabe149897447256f191259a9f93e0b68664d738e7f080c97b92fdf7b5c7bb",
+      "jspxSha256": "d61ec9c57ef276c5243f4c8ae081c8b5807292ee3de02062ff69ae43d482f25f",
       "diagnostic": null,
-      "seconds": 2.33
+      "seconds": 2.49
     },
     {
       "view": "jsf/samlite/samLiteValidation.jsp",
@@ -2790,9 +2789,9 @@
       "includedBy": [],
       "sourceSha256": "d2c3c620f26b2e56c00fe5935b38cafdeba9b0f2bf9bf9c7b25bd833ed27a14d",
       "validatingConversionPassed": true,
-      "jspxSha256": "1bfa798b2eb5b4891964bf683e80f382cbeb5c6a5f24cba0eb9591c36756046c",
+      "jspxSha256": "1dd3b3c701a9b98adb71f3f579766efd8ebb6b9afeca45d4dd7fc8790867258e",
       "diagnostic": null,
-      "seconds": 2.34
+      "seconds": 2.53
     },
     {
       "view": "jsf/section-activity/sectionActivity.jsp",
@@ -2800,9 +2799,9 @@
       "includedBy": [],
       "sourceSha256": "79880724ce56dca3b84d72a024392d7b62233421d455661fb13dd168612a2f89",
       "validatingConversionPassed": true,
-      "jspxSha256": "e41a91a0da7b6b2a48cb36d6821eb31c4b3c04807df450828c3b9153272b1c63",
+      "jspxSha256": "a0ae84392550362922d14b64cb01028ec10a9316a735fee6e5275c25b732818e",
       "diagnostic": null,
-      "seconds": 2.54
+      "seconds": 2.77
     },
     {
       "view": "jsf/section-activity/sectionActivityHeadings.jsp",
@@ -2814,18 +2813,17 @@
       "validatingConversionPassed": true,
       "jspxSha256": "566e979c3e30baee1decc21889ac6b229b094223e8a4230246b4cb61c4011e92",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 2.34
     },
     {
       "view": "jsf/security/roleCheckStaticInclude.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "92f85fab9f31062837e70ca85bc5d92bd33fd26e3304e03e46083be2f67d63b5",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: Full JSP page needs an explicit response charset before JSPX conversion",
-      "seconds": 1.09,
-      "failureCategory": "response-charset-required"
+      "validatingConversionPassed": true,
+      "jspxSha256": "fd205d5adc77100663839ac3abb0383702a466bce2f3e4409bbf7978a88bef1a",
+      "diagnostic": null,
+      "seconds": 2.1
     },
     {
       "view": "jsf/select/selectIndex.jsp",
@@ -2833,9 +2831,9 @@
       "includedBy": [],
       "sourceSha256": "e4bd5082afb31e4257892475ae160fcc4f9ee9b0faf96c6986dc214c252ae846",
       "validatingConversionPassed": true,
-      "jspxSha256": "ecf1ac5e5a28f47101c99bd2545d37d7858b6320e8164e319af9554de0c57713",
+      "jspxSha256": "e6de2781060748dd2170920fc40bfa8b52ff00216996763fde31f21a28bb145d",
       "diagnostic": null,
-      "seconds": 2.3
+      "seconds": 2.57
     },
     {
       "view": "jsf/select/selectIndex_content.jsp",
@@ -2848,7 +2846,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "e74c139335977838f798469f8dfa6431094660d042b156330f51e692f884bbde",
       "diagnostic": null,
-      "seconds": 2.41
+      "seconds": 2.81
     },
     {
       "view": "jsf/select/selectIndex_review_table.jsp",
@@ -2861,7 +2859,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "bd117311d963e65e3c4b6c9c97519c8330c6b9788990b717e1538f7e08413e40",
       "diagnostic": null,
-      "seconds": 2.29
+      "seconds": 2.82
     },
     {
       "view": "jsf/shared/itemAttachmentList.jsp",
@@ -2874,7 +2872,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "f4e5385daaa67b3e89fc27ce967e644a0ca4bbeb6fd1024f6064f951e1e0fe3b",
       "diagnostic": null,
-      "seconds": 2.35
+      "seconds": 2.32
     },
     {
       "view": "jsf/shared/mimeicon.jsp",
@@ -2921,7 +2919,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "4ca9288d4b9842f7b79d3fcf5e688e95065a4a5fa64cd4e21ed0425bd337da33",
       "diagnostic": null,
-      "seconds": 2.26
+      "seconds": 2.27
     },
     {
       "view": "jsf/shared/removeMedia.jsp",
@@ -2929,9 +2927,9 @@
       "includedBy": [],
       "sourceSha256": "84501198da47edf0e29ca330c157abfecd9917ad1544c4ceb969bea968a0c9c6",
       "validatingConversionPassed": true,
-      "jspxSha256": "ee3ef02963347b7db54530aea4933f2b4a12cff3e907c425ac2880b9be818af0",
+      "jspxSha256": "cdc59b5c1ab5bc1e0a23f0fb6af1fe1847c11050c824d7a1a65a475a3fb049f3",
       "diagnostic": null,
-      "seconds": 2.34
+      "seconds": 2.28
     },
     {
       "view": "jsf/template/confirmTempRemove.jsp",
@@ -2939,9 +2937,9 @@
       "includedBy": [],
       "sourceSha256": "b5b0ed67725201ffdc7e24765e1c1f45e64f2516f73dde9d4b04f056a993362c",
       "validatingConversionPassed": true,
-      "jspxSha256": "354f665800c970eb143a9af8b302197daf9672b1020d8ef3c295c250cc0dbf4d",
+      "jspxSha256": "cc783378375c12d24d5e8fac1d570abf7d80d9605dc40b9f2bfbcd6540dd8823",
       "diagnostic": null,
-      "seconds": 2.04
+      "seconds": 2.12
     },
     {
       "view": "jsf/template/templateEditor.jsp",
@@ -2949,9 +2947,9 @@
       "includedBy": [],
       "sourceSha256": "651faada9e540c10f46c581e543ec271859d6c74fb2d5967ce581fe2a3b07780",
       "validatingConversionPassed": true,
-      "jspxSha256": "2d82310b73010183796bd48b13b65824a280c20dd6ae1c1cc0785c2103fd927a",
+      "jspxSha256": "f484e4abe019549673a1187e71b9fc4accc9f87098fe4df761bc82fc92269d09",
       "diagnostic": null,
-      "seconds": 2.65
+      "seconds": 2.77
     },
     {
       "view": "jsf/template/templateHeadings.jsp",
@@ -2964,7 +2962,7 @@
       "validatingConversionPassed": true,
       "jspxSha256": "e18fffcb48ed8755e161bc7f01ee0037582348bc7f9bc37a1ace5be6b6922af1",
       "diagnostic": null,
-      "seconds": 2.02
+      "seconds": 2.34
     },
     {
       "view": "jsf/template/templateIndex.jsp",
@@ -2972,37 +2970,37 @@
       "includedBy": [],
       "sourceSha256": "bb7bbf729eebf16bdfc20847844def2e6f2e4b8a9e81e1a568a4d493d63605f3",
       "validatingConversionPassed": true,
-      "jspxSha256": "99743bacd372f4e92b0f790c0f9a19bbe07bd5bdae857a461bc062a05ab7b55b",
+      "jspxSha256": "99629d3e8fb5f3d5fff1bcf696384b94f01d0656d07948e9f262dba09db8b3f1",
       "diagnostic": null,
-      "seconds": 2.03
+      "seconds": 2.28
     },
     {
       "view": "jsf/upload/closeWindow.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "3d9491dad15331eceeb5188e698846461f7018c68609ae4c3b50aea2cd5f5424",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: Full JSP page needs an explicit response charset before JSPX conversion",
-      "seconds": 1.15,
-      "failureCategory": "response-charset-required"
+      "validatingConversionPassed": true,
+      "jspxSha256": "d82585aa7d2644fc114e72df590dd8dfba0e73a29fe2c91c6fa29fd69bebff9e",
+      "diagnostic": null,
+      "seconds": 1.97
     },
     {
       "view": "jsf/upload/uploadFile.jsp",
       "mode": "full",
       "includedBy": [],
       "sourceSha256": "77baba1c9d03199edbee99aa549c6e21ab26e7afcbaaf5952fc047644fe9a9e4",
-      "validatingConversionPassed": false,
-      "jspxSha256": null,
-      "diagnostic": "java.lang.UnsupportedOperationException: Full JSP page needs an explicit response charset before JSPX conversion",
-      "seconds": 0.95,
-      "failureCategory": "response-charset-required"
+      "validatingConversionPassed": true,
+      "jspxSha256": "20d79d2a2259ed2af0f709f88c161ce71aa32d41318dcdc447cb601190bccf3f",
+      "diagnostic": null,
+      "seconds": 1.69
     }
   ],
+  "summary": {
+    "passed": 243,
+    "failed": 2
+  },
   "failureCategories": {
     "invalid-source-el": 1,
-    "missing-source-include": 1,
-    "response-charset-required": 5,
-    "whitespace-trimming-unsupported": 6
+    "missing-source-include": 1
   }
 }

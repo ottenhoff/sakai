@@ -48,15 +48,25 @@ public class JspToJspx extends Recipe {
     @Option(displayName = "Fragment", description = "Convert an include fragment; omit translation-unit output settings and automatic preludes.", required = false, example = "true")
     private final boolean fragment;
 
+    @Option(displayName = "Default response charset", description = "Explicitly normalize full pages without a response charset to this charset; existing response charsets are preserved.", required = false, example = "UTF-8")
+    private final String defaultResponseCharset;
+
+    public JspToJspx(String webappDirectory, String classpath, Map<String, String> taglibs, boolean fragment) {
+        this(webappDirectory, classpath, taglibs, fragment, null);
+    }
+
     @JsonCreator
     public JspToJspx(@JsonProperty("webappDirectory") String webappDirectory,
                      @JsonProperty("classpath") String classpath,
                      @JsonProperty("taglibs") Map<String, String> taglibs,
-                     @JsonProperty("fragment") boolean fragment) {
+                     @JsonProperty("fragment") boolean fragment,
+                     @JsonProperty("defaultResponseCharset") String defaultResponseCharset) {
         this.webappDirectory = webappDirectory;
         this.classpath = classpath;
         this.taglibs = taglibs == null ? Map.of() : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(taglibs));
         this.fragment = fragment;
+        this.defaultResponseCharset = defaultResponseCharset == null ? null :
+                java.nio.charset.Charset.forName(defaultResponseCharset).name();
     }
 
     @Override
@@ -73,6 +83,7 @@ public class JspToJspx extends Recipe {
     public String getClasspath() { return classpath; }
     public Map<String, String> getTaglibs() { return taglibs; }
     public boolean isFragment() { return fragment; }
+    public String getDefaultResponseCharset() { return defaultResponseCharset; }
 
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
@@ -147,7 +158,7 @@ public class JspToJspx extends Recipe {
                     Files.createSymbolicLink(libraries.resolve(path.getFileName()), path);
                 }
             }
-            ConversionJspC compiler = new ConversionJspC(fragment);
+            ConversionJspC compiler = new ConversionJspC(fragment, defaultResponseCharset);
             compiler.setUriroot(webapp.toString());
             compiler.setJspFiles(relative.toString());
             compiler.setOutputDir(stage.resolve("generated").toString());

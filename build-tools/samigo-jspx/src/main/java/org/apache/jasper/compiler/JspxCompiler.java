@@ -33,29 +33,38 @@ public class JspxCompiler extends JDTCompiler {
         }
         // Parse afresh: code generation may optimize text and apply tag plugins.
         Node.Nodes original = new ParserController(ctxt, this).parse(ctxt.getJspFile());
-        conversion.setConvertedSource(new Emitter(conversion.isFragment(), getPageInfo()).emit(original));
+        if (getPageInfo().isTrimDirectiveWhitespaces()) {
+            // Apply Jasper's exact whitespace-only text rule before jsp:text
+            // combines source chunks into XML text nodes.
+            TextOptimizer.concatenate(this, original);
+        }
+        conversion.setConvertedSource(new Emitter(conversion.isFragment(), getPageInfo(),
+                conversion.getDefaultResponseCharset()).emit(original));
         return result;
     }
 
     private static final class Emitter {
         private final boolean fragment;
         private final PageInfo pageInfo;
+        private final String defaultResponseCharset;
         private final Map<String, String> namespaces = new LinkedHashMap<>();
         private final StringBuilder body = new StringBuilder();
         private int depth = 1;
 
-        private Emitter(boolean fragment, PageInfo pageInfo) {
+        private Emitter(boolean fragment, PageInfo pageInfo, String defaultResponseCharset) {
             this.fragment = fragment;
             this.pageInfo = pageInfo;
+            this.defaultResponseCharset = defaultResponseCharset;
             namespaces.put("jsp", "http://java.sun.com/JSP/Page");
         }
 
         private String emit(Node.Nodes nodes) throws Exception {
-            if (!fragment && !pageInfo.getContentType().toLowerCase(java.util.Locale.ROOT).contains("charset=")) {
-                throw new UnsupportedOperationException("Full JSP page needs an explicit response charset before JSPX conversion");
-            }
-            if (pageInfo.isTrimDirectiveWhitespaces()) {
-                throw new UnsupportedOperationException("trimDirectiveWhitespaces needs a separate conversion rule");
+            String contentType = pageInfo.getContentType();
+            if (!fragment && !contentType.toLowerCase(java.util.Locale.ROOT).contains("charset=")) {
+                if (defaultResponseCharset == null) {
+                    throw new UnsupportedOperationException("Full JSP page needs an explicit response charset before JSPX conversion");
+                }
+                contentType += ";charset=" + defaultResponseCharset;
             }
             collectNamespaces(nodes);
             write(nodes);
@@ -65,7 +74,8 @@ public class JspxCompiler extends JDTCompiler {
             output.append(">\n");
             if (!fragment) {
                 output.append("<jsp:directive.page pageEncoding=\"UTF-8\" contentType=\"")
-                        .append(attribute(pageInfo.getContentType())).append("\" isELIgnored=\"")
+                        .append(attribute(contentType)).append("\" trimDirectiveWhitespaces=\"")
+                        .append(pageInfo.isTrimDirectiveWhitespaces()).append("\" isELIgnored=\"")
                         .append(pageInfo.isELIgnored()).append("\" deferredSyntaxAllowedAsLiteral=\"")
                         .append(pageInfo.isDeferredSyntaxAllowedAsLiteral()).append("\"/>\n")
                         .append("<jsp:output omit-xml-declaration=\"yes\"/>\n");
@@ -190,6 +200,16 @@ public class JspxCompiler extends JDTCompiler {
         }
 
         private void text(String name, String text) {
+            if (name.equals("jsp:text") && pageInfo.isTrimDirectiveWhitespaces()) {
+                // CDATA boundaries flush Jasper's character buffer. A CR
+                // reference between CDATA sections would make a retained
+                // mixed-text suffix look like a whitespace-only text node.
+                body.append("  ".repeat(depth)).append('<').append(name).append('>')
+                        .append(text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                                .replace("\r", "&#13;"))
+                        .append("</").append(name).append(">\n");
+                return;
+            }
             body.append("  ".repeat(depth)).append('<').append(name).append("><![CDATA[")
                     .append(text.replace("]]>", "]]]]><![CDATA[>")
                             .replace("\r", "]]>&#13;<![CDATA["))

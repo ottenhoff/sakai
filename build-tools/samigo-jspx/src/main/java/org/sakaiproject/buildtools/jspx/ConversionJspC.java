@@ -21,10 +21,12 @@ import org.apache.jasper.compiler.JspxCompiler;
 /** Per-operation compiler options and result; no global or thread-local state. */
 public class ConversionJspC extends JspC {
     private final boolean fragment;
+    private final String defaultResponseCharset;
     private String convertedSource;
 
-    public ConversionJspC(boolean fragment) {
+    public ConversionJspC(boolean fragment, String defaultResponseCharset) {
         this.fragment = fragment;
+        this.defaultResponseCharset = defaultResponseCharset;
     }
 
     @Override
@@ -34,6 +36,10 @@ public class ConversionJspC extends JspC {
 
     public boolean isFragment() {
         return fragment;
+    }
+
+    public String getDefaultResponseCharset() {
+        return defaultResponseCharset;
     }
 
     public String getConvertedSource() {

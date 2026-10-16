@@ -78,6 +78,35 @@ class JspToJspxTest {
     }
 
     @Test
+    void explicitlyNormalizesMissingResponseCharsetsToUtf8() throws Exception {
+        String source = "<%@ page contentType=\"application/json\" %>{\"message\":\"Hello\"}";
+        String xml = convertSource(source, new JspToJspx(webapp.toString(),
+                System.getProperty("java.class.path"), Map.of(), false, "UTF-8")).printAll();
+        assertTrue(xml.contains("contentType=\"application/json;charset=UTF-8\""));
+        assertEquals(source, Files.readString(webapp.resolve("page.jsp")));
+    }
+
+    @Test
+    void retainsAnExistingResponseCharsetWhenUtf8NormalizationIsEnabled() throws Exception {
+        String source = "<%@ page contentType=\"text/html;charset=ISO-8859-1\" %>Hello";
+        String xml = convertSource(source, new JspToJspx(webapp.toString(),
+                System.getProperty("java.class.path"), Map.of(), false, "UTF-8")).printAll();
+        assertTrue(xml.contains("contentType=\"text/html;charset=ISO-8859-1\""));
+    }
+
+    @Test
+    void trimsOnlyWhitespaceTemplateTextAndPreservesMixedText() throws Exception {
+        String source = "<%@ page contentType=\"application/json;charset=UTF-8\" " +
+                "trimDirectiveWhitespaces=\"true\" %>\r\n  <%-- before --%>\t\n" +
+                "<% String value = \"ok\"; %>\n\t {\"message\":\"<%= value %>\"} \r\n";
+        String xml = convert(source, Map.of()).printAll();
+        assertTrue(xml.contains("trimDirectiveWhitespaces=\"true\""));
+        assertEquals(2, xml.split("<jsp:text>", -1).length - 1);
+        assertTrue(xml.contains("<jsp:text>\n\t {\"message\":\"</jsp:text>"));
+        assertTrue(xml.contains("\"} &#13;\n</jsp:text>"));
+    }
+
+    @Test
     void rejectsInvalidJavaInsteadOfProducingXmlThatOnlyLooksValid() throws Exception {
         rejects("<%@ page contentType=\"text/html;charset=UTF-8\" %><%= missingVariable %>");
     }
@@ -125,10 +154,14 @@ class JspToJspxTest {
         if (!source.contains("contentType=")) {
             source = "<%@ page contentType=\"text/html;charset=UTF-8\" %>" + source;
         }
+        return convertSource(source, recipe(taglibs));
+    }
+
+    private Xml.Document convertSource(String source, JspToJspx conversionRecipe) throws Exception {
         Files.writeString(webapp.resolve("page.jsp"), source);
         SourceFile input = PlainText.builder().sourcePath(Path.of("page.jsp")).text(source).build();
         List<Throwable> errors = new ArrayList<>();
-        List<Result> results = recipe(taglibs).run(new InMemoryLargeSourceSet(List.of(input)),
+        List<Result> results = conversionRecipe.run(new InMemoryLargeSourceSet(List.of(input)),
                 new InMemoryExecutionContext(errors::add)).getChangeset().getAllResults();
         assertTrue(errors.isEmpty(), errors.toString());
         assertEquals(1, results.size());

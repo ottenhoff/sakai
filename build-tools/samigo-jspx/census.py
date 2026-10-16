@@ -63,6 +63,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base', default=BASE)
     parser.add_argument('--workers', type=int, default=4)
+    parser.add_argument('--default-response-charset', help='Explicitly normalize missing full-page response charsets, e.g. UTF-8')
     args = parser.parse_args()
     if args.workers < 1:
         parser.error('--workers must be positive')
@@ -93,8 +94,13 @@ def main():
             taglibs[prefix] = uri
     taglib_file = work / 'taglibs.json'
     taglib_file.write_text(json.dumps(taglibs, indent=2) + '\n')
+    empty_taglib_file = work / 'empty-taglibs.json'
+    empty_taglib_file.write_text('{}\n')
+    # Keep every worker on one compiler build even if Maven rebuilds the module.
+    recipe_classes = work / 'recipe-classes'
+    shutil.copytree(TOOL / 'target/classes', recipe_classes)
     cp = os.pathsep.join([
-        str(TOOL / 'target/classes'), (TOOL / 'target/classpath.txt').read_text().strip(),
+        str(recipe_classes), (TOOL / 'target/classpath.txt').read_text().strip(),
         str(ROOT / 'samigo/samigo-app/target/classes'),
         (ROOT / 'samigo/samigo-app/target/jspx-app-classpath.txt').read_text().strip(),
     ])
@@ -112,8 +118,10 @@ def main():
         log.parent.mkdir(parents=True, exist_ok=True)
         command = [java, '-Xmx512m', '-cp', cp, 'org.sakaiproject.buildtools.jspx.ConvertJsp',
                    str(app), view, str(output), str(cpfile), str(bool(fragment)).lower()]
-        if fragment:
-            command.append(str(taglib_file))
+        if fragment or args.default_response_charset:
+            command.append(str(taglib_file if fragment else empty_taglib_file))
+        if args.default_response_charset:
+            command.append(args.default_response_charset)
         started = time.monotonic()
         try:
             with log.open('w') as stream:
@@ -138,16 +146,19 @@ def main():
     base_commit = subprocess.check_output(['git', 'rev-parse', args.base], cwd=ROOT, text=True).strip()
     report = {
         'baseCommit': base_commit,
-        'recipeCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+        'recipeBaseCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+        'recipeClassFilesSha256': {str(path.relative_to(recipe_classes)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                   for path in sorted(recipe_classes.rglob('*.class'))},
         'jasperVersion': '10.1.60',
         'openRewriteVersion': '8.90.4',
+        'defaultResponseCharset': args.default_response_charset,
         'totalJspFiles': len(views),
         'validation': ['namespace-aware XML', 'original Jasper Java compilation',
                        'converted Jasper Java compilation', 'OpenRewrite XML round-trip'],
         'fragmentContext': 'Include-only files, with the union of nonconflicting source taglib declarations. '
                            'Parent Java variables are not synthesized.',
         'limitations': ['Per-file conversions retain original .jsp include targets.',
-                        'Generated-Java equivalence is measured separately by the five-page pilot.',
+                        'Generated-Java equivalence is measured separately by the 16-page pilot.',
                         'Literal HTML in jsp:text is not HTML-validated.',
                         'JSPF and INC files are dependencies, not conversion targets in this census.'],
     }
