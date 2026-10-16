@@ -67,6 +67,9 @@
             <activation>
                 <property><name>openrewrite.source.dir</name></property>
             </activation>
+            <properties>
+                <coverage.parser.label>8.93.8 XML sources plus JSP patch; 8.90.4 core</coverage.parser.label>
+            </properties>
             <dependencies>
                 <dependency>
                     <groupId>org.apache.commons</groupId>
@@ -160,7 +163,7 @@
                             <arguments combine.self="override">
                                 <argument>${project.basedir}/../..</argument>
                                 <argument>${project.build.directory}/coverage.json</argument>
-                                <argument>8.93.8 XML sources plus JSP patch; 8.90.4 core</argument>
+                                <argument>${coverage.parser.label}</argument>
                             </arguments>
                         </configuration>
                     </plugin>

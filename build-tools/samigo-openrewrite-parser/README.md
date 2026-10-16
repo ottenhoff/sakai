@@ -132,7 +132,7 @@ fully parse. Of the five additional fragments, four fully parse and one fails.
 The unchanged 250-file corpus therefore has 86 fully parsed sources overall.
 
 The increased error count exposes source that was previously retained as opaque
-text. It does not represent 112 newly broken pages. Remaining first errors are
+text. Remaining first errors are
 mainly quoted attributes containing JSP expressions or embedded markup, raw
 script bodies, and template markup that is not structurally nested.
 
@@ -168,6 +168,15 @@ mvn -B -ntp -f build-tools/samigo-openrewrite-parser/pom.xml \
 The source profile has its own `target/openrewrite-source/` output directory.
 The original binary baseline still uses `target/coverage.json`. No external
 OpenRewrite checkout is needed for the original baseline command.
+
+The patch was also applied to current upstream `main` at
+`f0a034098a6f5246d5d112096b2d3d1dc0be633d`, producing commit
+`8d77476afc1a9f50f044ba0cf744f6a0c91b073e` on
+`codex/jsp-document-parser-upstream`. All 346 XML module tests pass on that source
+base too, and the same corpus still measures 82/245 JSPs fully parsed, with zero
+incomplete documents. This uses the same public 8.90.4 core dependencies. When
+measuring a different source revision, set `-Dcoverage.parser.label=...` to record
+the correct provenance in the generated report.
 
 ### Next parser work
 
