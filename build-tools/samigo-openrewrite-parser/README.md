@@ -147,6 +147,7 @@ diagnostics are regenerated into the ignored `target/` directory.
 - Implementation branch: `codex/jsp-document-parser`, commit
   `295617a269afe483843676790d8f253b9e9c7b78`.
 - Portable contribution: [0001-jsp-document-root.patch](patches/0001-jsp-document-root.patch).
+- Current-main draft contribution: [OpenRewrite #9220](https://github.com/openrewrite/rewrite/pull/9220).
 - **346 XML module tests pass**, including 17 new JSP root tests and a new RPC
   test; the unmodified source control passes its 328 tests.
 - Validation compiles the XML module's Java sources, resources, and tests using
