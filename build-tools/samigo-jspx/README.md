@@ -83,8 +83,8 @@ mvn -B -ntp -f samigo/samigo-app/pom.xml -DskipTests compile dependency:build-cl
 mvn -B -ntp -f build-tools/samigo-jspx/pom.xml -P samigo-pilot verify
 ```
 
-The Maven profile runs unit tests and `verify.py`. It takes 16 **original**
-JSPs from commit `a2f52bae02d`, including their inline scripts, and writes previews
+The Maven profile runs unit tests and `verify.py`. It takes 13 **original**
+JSPs from `upstream/master`, including their inline scripts, and writes previews
 under `target/jspx-verification/converted/`. It does not edit application sources
 or start Tomcat/Sakai. A copy of the application's webapp is used for compilation.
 
@@ -103,7 +103,7 @@ escaped EL in template text and attributes, entities, CRLF, Unicode, `]]>`, and
 whitespace-only versus mixed-text trimming.
 
 The six whitespace-trimming pages must match without any additional allowed
-changes. Five pages explicitly opt into response-charset normalization: their
+changes. Two pages explicitly opt into response-charset normalization: their
 only permitted generated-Java change is the exact call from
 `response.setContentType("text/html")` to
 `response.setContentType("text/html;charset=UTF-8")`. The report records this
@@ -154,31 +154,69 @@ After building the module and application classpath as above, run:
 python3 build-tools/samigo-jspx/census.py --workers 4 --default-response-charset UTF-8
 ```
 
-The census takes a complete Git snapshot of the original webapp at `a2f52bae02d`
-and runs the actual recipe independently on all **245 JSPs**. Application sources
+The census resolves `upstream/master` once and takes a complete Git snapshot of
+that commit. The cleaned baseline contains **233 JSPs**. Application sources
 are unchanged. Previews, compiler logs, and results go under `target/jspx-census/`.
 The [recorded full-corpus results](results/full-corpus.json) contain each source
 hash, conversion mode, include parents, outcome, and failure diagnostic.
 
 | Conversion mode | Passed | Total |
 | --- | ---: | ---: |
-| Full pages | 126 | 128 |
+| Full pages | 116 | 116 |
 | Include fragments | 117 | 117 |
-| All JSPs | **243** | **245** |
+| All JSPs | **233** | **233** |
 
 Passing requires namespace-aware XML validation, original and converted Jasper
 Java compilation, and an OpenRewrite XML round-trip. Include-only files are
 tested as fragments with the corpus's nonconflicting taglib mappings; parent
 Java variables are not synthesized. Unreferenced files remain full pages.
 
-With explicit UTF-8 response-charset normalization, the only **two failures** are
-pre-existing source failures: malformed EL in `author/previewAssessment.jsp` and
-a missing include in `delivery/reviewAssessment.jsp`.
+The baseline includes the merged removal of twelve unused JSPs in Sakai PR
+#15197. The recorded report pins the exact source commit and includes compiled
+recipe hashes. Explicit UTF-8 normalization applies to the two retained pages
+without a response charset.
 
 This is per-file validity coverage. Includes still target original JSPs; the
-census does not test an application in which every include has been renamed,
-compare generated Java across the full corpus, or validate literal HTML.
+census does not test an application in which every include has been renamed
+or validate literal HTML. Generated Java is compared separately below.
 The four JSPF files and `header.inc` are dependencies, not conversion targets.
+
+## Compare generated Java across the entire corpus
+
+Run both verification profiles after building the Samigo app classpath:
+
+```sh
+mvn -B -ntp -f build-tools/samigo-jspx/pom.xml -P samigo-pilot,samigo-corpus verify
+```
+
+The `samigo-corpus` profile first converts every JSP, then runs `compare.py`.
+Comparison requires a complete census with no failed conversions. It verifies
+source/output hashes and the compiler snapshot before compiling each original
+JSP and its JSPX counterpart in isolated webapps. Both versions use the same
+generated class name and output path. Java 17 source/target settings are used
+with the pinned Jasper compiler on JDK 21.
+
+Every pair must match under the metadata/chunk normalization listed above.
+Only the explicitly selected response charset may change, and that exact
+generated header call is recorded separately. IDs, bindings, setter order,
+listeners, scriptlets, and output text remain significant. Negative controls
+mutate actual generated IDs and bindings to check comparison sensitivity.
+
+To compare an existing successful census without converting it again:
+
+```sh
+python3 build-tools/samigo-jspx/compare.py --workers 4
+```
+
+Reports, original/converted Java, compiler logs, and any diffs are written under
+`target/jspx-comparison/`. The checked-in
+[equivalence report](results/equivalence.json) records the full-corpus outcome.
+On the cleaned baseline, **231 pairs match strictly** under the listed metadata
+normalization; **two pairs differ only by the explicitly selected UTF-8 header
+change**. There are no unexpected generated-Java differences.
+Compiler comparison failures fail the Maven build. Includes still point to
+original JSPs, so this does not yet prove an application with all includes
+converted and renamed together.
 
 ## Current boundaries
 
@@ -195,6 +233,7 @@ prefixes. Missing response charsets require the explicit normalization option
 described above.
 
 The prototype uses Jasper internals through one adapter pinned to 10.1.60.
-Compiler comparisons cover the listed 16 pages and five fixtures, not every Sakai
-flow or arbitrary container. The separate census measures per-file conversion
-validity. No live deployment or complete application migration is claimed.
+The pilot compares 13 real pages and five fixtures; the corpus profile compares
+every retained Samigo JSP independently. These checks do not cover other Sakai
+tools or arbitrary containers. No live deployment or complete application
+migration is claimed.

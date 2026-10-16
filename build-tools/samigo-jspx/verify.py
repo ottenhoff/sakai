@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Convert original Samigo JSPs, compile JSP/JSPX, and compare generated Java."""
 import ast
+import argparse
 import difflib
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -10,12 +12,13 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = Path(__file__).resolve().parent
 WORK = ROOT / 'target/jspx-verification'
 WEBAPP = Path('samigo/samigo-app/src/webapp')
-BASE = 'a2f52bae02d'
+BASE = 'upstream/master'
 CASES = [
     ('jsf/print/printAssessment.jsp', False),
     ('jsf/evaluation/gradeStudentResultAttachment.jsp', True),
@@ -30,14 +33,9 @@ CASES = [
     ('jsf/qti/xmlPoolDisplay.jsp', False),
     ('jsf/author/createAssessment_title.jsp', False),
     ('jsf/author/editLink.jsp', False),
-    ('jsf/security/roleCheckStaticInclude.jsp', False),
-    ('jsf/upload/closeWindow.jsp', False),
-    ('jsf/upload/uploadFile.jsp', False),
 ]
 UTF8_NORMALIZED = {
     'jsf/author/createAssessment_title.jsp', 'jsf/author/editLink.jsp',
-    'jsf/security/roleCheckStaticInclude.jsp', 'jsf/upload/closeWindow.jsp',
-    'jsf/upload/uploadFile.jsp',
 }
 CONTROLS = {
     'controls/escaped-el.jsp': r'<%@ page deferredSyntaxAllowedAsLiteral="true" %>\${name} / \\${name} / ${name} / #{literal}',
@@ -74,14 +72,21 @@ def run(command, logfile):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--base', default=BASE)
+    args = parser.parse_args()
+    base = subprocess.check_output(['git', 'rev-parse', args.base], cwd=ROOT, text=True).strip()
     WORK.mkdir(parents=True, exist_ok=True)
     app = WORK / 'webapp'
     if app.exists():
         shutil.rmtree(app)
-    shutil.copytree(ROOT / WEBAPP, app)
-    for view, _ in CASES:
-        original = subprocess.check_output(['git', 'show', f'{BASE}:{WEBAPP / view}'], cwd=ROOT)
-        (app / view).write_bytes(original)
+    snapshot = WORK / 'snapshot'
+    if snapshot.exists():
+        shutil.rmtree(snapshot)
+    archive = subprocess.check_output(['git', 'archive', base, str(WEBAPP)], cwd=ROOT)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as files:
+        files.extractall(snapshot, filter='data')
+    shutil.move(snapshot / WEBAPP, app)
     declarations = ''.join(f'<%@ taglib prefix="{p}" uri="{u}" %>' for p, u in TAGLIBS.items())
     for view, content in CONTROLS.items():
         (app / view).parent.mkdir(exist_ok=True)
@@ -156,7 +161,7 @@ def main():
                         'generatedJavaMatchesExpectedChanges': expected_match})
         print(view, ('MATCH' if same else 'MATCH WITH EXPLICIT UTF-8 HEADER CHANGE')
               if expected_match else 'DIFFERENCE', flush=True)
-    (WORK / 'results.json').write_text(json.dumps({'baseCommit': BASE, 'results': results}, indent=2) + '\n')
+    (WORK / 'results.json').write_text(json.dumps({'baseCommit': base, 'results': results}, indent=2) + '\n')
     if failures:
         raise AssertionError(f'Inspect generated Java differences for {failures}')
 

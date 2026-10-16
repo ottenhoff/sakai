@@ -18,7 +18,7 @@ import time
 ROOT = Path(__file__).resolve().parents[2]
 TOOL = Path(__file__).resolve().parent
 WEBAPP = Path('samigo/samigo-app/src/webapp')
-BASE = 'a2f52bae02d'
+BASE = 'upstream/master'
 
 
 def uncomment(source):
@@ -72,7 +72,8 @@ def main():
         shutil.rmtree(work)
     work.mkdir(parents=True)
     # A complete Git snapshot avoids depending on pilot edits or dirty sources.
-    archive = subprocess.check_output(['git', 'archive', args.base, str(WEBAPP)], cwd=ROOT)
+    base_commit = subprocess.check_output(['git', 'rev-parse', args.base], cwd=ROOT, text=True).strip()
+    archive = subprocess.check_output(['git', 'archive', base_commit, str(WEBAPP)], cwd=ROOT)
     with tarfile.open(fileobj=io.BytesIO(archive)) as files:
         files.extractall(work / 'snapshot', filter='data')
     app = work / 'snapshot' / WEBAPP
@@ -143,7 +144,6 @@ def main():
 
     views = [view for view in sources if view.endswith('.jsp')]
     results = []
-    base_commit = subprocess.check_output(['git', 'rev-parse', args.base], cwd=ROOT, text=True).strip()
     report = {
         'baseCommit': base_commit,
         'recipeBaseCommit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
@@ -158,7 +158,7 @@ def main():
         'fragmentContext': 'Include-only files, with the union of nonconflicting source taglib declarations. '
                            'Parent Java variables are not synthesized.',
         'limitations': ['Per-file conversions retain original .jsp include targets.',
-                        'Generated-Java equivalence is measured separately by the 16-page pilot.',
+                        'Generated-Java equivalence is measured separately by compare.py.',
                         'Literal HTML in jsp:text is not HTML-validated.',
                         'JSPF and INC files are dependencies, not conversion targets in this census.'],
     }

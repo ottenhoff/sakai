@@ -1,5 +1,5 @@
 {
-  "baseCommit": "a2f52bae02d",
+  "baseCommit": "cbc192f88279a455dffa4b7fac72ef8d54c5518d",
   "results": [
     {
       "view": "jsf/print/printAssessment.jsp",
@@ -142,48 +142,6 @@
       "xmlAndOpenRewriteParse": true,
       "sourceSha256": "831161584012363c3500233d813c754f90714041fb6145456b13ec01f381cc73",
       "jspxSha256": "b4f090ba118f3a025789c6bf747a7c19dcf4510b2bd098e3b55582af57f3b0b8",
-      "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": false,
-      "intentionalResponseCharsetChange": {
-        "from": "text/html",
-        "to": "text/html;charset=UTF-8"
-      },
-      "generatedJavaMatchesExpectedChanges": true
-    },
-    {
-      "view": "jsf/security/roleCheckStaticInclude.jsp",
-      "fragment": false,
-      "xmlAndOpenRewriteParse": true,
-      "sourceSha256": "92f85fab9f31062837e70ca85bc5d92bd33fd26e3304e03e46083be2f67d63b5",
-      "jspxSha256": "1e7384249645df1272274173079308bb80dc707d975437ce58d40e3a87fd9773",
-      "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": false,
-      "intentionalResponseCharsetChange": {
-        "from": "text/html",
-        "to": "text/html;charset=UTF-8"
-      },
-      "generatedJavaMatchesExpectedChanges": true
-    },
-    {
-      "view": "jsf/upload/closeWindow.jsp",
-      "fragment": false,
-      "xmlAndOpenRewriteParse": true,
-      "sourceSha256": "3d9491dad15331eceeb5188e698846461f7018c68609ae4c3b50aea2cd5f5424",
-      "jspxSha256": "0aab43a6e53478da8d9ef0db7f013952b77ec806666469cdf47bb6de033312c1",
-      "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": false,
-      "intentionalResponseCharsetChange": {
-        "from": "text/html",
-        "to": "text/html;charset=UTF-8"
-      },
-      "generatedJavaMatchesExpectedChanges": true
-    },
-    {
-      "view": "jsf/upload/uploadFile.jsp",
-      "fragment": false,
-      "xmlAndOpenRewriteParse": true,
-      "sourceSha256": "77baba1c9d03199edbee99aa549c6e21ab26e7afcbaaf5952fc047644fe9a9e4",
-      "jspxSha256": "994ec2b14ba509033065a59014ffd515f1a97c2ff9da6a2351ff1be77835096a",
       "jasperCompiledBeforeAndAfter": true,
       "generatedJavaMatches": false,
       "intentionalResponseCharsetChange": {
