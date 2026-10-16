@@ -102,15 +102,77 @@ The tagged `XMLLexer.g4` and `XMLParser.g4` files are identical between 8.90.4
 and 8.93.8; `XmlParser.java` and `XmlParserVisitor.java` differ. Those source
 comparisons do not substitute for running 8.93.8.
 
-## Recommended next work
+## First parser implementation: October 16, 2026
 
-Start with parser correctness: detect non-whitespace unconsumed input instead
-of silently returning an apparently successful document. Then support JSP
-prolog interleaving, include directives in content, and fragments with multiple
-top-level nodes. Attribute syntax and script bodies need their own fixtures.
-These are parser prerequisites for a structural JSP-to-Facelets recipe.
+The selected root is **`Xml.JspDocument`**, containing an ordered `List<Xml>` of
+top-level nodes. JSP pages and include fragments do not require a single root
+element. Directives, DOCTYPEs, comments, scriptlets, expressions, text, and
+elements retain their original order, without an invented enclosing tag.
+Existing XML node types are reused for nested structure.
 
-Preserve this baseline and rerun the same inputs after each parser improvement.
-Source IDs, bean expressions, and includes should remain untouched during these
-measurements. Parsing and byte preservation do not establish JSF lifecycle or
-rendered-behavior equivalence.
+`JspParser` explicitly accepts `.jsp`, `.jspf`, and `.inc`. The generic XML
+parser routes `.jsp`/`.jspf` to the JSP root, but does not claim unrelated `.inc`
+files. `.jspx` retains the XML document model. Both document entry points now
+require complete token consumption. Parser diagnostics cannot be hidden in a
+successful source tree. Legal trailing XML comments/instructions remain valid.
+
+The change includes visitors, printing, RPC codecs, basic document-aware XPath
+and formatting, plus a conservative equality check for JSP source. It is an
+OpenRewrite parser change; no Samigo template or runtime configuration changes.
+
+| Original JSP result | Unmodified 8.93.8 source | Patched source |
+| --- | ---: | ---: |
+| Fully parsed, byte-identical | 14 (5.7%) | **82 (33.5%)** |
+| Unparsed trailing content | 180 | **0** |
+| Explicit parse errors | 51 | 163 |
+
+All 14 previous successes remain successful. Of the 180 incomplete documents,
+49 fully parse and 131 now report failures. Another 19 previous parse errors
+fully parse. Of the five additional fragments, four fully parse and one fails.
+The unchanged 250-file corpus therefore has 86 fully parsed sources overall.
+
+The increased error count exposes source that was previously retained as opaque
+text. It does not represent 112 newly broken pages. Remaining first errors are
+mainly quoted attributes containing JSP expressions or embedded markup, raw
+script bodies, and template markup that is not structurally nested.
+
+[Per-file comparison](results/jsp-document-comparison.json) records input hashes,
+before/after statuses, parsed element counts, and the first diagnostic. Full
+diagnostics are regenerated into the ignored `target/` directory.
+
+### Source and validation provenance
+
+- OpenRewrite source base: tag `v8.93.8`, commit
+  `22a5e8aa29dbc465ab4f00882c585f8d9e9e70b7`.
+- Implementation branch: `codex/jsp-document-parser`, commit
+  `295617a269afe483843676790d8f253b9e9c7b78`.
+- Portable contribution: [0001-jsp-document-root.patch](patches/0001-jsp-document-root.patch).
+- **346 XML module tests pass**, including 17 new JSP root tests and a new RPC
+  test; the unmodified source control passes its 328 tests.
+- Validation compiles the XML module's Java sources, resources, and tests using
+  this standalone Maven profile with public **8.90.4 core** dependencies. The
+  current project's Gradle build and the full 8.93.8 dependency graph have not
+  been validated. The same dependency graph was used for the unmodified-source
+  control, which reproduced the original 14/245 baseline.
+
+Apply and measure from this Sakai repository root:
+
+```sh
+git clone --depth 1 --branch v8.93.8 https://github.com/openrewrite/rewrite.git /tmp/rewrite-jsp
+git -C /tmp/rewrite-jsp switch -c jsp-document-parser
+git -C /tmp/rewrite-jsp am "$PWD/build-tools/samigo-openrewrite-parser/patches/0001-jsp-document-root.patch"
+mvn -B -ntp -f build-tools/samigo-openrewrite-parser/pom.xml \
+    -Dopenrewrite.source.dir=/tmp/rewrite-jsp/rewrite-xml test exec:java
+```
+
+The source profile has its own `target/openrewrite-source/` output directory.
+The original binary baseline still uses `target/coverage.json`. No external
+OpenRewrite checkout is needed for the original baseline command.
+
+### Next parser work
+
+Add typed support for JSP expressions and embedded markup inside attributes,
+then raw script bodies and non-nested template output. Preserve the original
+IDs, bean expressions, and source bytes in every successful parse. Only then
+build the structural JSP-to-Facelets recipe. Parsing and byte preservation do
+not establish JSF lifecycle or rendered-behavior equivalence.

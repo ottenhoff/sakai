@@ -23,6 +23,7 @@ import org.openrewrite.SourceFile;
 import org.openrewrite.ParseExceptionResult;
 import org.openrewrite.tree.ParseError;
 import org.openrewrite.xml.XmlParser;
+import org.openrewrite.xml.XmlVisitor;
 import org.openrewrite.xml.tree.Xml;
 
 import java.io.ByteArrayInputStream;
@@ -38,6 +39,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import java.util.function.Supplier;
+import java.util.function.Function;
 
 /** Measures unmodified source; a ParseError printing its original input is never a success. */
 public final class JspParserCoverage {
@@ -49,6 +52,15 @@ public final class JspParserCoverage {
     }
 
     public static void main(String[] args) throws Exception {
+        run(args, () -> XmlParser.builder().build());
+    }
+
+    public static void run(String[] args, Supplier<? extends Parser> parsers) throws Exception {
+        run(args, parsers, source -> source instanceof Xml.Document xml ? xml.getEof() : "");
+    }
+
+    public static void run(String[] args, Supplier<? extends Parser> parsers,
+                           Function<SourceFile, String> unparsedContent) throws Exception {
         if (args.length != 3) {
             throw new IllegalArgumentException("Expected repository root, output JSON path, parser version");
         }
@@ -66,18 +78,19 @@ public final class JspParserCoverage {
         List<Measurement> nativeResults = new ArrayList<>();
         List<Measurement> fragmentProbes = new ArrayList<>();
         for (Path input : inputs) {
-            nativeResults.add(measure(root, input, false));
+            nativeResults.add(measure(root, input, false, parsers.get(), unparsedContent));
             if (isFragment(input)) {
                 // Only change the in-memory parser path to bypass extension rejection. No wrapper or cleanup.
-                fragmentProbes.add(measure(root, input, true));
+                fragmentProbes.add(measure(root, input, true, parsers.get(), unparsedContent));
             }
         }
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("sakaiCommit", git(root, "rev-parse", "HEAD").trim());
         report.put("samigoWorkingTreeStatus", git(root, "status", "--porcelain", "--", "samigo").trim());
         report.put("rewriteVersion", args[2]);
+        report.put("parserImplementation", parsers.get().getClass().getName());
         report.put("javaVersion", System.getProperty("java.version"));
-        report.put("successDefinition", "Xml.Document, zero parser diagnostics, no non-whitespace EOF content, byte-identical printAllAsBytes");
+        report.put("successDefinition", "XML/JSP AST, zero parser diagnostics, no unparsed content, byte-identical printAllAsBytes");
         report.put("jspSummary", counts(nativeResults.stream().filter(result -> !isFragment(Path.of(result.path()))).toList()));
         report.put("nativeSummary", counts(nativeResults));
         report.put("fragmentProbeSummary", counts(fragmentProbes));
@@ -92,12 +105,21 @@ public final class JspParserCoverage {
     }
 
     public static Measurement measure(Path root, Path input, boolean forceJspExtension) throws IOException {
+        return measure(root, input, forceJspExtension, XmlParser.builder().build());
+    }
+
+    public static Measurement measure(Path root, Path input, boolean forceJspExtension, Parser parser) throws IOException {
+        return measure(root, input, forceJspExtension, parser,
+                source -> source instanceof Xml.Document xml ? xml.getEof() : "");
+    }
+
+    private static Measurement measure(Path root, Path input, boolean forceJspExtension, Parser parser,
+                                        Function<SourceFile, String> unparsedContent) throws IOException {
         Path relative = root.relativize(input);
         Path parserPath = forceJspExtension ? Path.of(relative + ".jsp") : relative;
         byte[] original = Files.readAllBytes(input);
         List<String> diagnostics = new ArrayList<>();
         ExecutionContext context = new InMemoryExecutionContext(error -> diagnostics.add(error.toString()));
-        XmlParser parser = XmlParser.builder().build();
         String digest = sha256(original);
         if (!parser.accept(parserPath)) {
             return new Measurement(relative.toString(), parserPath.toString(), "UNSUPPORTED_EXTENSION",
@@ -115,11 +137,11 @@ public final class JspParserCoverage {
                     .map(ParseExceptionResult::getMessage).orElse("");
             Xml.Document document = source instanceof Xml.Document xml ? xml : null;
             Xml.Tag rootTag = document == null ? null : document.getRoot();
-            String trailing = document == null ? "" : document.getEof().strip();
+            String trailing = unparsedContent.apply(source).strip();
             String status;
             if (source instanceof ParseError) {
                 status = "PARSE_ERROR";
-            } else if (!(source instanceof Xml.Document)) {
+            } else if (!(source instanceof Xml)) {
                 status = "UNEXPECTED_TREE";
             } else if (!diagnostics.isEmpty()) {
                 status = "PARSER_DIAGNOSTICS";
@@ -133,14 +155,25 @@ public final class JspParserCoverage {
             return new Measurement(relative.toString(), parserPath.toString(), status,
                     source.getClass().getSimpleName(), byteIdentical, digest,
                     source.getCharset() == null ? "" : source.getCharset().name(),
-                    rootTag == null ? "" : rootTag.getName(), elementCount(rootTag), trailing.length(),
+                    rootTag == null ? "" : rootTag.getName(), elementCount(source), trailing.length(),
                     trailing.substring(0, Math.min(240, trailing.length())), diagnostics.size(),
                     diagnostics.stream().limit(5).map(JspParserCoverage::abbreviate).toList(), abbreviate(parseError));
         }
     }
 
-    private static int elementCount(Xml.Tag tag) {
-        return tag == null ? 0 : 1 + tag.getChildren().stream().mapToInt(JspParserCoverage::elementCount).sum();
+    private static int elementCount(SourceFile source) {
+        if (!(source instanceof Xml)) {
+            return 0;
+        }
+        int[] count = {0};
+        new XmlVisitor<int[]>() {
+            @Override
+            public Xml visitTag(Xml.Tag tag, int[] result) {
+                result[0]++;
+                return super.visitTag(tag, result);
+            }
+        }.visit(source, count);
+        return count[0];
     }
 
     private static Map<String, Long> counts(List<Measurement> results) {

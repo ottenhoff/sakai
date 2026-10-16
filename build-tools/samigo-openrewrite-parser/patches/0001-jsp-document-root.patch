@@ -1,0 +1,2748 @@
+From 295617a269afe483843676790d8f253b9e9c7b78 Mon Sep 17 00:00:00 2001
+From: Sam Ottenhoff <ottenhoff@longsight.com>
+Date: Fri, 16 Oct 2026 08:10:25 -0400
+Subject: [PATCH] Parse JSP translation units with an ordered document root
+
+Represent JSP pages and include fragments as Xml.JspDocument, preserving ordered top-level syntax without a synthetic wrapper. Add an explicit JspParser, visitor/printer and RPC support, document-aware XPath and formatting, and complete-input checks that reject silently unparsed markup.
+
+Validated all 346 XML module tests using the 8.93.8 XML sources with public 8.90.4 core dependencies. On an unchanged 245-JSP Samigo corpus, complete byte-identical parses increase from 14 to 82; all previous successes remain successful. Current Gradle dependency resolution is not part of this validation.
+---
+ rewrite-xml/src/main/antlr/XMLParser.g4       |  15 +-
+ .../java/org/openrewrite/xml/Assertions.java  |  21 +
+ .../java/org/openrewrite/xml/JspParser.java   |  61 ++
+ .../openrewrite/xml/SemanticallyEqual.java    |   8 +
+ .../org/openrewrite/xml/XPathMatcher.java     |   9 +-
+ .../org/openrewrite/xml/XmlIsoVisitor.java    |   5 +
+ .../java/org/openrewrite/xml/XmlParser.java   |  42 +-
+ .../java/org/openrewrite/xml/XmlVisitor.java  |   7 +-
+ .../xml/format/AutoFormatVisitor.java         |  11 +-
+ .../format/AutodetectGeneralFormatStyle.java  |   5 +
+ .../xml/format/LineBreaksVisitor.java         |  25 +-
+ .../format/MinimumViableSpacingVisitor.java   |   3 +-
+ .../xml/format/NormalizeFormatVisitor.java    |   3 +-
+ .../format/NormalizeLineBreaksVisitor.java    |   3 +-
+ .../format/NormalizeTabsOrSpacesVisitor.java  |   3 +-
+ .../RemoveTrailingWhitespaceVisitor.java      |   3 +-
+ .../xml/format/TabsAndIndentsVisitor.java     |   3 +-
+ .../xml/internal/XmlParserVisitor.java        |   9 +
+ .../openrewrite/xml/internal/XmlPrinter.java  |  12 +
+ .../xml/internal/grammar/XMLParser.interp     |   4 +-
+ .../xml/internal/grammar/XMLParser.java       | 821 +++++++++++-------
+ .../xml/internal/grammar/XMLParserBase.java   |   3 +
+ .../grammar/XMLParserBaseListener.java        |  24 +
+ .../grammar/XMLParserBaseVisitor.java         |  14 +
+ .../internal/grammar/XMLParserListener.java   |  20 +
+ .../internal/grammar/XMLParserVisitor.java    |  12 +
+ .../xml/internal/rpc/JspRpcCodec.java         |  25 +
+ .../xml/internal/rpc/XmlReceiver.java         |  11 +
+ .../xml/internal/rpc/XmlSender.java           |  12 +
+ .../org/openrewrite/xml/style/Autodetect.java |   2 +-
+ .../java/org/openrewrite/xml/tree/Xml.java    |  54 +-
+ ...rg.openrewrite.rpc.DynamicDispatchRpcCodec |   1 +
+ .../org/openrewrite/xml/JspDocumentTest.java  | 184 ++++
+ .../org/openrewrite/xml/XmlParserTest.java    |  29 +-
+ .../xml/internal/rpc/XmlSendReceiveTest.java  |  13 +
+ 35 files changed, 1134 insertions(+), 343 deletions(-)
+ create mode 100644 rewrite-xml/src/main/java/org/openrewrite/xml/JspParser.java
+ create mode 100644 rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/JspRpcCodec.java
+ create mode 100644 rewrite-xml/src/test/java/org/openrewrite/xml/JspDocumentTest.java
+
+diff --git a/rewrite-xml/src/main/antlr/XMLParser.g4 b/rewrite-xml/src/main/antlr/XMLParser.g4
+index 2477fc3..4ca3fff 100755
+--- a/rewrite-xml/src/main/antlr/XMLParser.g4
++++ b/rewrite-xml/src/main/antlr/XMLParser.g4
+@@ -37,7 +37,17 @@ parser grammar XMLParser;
+ options { tokenVocab=XMLLexer; superClass=XMLParserBase; }
+ 
+ document
+-    :   UTF_ENCODING_BOM? prolog element?
++    :   UTF_ENCODING_BOM? prolog element? (COMMENT | processinginstruction)* EOF
++    ;
++
++// A JSP translation unit is an ordered sequence, not an XML document with one root.
++// EOF is mandatory: preserving unparsed source in a suffix is not a successful JSP parse.
++jspdocument
++    :   UTF_ENCODING_BOM? jspcontent* EOF
++    ;
++
++jspcontent
++    :   xmldecl | content
+     ;
+ 
+ prolog
+@@ -79,7 +89,8 @@ processinginstruction
+ 
+ content
+     :   (element | reference | processinginstruction | CDATA | COMMENT |
+-         jspscriptlet | jspexpression | jspdeclaration | jspcomment | chardata) ;
++         jspscriptlet | jspexpression | jspdeclaration | jspcomment | chardata |
++         {jspMode}? jspdirective | {jspMode}? doctypedecl) ;
+ 
+ element
+     :   OPEN name=Name attribute*
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/Assertions.java b/rewrite-xml/src/main/java/org/openrewrite/xml/Assertions.java
+index e6d9305..ebe85c1 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/Assertions.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/Assertions.java
+@@ -27,6 +27,27 @@ public class Assertions {
+     private Assertions() {
+     }
+ 
++    public static SourceSpecs jsp(@Nullable String before) {
++        return jsp(before, s -> { });
++    }
++
++    public static SourceSpecs jsp(@Nullable String before, Consumer<SourceSpec<Xml.JspDocument>> spec) {
++        SourceSpec<Xml.JspDocument> jsp = new SourceSpec<>(Xml.JspDocument.class, null, JspParser.builder(), before, null);
++        spec.accept(jsp);
++        return jsp;
++    }
++
++    public static SourceSpecs jsp(@Nullable String before, @Nullable String after) {
++        return jsp(before, after, s -> { });
++    }
++
++    public static SourceSpecs jsp(@Nullable String before, @Nullable String after,
++                                  Consumer<SourceSpec<Xml.JspDocument>> spec) {
++        SourceSpec<Xml.JspDocument> jsp = new SourceSpec<>(Xml.JspDocument.class, null, JspParser.builder(), before, s -> after);
++        spec.accept(jsp);
++        return jsp;
++    }
++
+     public static SourceSpecs xml(@Language("xml") @Nullable String before) {
+         return xml(before, s -> {
+         });
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/JspParser.java b/rewrite-xml/src/main/java/org/openrewrite/xml/JspParser.java
+new file mode 100644
+index 0000000..1983a62
+--- /dev/null
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/JspParser.java
+@@ -0,0 +1,61 @@
++/*
++ * Copyright 2026 the original author or authors.
++ * <p>
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * <p>
++ * https://www.apache.org/licenses/LICENSE-2.0
++ * <p>
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.openrewrite.xml;
++
++import org.jspecify.annotations.Nullable;
++import org.openrewrite.xml.tree.Xml;
++
++import java.nio.file.Path;
++import java.util.Locale;
++
++/** Parses JSP template syntax, including translation-unit fragments with multiple roots. */
++public class JspParser extends XmlParser {
++    @Override
++    public boolean accept(Path path) {
++        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
++        return name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".inc");
++    }
++
++    @Override
++    protected boolean isJsp(@Nullable Path path) {
++        return true;
++    }
++
++    @Override
++    public Path sourcePathFromSourceText(Path prefix, String sourceCode) {
++        return prefix.resolve("file.jsp");
++    }
++
++    public static Builder builder() {
++        return new Builder();
++    }
++
++    public static class Builder extends XmlParser.Builder {
++        public Builder() {
++            super(Xml.JspDocument.class);
++        }
++
++        @Override
++        public JspParser build() {
++            return new JspParser();
++        }
++
++        @Override
++        public String getDslName() {
++            return "jsp";
++        }
++    }
++}
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/SemanticallyEqual.java b/rewrite-xml/src/main/java/org/openrewrite/xml/SemanticallyEqual.java
+index fd7b22c..6d88686 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/SemanticallyEqual.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/SemanticallyEqual.java
+@@ -27,6 +27,7 @@
+ /**
+  * Recursively check the equality of XML tags and attributes.
+  * Ignores comments. Ignores the order of attributes.
++ * JSP translation units are compared conservatively by their complete printed source.
+  */
+ public class SemanticallyEqual {
+ 
+@@ -44,6 +45,13 @@ private static class SemanticallyEqualVisitor extends XmlVisitor<Xml> {
+ 
+         boolean areEqual = true;
+ 
++        @Override
++        public @Nullable Xml visitJspDocument(Xml.JspDocument document, Xml other) {
++            areEqual = other instanceof Xml.JspDocument &&
++                    document.printAll().equals(((Xml.JspDocument) other).printAll());
++            return null;
++        }
++
+         @Override
+         public @Nullable Xml visitDocument(Xml.Document document, Xml other) {
+             if(document == other) {
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/XPathMatcher.java b/rewrite-xml/src/main/java/org/openrewrite/xml/XPathMatcher.java
+index 916eb71..06bf3a6 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/XPathMatcher.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/XPathMatcher.java
+@@ -17,6 +17,7 @@
+ 
+ import org.jspecify.annotations.Nullable;
+ import org.openrewrite.Cursor;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.xml.XPathCompiler.*;
+ import org.openrewrite.xml.tree.Content;
+ import org.openrewrite.xml.tree.Xml;
+@@ -449,7 +450,7 @@ private boolean matchNodeTypeStepBottomUp(CompiledStep step, @Nullable Cursor cu
+         if (cursor == null) return null;
+         Cursor parent = cursor.getParent();
+         while (parent != null && !(parent.getValue() instanceof Xml.Tag)) {
+-            if (parent.getValue() instanceof Xml.Document) {
++            if (parent.getValue() instanceof SourceFile) {
+                 return null;
+             }
+             parent = parent.getParent();
+@@ -1241,10 +1242,10 @@ private boolean matchBooleanExpr(Cursor cursor) {
+         // Check if cursor is at root (parent is Document or no parent tag)
+         Cursor parentCursor = cursor.getParent();
+         while (parentCursor != null && !(parentCursor.getValue() instanceof Xml.Tag) &&
+-               !(parentCursor.getValue() instanceof Xml.Document)) {
++               !(parentCursor.getValue() instanceof SourceFile)) {
+             parentCursor = parentCursor.getParent();
+         }
+-        if (parentCursor == null || !(parentCursor.getValue() instanceof Xml.Document)) {
++        if (parentCursor == null || !(parentCursor.getValue() instanceof SourceFile)) {
+             return false; // Not at root element
+         }
+ 
+@@ -1393,7 +1394,7 @@ private boolean evaluateFilterPredicate(CompiledExpr expr, Xml.Tag tag, int posi
+      */
+     private Xml.@Nullable Tag getRootTag(Cursor cursor) {
+         Cursor c = cursor;
+-        while (c.getParent() != null && !(c.getParent().getValue() instanceof Xml.Document)) {
++        while (c.getParent() != null && !(c.getParent().getValue() instanceof SourceFile)) {
+             c = c.getParent();
+         }
+         return c.getValue() instanceof Xml.Tag ? (Xml.Tag) c.getValue() : null;
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/XmlIsoVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/XmlIsoVisitor.java
+index eaf1934..e6efa4a 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/XmlIsoVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/XmlIsoVisitor.java
+@@ -18,6 +18,11 @@
+ import org.openrewrite.xml.tree.Xml;
+ 
+ public class XmlIsoVisitor<P> extends XmlVisitor<P> {
++    @Override
++    public Xml.JspDocument visitJspDocument(Xml.JspDocument document, P p) {
++        return (Xml.JspDocument) super.visitJspDocument(document, p);
++    }
++
+     @Override
+     public Xml.Document visitDocument(Xml.Document document, P p) {
+         return (Xml.Document) super.visitDocument(document, p);
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/XmlParser.java b/rewrite-xml/src/main/java/org/openrewrite/xml/XmlParser.java
+index 8444a7b..394abf9 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/XmlParser.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/XmlParser.java
+@@ -50,6 +50,8 @@ public class XmlParser implements Parser {
+             "jxb",
+             "xjb",
+             "jsp",
++            "jspf",
++            "jspx",
+             // WebSphere/Rational Application Developer object-relational mapping for CMP entity beans
+             "mapxmi",
+             "tblxmi",
+@@ -102,21 +104,27 @@ public Stream<SourceFile> parseInputs(Iterable<Input> sourceFiles, @Nullable Pat
+                 String sourceStr = is.readFully();
+ 
+                 XMLLexer lexer = new XMLLexer(CharStreams.fromString(sourceStr));
++                ForwardingErrorListener errors = new ForwardingErrorListener(input.getPath(), ctx);
+                 lexer.removeErrorListeners();
+-                lexer.addErrorListener(new ForwardingErrorListener(input.getPath(), ctx));
++                lexer.addErrorListener(errors);
+ 
+                 XMLParser parser = new XMLParser(new CommonTokenStream(lexer));
+                 parser.htmlMode = isHtmlLike(path);
++                parser.jspMode = isJsp(path);
+                 parser.removeErrorListeners();
+-                parser.addErrorListener(new ForwardingErrorListener(input.getPath(), ctx));
++                parser.addErrorListener(errors);
+ 
+-                Xml.Document document = new XmlParserVisitor(
++                ParserRuleContext parsed = parser.jspMode ? parser.jspdocument() : parser.document();
++                SourceFile document = (SourceFile) new XmlParserVisitor(
+                         path,
+                         input.getFileAttributes(),
+                         sourceStr,
+                         is.getCharset(),
+                         is.isCharsetBomMarked()
+-                ).visitDocument(parser.document());
++                ).visit(parsed);
++                if (errors.firstError != null) {
++                    throw new IllegalStateException(errors.firstError);
++                }
+                 parsingListener.parsed(input, document);
+                 return requirePrintEqualsInput(document, input, relativeTo, ctx);
+             } catch (Throwable t) {
+@@ -135,12 +143,20 @@ public Stream<SourceFile> parse(@Language("xml") String... sources) {
+      * Whether unclosed HTML void elements (e.g. {@code <br>}) should be tolerated for the given path.
+      * Enabled for HTML-like sources where void elements are idiomatically written without a slash.
+      */
+-    private static boolean isHtmlLike(@Nullable Path path) {
++    private boolean isHtmlLike(@Nullable Path path) {
+         if (path == null) {
+             return false;
+         }
+         String p = path.toString().toLowerCase();
+-        return p.endsWith(".jsp") || p.endsWith(".jspx") || p.endsWith(".html") || p.endsWith(".htm");
++        return isJsp(path) || p.endsWith(".jspx") || p.endsWith(".html") || p.endsWith(".htm");
++    }
++
++    protected boolean isJsp(@Nullable Path path) {
++        if (path == null) {
++            return false;
++        }
++        String p = path.toString().toLowerCase(java.util.Locale.ROOT);
++        return p.endsWith(".jsp") || p.endsWith(".jspf");
+     }
+ 
+     @Override
+@@ -166,6 +182,7 @@ public Path sourcePathFromSourceText(Path prefix, String sourceCode) {
+     }
+ 
+     private static class ForwardingErrorListener extends BaseErrorListener {
++        private @Nullable String firstError;
+         private final Path sourcePath;
+         private final ExecutionContext ctx;
+ 
+@@ -177,8 +194,11 @@ private ForwardingErrorListener(Path sourcePath, ExecutionContext ctx) {
+         @Override
+         public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
+                                 int line, int charPositionInLine, String msg, RecognitionException e) {
+-            ctx.getOnError().accept(new XmlParsingException(sourcePath,
+-                    String.format("Syntax error in %s at line %d:%d %s.", sourcePath, line, charPositionInLine, msg), e));
++            String message = String.format("Syntax error in %s at line %d:%d %s.", sourcePath, line, charPositionInLine, msg);
++            if (firstError == null) {
++                firstError = message;
++            }
++            ctx.getOnError().accept(new XmlParsingException(sourcePath, message, e));
+         }
+     }
+ 
+@@ -189,7 +209,11 @@ public static Builder builder() {
+     public static class Builder extends org.openrewrite.Parser.Builder {
+ 
+         public Builder() {
+-            super(Xml.Document.class);
++            this(Xml.Document.class);
++        }
++
++        protected Builder(Class<? extends SourceFile> documentType) {
++            super(documentType);
+         }
+ 
+         @Override
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/XmlVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/XmlVisitor.java
+index d625497..29046ac 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/XmlVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/XmlVisitor.java
+@@ -27,7 +27,7 @@ public class XmlVisitor<P> extends TreeVisitor<Xml, P> {
+ 
+     @Override
+     public boolean isAcceptable(SourceFile sourceFile, P p) {
+-        return sourceFile instanceof Xml.Document;
++        return sourceFile instanceof Xml.Document || sourceFile instanceof Xml.JspDocument;
+     }
+ 
+     @Override
+@@ -71,6 +71,11 @@ public Xml visitDocument(Xml.Document document, P p) {
+         return d.withRoot(visitAndCast(d.getRoot(), p));
+     }
+ 
++    public Xml visitJspDocument(Xml.JspDocument document, P p) {
++        Xml.JspDocument d = document.withMarkers(visitMarkers(document.getMarkers(), p));
++        return d.withContent(ListUtils.map(d.getContent(), node -> visitAndCast(node, p)));
++    }
++
+     public Xml visitXmlDecl(Xml.XmlDecl xmlDecl, P p) {
+         Xml.XmlDecl x = xmlDecl.withMarkers(visitMarkers(xmlDecl.getMarkers(), p));
+         return x.withAttributes(ListUtils.map(x.getAttributes(), a -> visitAndCast(a, p)));
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutoFormatVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutoFormatVisitor.java
+index cc9b073..63e15c5 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutoFormatVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutoFormatVisitor.java
+@@ -17,6 +17,7 @@
+ 
+ import org.jspecify.annotations.Nullable;
+ import org.openrewrite.Cursor;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.style.GeneralFormatStyle;
+ import org.openrewrite.style.Style;
+@@ -43,9 +44,8 @@ public AutoFormatVisitor(@Nullable Tree stopAfter) {
+ 
+     @Override
+     public Xml visit(@Nullable Tree tree, P p, Cursor cursor) {
+-        Xml.Document doc = (tree instanceof Xml.Document) ?
+-                (Xml.Document) tree :
+-                cursor.firstEnclosingOrThrow(Xml.Document.class);
++        SourceFile doc = tree instanceof SourceFile ?
++                (SourceFile) tree : cursor.firstEnclosingOrThrow(SourceFile.class);
+ 
+         Xml t = new NormalizeFormatVisitor<>(stopAfter).visit(tree, p, cursor.fork());
+ 
+@@ -69,6 +69,11 @@ public Xml visit(@Nullable Tree tree, P p, Cursor cursor) {
+                 .visit(t, p, cursor.fork());
+     }
+ 
++    @Override
++    public Xml.JspDocument visitJspDocument(Xml.JspDocument document, P p) {
++        return (Xml.JspDocument) visit(document, p, getCursor().getParentOrThrow());
++    }
++
+     @Override
+     public Xml.Document visitDocument(Xml.Document doc, P p) {
+         Xml.Document t = (Xml.Document) new RemoveTrailingWhitespaceVisitor<>(stopAfter).visit(doc, p);
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutodetectGeneralFormatStyle.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutodetectGeneralFormatStyle.java
+index c4870d0..0463666 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutodetectGeneralFormatStyle.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/AutodetectGeneralFormatStyle.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.style.GeneralFormatStyle;
+ import org.openrewrite.xml.XmlVisitor;
+@@ -28,6 +29,10 @@ public class AutodetectGeneralFormatStyle extends XmlVisitor<LineEndingsCount> {
+      * more common in the supplied AST.
+      */
+     public static GeneralFormatStyle autodetectGeneralFormatStyle(Xml.Document x) {
++        return autodetectGeneralFormatStyle((SourceFile) x);
++    }
++
++    public static GeneralFormatStyle autodetectGeneralFormatStyle(SourceFile x) {
+         LineEndingsCount count = new LineEndingsCount();
+         new AutodetectGeneralFormatStyle().visit(x, count);
+         if(count.lf >= count.crlf) {
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/LineBreaksVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/LineBreaksVisitor.java
+index c01d56f..27983b1 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/LineBreaksVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/LineBreaksVisitor.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.xml.XmlIsoVisitor;
+ import org.openrewrite.xml.tree.Content;
+@@ -76,11 +77,18 @@ public Xml.Prolog visitProlog(Xml.Prolog prolog, P p) {
+ 
+     @Override
+     public Xml.Tag visitTag(Xml.Tag tag, P p) {
+-        Xml.Document doc = getCursor().firstEnclosingOrThrow(Xml.Document.class);
++        SourceFile doc = getCursor().firstEnclosingOrThrow(SourceFile.class);
++        boolean firstElement;
++        if (doc instanceof Xml.JspDocument) {
++            firstElement = !((Xml.JspDocument) doc).getContent().isEmpty() &&
++                    ((Xml.JspDocument) doc).getContent().get(0).isScope(tag);
++        } else {
++            Xml.Document xml = (Xml.Document) doc;
++            firstElement = xml.getRoot().isScope(tag) && xml.getProlog().getXmlDecl() == null &&
++                    xml.getProlog().getMisc().isEmpty();
++        }
+         Xml.Tag t = keepMaximumLines(minimumLines(super.visitTag(tag, p),
+-                doc.getRoot().isScope(tag) &&
+-                        doc.getProlog().getXmlDecl() == null &&
+-                        doc.getProlog().getMisc().isEmpty() ? 0 : 1), 2);
++                firstElement ? 0 : 1), 2);
+         if (t.getClosing() != null && !t.getChildren().isEmpty()) {
+             t = t.withClosing(keepMaximumLines(minimumLines(t.getClosing(), 1), 2));
+         }
+@@ -88,7 +96,12 @@ public Xml.Tag visitTag(Xml.Tag tag, P p) {
+     }
+ 
+     private boolean isFirstMisc(Misc misc) {
+-        Xml.Document doc = getCursor().firstEnclosingOrThrow(Xml.Document.class);
++        SourceFile source = getCursor().firstEnclosingOrThrow(SourceFile.class);
++        if (source instanceof Xml.JspDocument) {
++            return !((Xml.JspDocument) source).getContent().isEmpty() &&
++                    ((Xml.JspDocument) source).getContent().get(0).isScope(misc);
++        }
++        Xml.Document doc = (Xml.Document) source;
+         if (doc.getProlog().getXmlDecl() == null) {
+             return !doc.getProlog().getMisc().isEmpty() &&
+                     doc.getProlog().getMisc().get(0) == misc;
+@@ -134,7 +147,7 @@ private String minimumLines(String whitespace, int min) {
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/MinimumViableSpacingVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/MinimumViableSpacingVisitor.java
+index 60b5008..23dda54 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/MinimumViableSpacingVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/MinimumViableSpacingVisitor.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.xml.XmlIsoVisitor;
+ import org.openrewrite.xml.tree.Xml;
+@@ -52,7 +53,7 @@ public Xml.Attribute visitAttribute(Xml.Attribute attribute, P p) {
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeFormatVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeFormatVisitor.java
+index bd44961..c5a0745 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeFormatVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeFormatVisitor.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.xml.XmlIsoVisitor;
+ import org.openrewrite.xml.tree.Xml;
+@@ -43,7 +44,7 @@ public NormalizeFormatVisitor(@Nullable Tree stopAfter) {
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeLineBreaksVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeLineBreaksVisitor.java
+index 758ae73..529390a 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeLineBreaksVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeLineBreaksVisitor.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.style.GeneralFormatStyle;
+ import org.openrewrite.xml.XmlIsoVisitor;
+@@ -56,7 +57,7 @@ public NormalizeLineBreaksVisitor(GeneralFormatStyle style, @Nullable Tree stopA
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeTabsOrSpacesVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeTabsOrSpacesVisitor.java
+index 3251f77..ce5ebda 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeTabsOrSpacesVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/NormalizeTabsOrSpacesVisitor.java
+@@ -17,6 +17,7 @@
+ 
+ import org.jspecify.annotations.NonNull;
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.internal.StringUtils;
+ import org.openrewrite.xml.XmlIsoVisitor;
+@@ -110,7 +111,7 @@ private String normalize(String text) {
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/RemoveTrailingWhitespaceVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/RemoveTrailingWhitespaceVisitor.java
+index 5d2104a..8c610fb 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/RemoveTrailingWhitespaceVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/RemoveTrailingWhitespaceVisitor.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.xml.XmlIsoVisitor;
+ import org.openrewrite.xml.tree.Xml;
+@@ -56,7 +57,7 @@ public Xml.Document visitDocument(Xml.Document doc, P p) {
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/format/TabsAndIndentsVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/format/TabsAndIndentsVisitor.java
+index 6a296f6..1ca4b88 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/format/TabsAndIndentsVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/format/TabsAndIndentsVisitor.java
+@@ -16,6 +16,7 @@
+ package org.openrewrite.xml.format;
+ 
+ import org.jspecify.annotations.Nullable;
++import org.openrewrite.SourceFile;
+ import org.openrewrite.Tree;
+ import org.openrewrite.xml.XmlIsoVisitor;
+ import org.openrewrite.xml.style.TabsAndIndentsStyle;
+@@ -91,7 +92,7 @@ private boolean isDocTypeContinuation(Xml x) {
+     @Override
+     public @Nullable Xml postVisit(Xml tree, P p) {
+         if (stopAfter != null && stopAfter.isScope(tree)) {
+-            getCursor().putMessageOnFirstEnclosing(Xml.Document.class, "stop", true);
++            getCursor().putMessageOnFirstEnclosing(SourceFile.class, "stop", true);
+         }
+         return super.postVisit(tree, p);
+     }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlParserVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlParserVisitor.java
+index b6c707e..3a9c8dd 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlParserVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlParserVisitor.java
+@@ -87,6 +87,15 @@ public Xml.Document visitDocument(XMLParser.DocumentContext ctx) {
+         );
+     }
+ 
++    @Override
++    public Xml.JspDocument visitJspdocument(XMLParser.JspdocumentContext ctx) {
++        return convert(ctx, (c, prefix) -> {
++            List<Xml> content = c.jspcontent().stream().map(this::visit).collect(toList());
++            return new Xml.JspDocument(randomId(), path, prefix, Markers.EMPTY, charset.name(),
++                    charsetBomMarked, null, fileAttributes, content, source.substring(cursor));
++        });
++    }
++
+     @Override
+     public Xml.Prolog visitProlog(XMLParser.PrologContext ctx) {
+         return convert(ctx, (c, prefix) -> new Xml.Prolog(
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlPrinter.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlPrinter.java
+index ed52160..104a995 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlPrinter.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/XmlPrinter.java
+@@ -26,6 +26,18 @@
+ 
+ public class XmlPrinter<P> extends XmlVisitor<PrintOutputCapture<P>> {
+ 
++    @Override
++    public Xml visitJspDocument(Xml.JspDocument document, PrintOutputCapture<P> p) {
++        if (document.isCharsetBomMarked()) {
++            p.append('\uFEFF');
++        }
++        beforeSyntax(document, p);
++        super.visitJspDocument(document, p);
++        afterSyntax(document, p);
++        p.append(document.getEof());
++        return document;
++    }
++
+     @Override
+     public Xml visitDocument(Xml.Document document, PrintOutputCapture<P> p) {
+         if (document.isCharsetBomMarked()) {
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.interp b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.interp
+index 3ed6ca9..3c94578 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.interp
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.interp
+@@ -90,6 +90,8 @@ Name
+ 
+ rule names:
+ document
++jspdocument
++jspcontent
+ prolog
+ xmldecl
+ misc
+@@ -113,4 +115,4 @@ chardata
+ 
+ 
+ atn:
+-[4, 1, 42, 212, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7, 4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 2, 10, 7, 10, 2, 11, 7, 11, 2, 12, 7, 12, 2, 13, 7, 13, 2, 14, 7, 14, 2, 15, 7, 15, 2, 16, 7, 16, 2, 17, 7, 17, 2, 18, 7, 18, 2, 19, 7, 19, 2, 20, 7, 20, 1, 0, 3, 0, 44, 8, 0, 1, 0, 1, 0, 3, 0, 48, 8, 0, 1, 1, 3, 1, 51, 8, 1, 1, 1, 5, 1, 54, 8, 1, 10, 1, 12, 1, 57, 9, 1, 1, 1, 5, 1, 60, 8, 1, 10, 1, 12, 1, 63, 9, 1, 1, 2, 1, 2, 5, 2, 67, 8, 2, 10, 2, 12, 2, 70, 9, 2, 1, 2, 1, 2, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 3, 3, 79, 8, 3, 1, 4, 1, 4, 1, 4, 1, 4, 1, 4, 5, 4, 86, 8, 4, 10, 4, 12, 4, 89, 9, 4, 1, 4, 1, 4, 1, 4, 1, 4, 3, 4, 95, 8, 4, 1, 4, 1, 4, 1, 5, 1, 5, 5, 5, 101, 8, 5, 10, 5, 12, 5, 104, 9, 5, 1, 6, 1, 6, 5, 6, 108, 8, 6, 10, 6, 12, 6, 111, 9, 6, 1, 6, 5, 6, 114, 8, 6, 10, 6, 12, 6, 117, 9, 6, 1, 6, 5, 6, 120, 8, 6, 10, 6, 12, 6, 123, 9, 6, 1, 6, 1, 6, 1, 6, 3, 6, 128, 8, 6, 1, 7, 1, 7, 1, 8, 3, 8, 133, 8, 8, 1, 9, 1, 9, 5, 9, 137, 8, 9, 10, 9, 12, 9, 140, 9, 9, 1, 9, 1, 9, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 1, 10, 3, 10, 154, 8, 10, 1, 11, 1, 11, 1, 11, 5, 11, 159, 8, 11, 10, 11, 12, 11, 162, 9, 11, 1, 11, 1, 11, 1, 11, 1, 11, 1, 11, 5, 11, 169, 8, 11, 10, 11, 12, 11, 172, 9, 11, 1, 11, 1, 11, 1, 11, 1, 11, 3, 11, 178, 8, 11, 3, 11, 180, 8, 11, 1, 12, 1, 12, 1, 13, 1, 13, 1, 13, 1, 13, 5, 13, 188, 8, 13, 10, 13, 12, 13, 191, 9, 13, 1, 13, 1, 13, 1, 13, 1, 14, 1, 14, 1, 15, 1, 15, 1, 16, 1, 16, 1, 17, 1, 17, 1, 18, 1, 18, 1, 19, 1, 19, 1, 19, 1, 19, 1, 20, 1, 20, 1, 20, 0, 0, 21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 0, 3, 1, 0, 28, 29, 1, 0, 5, 6, 3, 0, 7, 7, 9, 9, 18, 18, 225, 0, 43, 1, 0, 0, 0, 2, 50, 1, 0, 0, 0, 4, 64, 1, 0, 0, 0, 6, 78, 1, 0, 0, 0, 8, 80, 1, 0, 0, 0, 10, 102, 1, 0, 0, 0, 12, 127, 1, 0, 0, 0, 14, 129, 1, 0, 0, 0, 16, 132, 1, 0, 0, 0, 18, 134, 1, 0, 0, 0, 20, 153, 1, 0, 0, 0, 22, 155, 1, 0, 0, 0, 24, 181, 1, 0, 0, 0, 26, 183, 1, 0, 0, 0, 28, 195, 1, 0, 0, 0, 30, 197, 1, 0, 0, 0, 32, 199, 1, 0, 0, 0, 34, 201, 1, 0, 0, 0, 36, 203, 1, 0, 0, 0, 38, 205, 1, 0, 0, 0, 40, 209, 1, 0, 0, 0, 42, 44, 5, 8, 0, 0, 43, 42, 1, 0, 0, 0, 43, 44, 1, 0, 0, 0, 44, 45, 1, 0, 0, 0, 45, 47, 3, 2, 1, 0, 46, 48, 3, 22, 11, 0, 47, 46, 1, 0, 0, 0, 47, 48, 1, 0, 0, 0, 48, 1, 1, 0, 0, 0, 49, 51, 3, 4, 2, 0, 50, 49, 1, 0, 0, 0, 50, 51, 1, 0, 0, 0, 51, 55, 1, 0, 0, 0, 52, 54, 3, 6, 3, 0, 53, 52, 1, 0, 0, 0, 54, 57, 1, 0, 0, 0, 55, 53, 1, 0, 0, 0, 55, 56, 1, 0, 0, 0, 56, 61, 1, 0, 0, 0, 57, 55, 1, 0, 0, 0, 58, 60, 3, 26, 13, 0, 59, 58, 1, 0, 0, 0, 60, 63, 1, 0, 0, 0, 61, 59, 1, 0, 0, 0, 61, 62, 1, 0, 0, 0, 62, 3, 1, 0, 0, 0, 63, 61, 1, 0, 0, 0, 64, 68, 5, 10, 0, 0, 65, 67, 3, 38, 19, 0, 66, 65, 1, 0, 0, 0, 67, 70, 1, 0, 0, 0, 68, 66, 1, 0, 0, 0, 68, 69, 1, 0, 0, 0, 69, 71, 1, 0, 0, 0, 70, 68, 1, 0, 0, 0, 71, 72, 5, 34, 0, 0, 72, 5, 1, 0, 0, 0, 73, 79, 5, 2, 0, 0, 74, 79, 3, 8, 4, 0, 75, 79, 3, 18, 9, 0, 76, 79, 3, 32, 16, 0, 77, 79, 3, 34, 17, 0, 78, 73, 1, 0, 0, 0, 78, 74, 1, 0, 0, 0, 78, 75, 1, 0, 0, 0, 78, 76, 1, 0, 0, 0, 78, 77, 1, 0, 0, 0, 79, 7, 1, 0, 0, 0, 80, 81, 5, 13, 0, 0, 81, 82, 5, 22, 0, 0, 82, 83, 5, 42, 0, 0, 83, 87, 3, 16, 8, 0, 84, 86, 5, 41, 0, 0, 85, 84, 1, 0, 0, 0, 86, 89, 1, 0, 0, 0, 87, 85, 1, 0, 0, 0, 87, 88, 1, 0, 0, 0, 88, 94, 1, 0, 0, 0, 89, 87, 1, 0, 0, 0, 90, 91, 5, 20, 0, 0, 91, 92, 3, 10, 5, 0, 92, 93, 5, 23, 0, 0, 93, 95, 1, 0, 0, 0, 94, 90, 1, 0, 0, 0, 94, 95, 1, 0, 0, 0, 95, 96, 1, 0, 0, 0, 96, 97, 5, 19, 0, 0, 97, 9, 1, 0, 0, 0, 98, 101, 3, 12, 6, 0, 99, 101, 3, 14, 7, 0, 100, 98, 1, 0, 0, 0, 100, 99, 1, 0, 0, 0, 101, 104, 1, 0, 0, 0, 102, 100, 1, 0, 0, 0, 102, 103, 1, 0, 0, 0, 103, 11, 1, 0, 0, 0, 104, 102, 1, 0, 0, 0, 105, 109, 5, 24, 0, 0, 106, 108, 7, 0, 0, 0, 107, 106, 1, 0, 0, 0, 108, 111, 1, 0, 0, 0, 109, 107, 1, 0, 0, 0, 109, 110, 1, 0, 0, 0, 110, 115, 1, 0, 0, 0, 111, 109, 1, 0, 0, 0, 112, 114, 5, 30, 0, 0, 113, 112, 1, 0, 0, 0, 114, 117, 1, 0, 0, 0, 115, 113, 1, 0, 0, 0, 115, 116, 1, 0, 0, 0, 116, 121, 1, 0, 0, 0, 117, 115, 1, 0, 0, 0, 118, 120, 7, 0, 0, 0, 119, 118, 1, 0, 0, 0, 120, 123, 1, 0, 0, 0, 121, 119, 1, 0, 0, 0, 121, 122, 1, 0, 0, 0, 122, 124, 1, 0, 0, 0, 123, 121, 1, 0, 0, 0, 124, 128, 5, 26, 0, 0, 125, 128, 3, 18, 9, 0, 126, 128, 5, 2, 0, 0, 127, 105, 1, 0, 0, 0, 127, 125, 1, 0, 0, 0, 127, 126, 1, 0, 0, 0, 128, 13, 1, 0, 0, 0, 129, 130, 5, 4, 0, 0, 130, 15, 1, 0, 0, 0, 131, 133, 5, 42, 0, 0, 132, 131, 1, 0, 0, 0, 132, 133, 1, 0, 0, 0, 133, 17, 1, 0, 0, 0, 134, 138, 5, 12, 0, 0, 135, 137, 5, 32, 0, 0, 136, 135, 1, 0, 0, 0, 137, 140, 1, 0, 0, 0, 138, 136, 1, 0, 0, 0, 138, 139, 1, 0, 0, 0, 139, 141, 1, 0, 0, 0, 140, 138, 1, 0, 0, 0, 141, 142, 5, 34, 0, 0, 142, 19, 1, 0, 0, 0, 143, 154, 3, 22, 11, 0, 144, 154, 3, 36, 18, 0, 145, 154, 3, 18, 9, 0, 146, 154, 5, 3, 0, 0, 147, 154, 5, 2, 0, 0, 148, 154, 3, 28, 14, 0, 149, 154, 3, 30, 15, 0, 150, 154, 3, 32, 16, 0, 151, 154, 3, 34, 17, 0, 152, 154, 3, 40, 20, 0, 153, 143, 1, 0, 0, 0, 153, 144, 1, 0, 0, 0, 153, 145, 1, 0, 0, 0, 153, 146, 1, 0, 0, 0, 153, 147, 1, 0, 0, 0, 153, 148, 1, 0, 0, 0, 153, 149, 1, 0, 0, 0, 153, 150, 1, 0, 0, 0, 153, 151, 1, 0, 0, 0, 153, 152, 1, 0, 0, 0, 154, 21, 1, 0, 0, 0, 155, 156, 5, 11, 0, 0, 156, 160, 5, 42, 0, 0, 157, 159, 3, 38, 19, 0, 158, 157, 1, 0, 0, 0, 159, 162, 1, 0, 0, 0, 160, 158, 1, 0, 0, 0, 160, 161, 1, 0, 0, 0, 161, 179, 1, 0, 0, 0, 162, 160, 1, 0, 0, 0, 163, 180, 5, 35, 0, 0, 164, 177, 5, 33, 0, 0, 165, 166, 4, 11, 0, 1, 166, 178, 3, 24, 12, 0, 167, 169, 3, 20, 10, 0, 168, 167, 1, 0, 0, 0, 169, 172, 1, 0, 0, 0, 170, 168, 1, 0, 0, 0, 170, 171, 1, 0, 0, 0, 171, 173, 1, 0, 0, 0, 172, 170, 1, 0, 0, 0, 173, 174, 5, 11, 0, 0, 174, 175, 5, 39, 0, 0, 175, 176, 5, 42, 0, 0, 176, 178, 5, 33, 0, 0, 177, 165, 1, 0, 0, 0, 177, 170, 1, 0, 0, 0, 178, 180, 1, 0, 0, 0, 179, 163, 1, 0, 0, 0, 179, 164, 1, 0, 0, 0, 180, 23, 1, 0, 0, 0, 181, 182, 1, 0, 0, 0, 182, 25, 1, 0, 0, 0, 183, 184, 5, 11, 0, 0, 184, 185, 5, 37, 0, 0, 185, 189, 5, 42, 0, 0, 186, 188, 3, 38, 19, 0, 187, 186, 1, 0, 0, 0, 188, 191, 1, 0, 0, 0, 189, 187, 1, 0, 0, 0, 189, 190, 1, 0, 0, 0, 190, 192, 1, 0, 0, 0, 191, 189, 1, 0, 0, 0, 192, 193, 5, 38, 0, 0, 193, 194, 5, 33, 0, 0, 194, 27, 1, 0, 0, 0, 195, 196, 5, 17, 0, 0, 196, 29, 1, 0, 0, 0, 197, 198, 5, 16, 0, 0, 198, 31, 1, 0, 0, 0, 199, 200, 5, 15, 0, 0, 200, 33, 1, 0, 0, 0, 201, 202, 5, 14, 0, 0, 202, 35, 1, 0, 0, 0, 203, 204, 7, 1, 0, 0, 204, 37, 1, 0, 0, 0, 205, 206, 5, 42, 0, 0, 206, 207, 5, 40, 0, 0, 207, 208, 5, 41, 0, 0, 208, 39, 1, 0, 0, 0, 209, 210, 7, 2, 0, 0, 210, 41, 1, 0, 0, 0, 23, 43, 47, 50, 55, 61, 68, 78, 87, 94, 100, 102, 109, 115, 121, 127, 132, 138, 153, 160, 170, 177, 179, 189]
+\ No newline at end of file
++[4, 1, 42, 244, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7, 4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 2, 10, 7, 10, 2, 11, 7, 11, 2, 12, 7, 12, 2, 13, 7, 13, 2, 14, 7, 14, 2, 15, 7, 15, 2, 16, 7, 16, 2, 17, 7, 17, 2, 18, 7, 18, 2, 19, 7, 19, 2, 20, 7, 20, 2, 21, 7, 21, 2, 22, 7, 22, 1, 0, 3, 0, 48, 8, 0, 1, 0, 1, 0, 3, 0, 52, 8, 0, 1, 0, 1, 0, 5, 0, 56, 8, 0, 10, 0, 12, 0, 59, 9, 0, 1, 0, 1, 0, 1, 1, 3, 1, 64, 8, 1, 1, 1, 5, 1, 67, 8, 1, 10, 1, 12, 1, 70, 9, 1, 1, 1, 1, 1, 1, 2, 1, 2, 3, 2, 76, 8, 2, 1, 3, 3, 3, 79, 8, 3, 1, 3, 5, 3, 82, 8, 3, 10, 3, 12, 3, 85, 9, 3, 1, 3, 5, 3, 88, 8, 3, 10, 3, 12, 3, 91, 9, 3, 1, 4, 1, 4, 5, 4, 95, 8, 4, 10, 4, 12, 4, 98, 9, 4, 1, 4, 1, 4, 1, 5, 1, 5, 1, 5, 1, 5, 1, 5, 3, 5, 107, 8, 5, 1, 6, 1, 6, 1, 6, 1, 6, 1, 6, 5, 6, 114, 8, 6, 10, 6, 12, 6, 117, 9, 6, 1, 6, 1, 6, 1, 6, 1, 6, 3, 6, 123, 8, 6, 1, 6, 1, 6, 1, 7, 1, 7, 5, 7, 129, 8, 7, 10, 7, 12, 7, 132, 9, 7, 1, 8, 1, 8, 5, 8, 136, 8, 8, 10, 8, 12, 8, 139, 9, 8, 1, 8, 5, 8, 142, 8, 8, 10, 8, 12, 8, 145, 9, 8, 1, 8, 5, 8, 148, 8, 8, 10, 8, 12, 8, 151, 9, 8, 1, 8, 1, 8, 1, 8, 3, 8, 156, 8, 8, 1, 9, 1, 9, 1, 10, 3, 10, 161, 8, 10, 1, 11, 1, 11, 5, 11, 165, 8, 11, 10, 11, 12, 11, 168, 9, 11, 1, 11, 1, 11, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 3, 12, 186, 8, 12, 1, 13, 1, 13, 1, 13, 5, 13, 191, 8, 13, 10, 13, 12, 13, 194, 9, 13, 1, 13, 1, 13, 1, 13, 1, 13, 1, 13, 5, 13, 201, 8, 13, 10, 13, 12, 13, 204, 9, 13, 1, 13, 1, 13, 1, 13, 1, 13, 3, 13, 210, 8, 13, 3, 13, 212, 8, 13, 1, 14, 1, 14, 1, 15, 1, 15, 1, 15, 1, 15, 5, 15, 220, 8, 15, 10, 15, 12, 15, 223, 9, 15, 1, 15, 1, 15, 1, 15, 1, 16, 1, 16, 1, 17, 1, 17, 1, 18, 1, 18, 1, 19, 1, 19, 1, 20, 1, 20, 1, 21, 1, 21, 1, 21, 1, 21, 1, 22, 1, 22, 1, 22, 0, 0, 23, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 0, 3, 1, 0, 28, 29, 1, 0, 5, 6, 3, 0, 7, 7, 9, 9, 18, 18, 262, 0, 47, 1, 0, 0, 0, 2, 63, 1, 0, 0, 0, 4, 75, 1, 0, 0, 0, 6, 78, 1, 0, 0, 0, 8, 92, 1, 0, 0, 0, 10, 106, 1, 0, 0, 0, 12, 108, 1, 0, 0, 0, 14, 130, 1, 0, 0, 0, 16, 155, 1, 0, 0, 0, 18, 157, 1, 0, 0, 0, 20, 160, 1, 0, 0, 0, 22, 162, 1, 0, 0, 0, 24, 185, 1, 0, 0, 0, 26, 187, 1, 0, 0, 0, 28, 213, 1, 0, 0, 0, 30, 215, 1, 0, 0, 0, 32, 227, 1, 0, 0, 0, 34, 229, 1, 0, 0, 0, 36, 231, 1, 0, 0, 0, 38, 233, 1, 0, 0, 0, 40, 235, 1, 0, 0, 0, 42, 237, 1, 0, 0, 0, 44, 241, 1, 0, 0, 0, 46, 48, 5, 8, 0, 0, 47, 46, 1, 0, 0, 0, 47, 48, 1, 0, 0, 0, 48, 49, 1, 0, 0, 0, 49, 51, 3, 6, 3, 0, 50, 52, 3, 26, 13, 0, 51, 50, 1, 0, 0, 0, 51, 52, 1, 0, 0, 0, 52, 57, 1, 0, 0, 0, 53, 56, 5, 2, 0, 0, 54, 56, 3, 22, 11, 0, 55, 53, 1, 0, 0, 0, 55, 54, 1, 0, 0, 0, 56, 59, 1, 0, 0, 0, 57, 55, 1, 0, 0, 0, 57, 58, 1, 0, 0, 0, 58, 60, 1, 0, 0, 0, 59, 57, 1, 0, 0, 0, 60, 61, 5, 0, 0, 1, 61, 1, 1, 0, 0, 0, 62, 64, 5, 8, 0, 0, 63, 62, 1, 0, 0, 0, 63, 64, 1, 0, 0, 0, 64, 68, 1, 0, 0, 0, 65, 67, 3, 4, 2, 0, 66, 65, 1, 0, 0, 0, 67, 70, 1, 0, 0, 0, 68, 66, 1, 0, 0, 0, 68, 69, 1, 0, 0, 0, 69, 71, 1, 0, 0, 0, 70, 68, 1, 0, 0, 0, 71, 72, 5, 0, 0, 1, 72, 3, 1, 0, 0, 0, 73, 76, 3, 8, 4, 0, 74, 76, 3, 24, 12, 0, 75, 73, 1, 0, 0, 0, 75, 74, 1, 0, 0, 0, 76, 5, 1, 0, 0, 0, 77, 79, 3, 8, 4, 0, 78, 77, 1, 0, 0, 0, 78, 79, 1, 0, 0, 0, 79, 83, 1, 0, 0, 0, 80, 82, 3, 10, 5, 0, 81, 80, 1, 0, 0, 0, 82, 85, 1, 0, 0, 0, 83, 81, 1, 0, 0, 0, 83, 84, 1, 0, 0, 0, 84, 89, 1, 0, 0, 0, 85, 83, 1, 0, 0, 0, 86, 88, 3, 30, 15, 0, 87, 86, 1, 0, 0, 0, 88, 91, 1, 0, 0, 0, 89, 87, 1, 0, 0, 0, 89, 90, 1, 0, 0, 0, 90, 7, 1, 0, 0, 0, 91, 89, 1, 0, 0, 0, 92, 96, 5, 10, 0, 0, 93, 95, 3, 42, 21, 0, 94, 93, 1, 0, 0, 0, 95, 98, 1, 0, 0, 0, 96, 94, 1, 0, 0, 0, 96, 97, 1, 0, 0, 0, 97, 99, 1, 0, 0, 0, 98, 96, 1, 0, 0, 0, 99, 100, 5, 34, 0, 0, 100, 9, 1, 0, 0, 0, 101, 107, 5, 2, 0, 0, 102, 107, 3, 12, 6, 0, 103, 107, 3, 22, 11, 0, 104, 107, 3, 36, 18, 0, 105, 107, 3, 38, 19, 0, 106, 101, 1, 0, 0, 0, 106, 102, 1, 0, 0, 0, 106, 103, 1, 0, 0, 0, 106, 104, 1, 0, 0, 0, 106, 105, 1, 0, 0, 0, 107, 11, 1, 0, 0, 0, 108, 109, 5, 13, 0, 0, 109, 110, 5, 22, 0, 0, 110, 111, 5, 42, 0, 0, 111, 115, 3, 20, 10, 0, 112, 114, 5, 41, 0, 0, 113, 112, 1, 0, 0, 0, 114, 117, 1, 0, 0, 0, 115, 113, 1, 0, 0, 0, 115, 116, 1, 0, 0, 0, 116, 122, 1, 0, 0, 0, 117, 115, 1, 0, 0, 0, 118, 119, 5, 20, 0, 0, 119, 120, 3, 14, 7, 0, 120, 121, 5, 23, 0, 0, 121, 123, 1, 0, 0, 0, 122, 118, 1, 0, 0, 0, 122, 123, 1, 0, 0, 0, 123, 124, 1, 0, 0, 0, 124, 125, 5, 19, 0, 0, 125, 13, 1, 0, 0, 0, 126, 129, 3, 16, 8, 0, 127, 129, 3, 18, 9, 0, 128, 126, 1, 0, 0, 0, 128, 127, 1, 0, 0, 0, 129, 132, 1, 0, 0, 0, 130, 128, 1, 0, 0, 0, 130, 131, 1, 0, 0, 0, 131, 15, 1, 0, 0, 0, 132, 130, 1, 0, 0, 0, 133, 137, 5, 24, 0, 0, 134, 136, 7, 0, 0, 0, 135, 134, 1, 0, 0, 0, 136, 139, 1, 0, 0, 0, 137, 135, 1, 0, 0, 0, 137, 138, 1, 0, 0, 0, 138, 143, 1, 0, 0, 0, 139, 137, 1, 0, 0, 0, 140, 142, 5, 30, 0, 0, 141, 140, 1, 0, 0, 0, 142, 145, 1, 0, 0, 0, 143, 141, 1, 0, 0, 0, 143, 144, 1, 0, 0, 0, 144, 149, 1, 0, 0, 0, 145, 143, 1, 0, 0, 0, 146, 148, 7, 0, 0, 0, 147, 146, 1, 0, 0, 0, 148, 151, 1, 0, 0, 0, 149, 147, 1, 0, 0, 0, 149, 150, 1, 0, 0, 0, 150, 152, 1, 0, 0, 0, 151, 149, 1, 0, 0, 0, 152, 156, 5, 26, 0, 0, 153, 156, 3, 22, 11, 0, 154, 156, 5, 2, 0, 0, 155, 133, 1, 0, 0, 0, 155, 153, 1, 0, 0, 0, 155, 154, 1, 0, 0, 0, 156, 17, 1, 0, 0, 0, 157, 158, 5, 4, 0, 0, 158, 19, 1, 0, 0, 0, 159, 161, 5, 42, 0, 0, 160, 159, 1, 0, 0, 0, 160, 161, 1, 0, 0, 0, 161, 21, 1, 0, 0, 0, 162, 166, 5, 12, 0, 0, 163, 165, 5, 32, 0, 0, 164, 163, 1, 0, 0, 0, 165, 168, 1, 0, 0, 0, 166, 164, 1, 0, 0, 0, 166, 167, 1, 0, 0, 0, 167, 169, 1, 0, 0, 0, 168, 166, 1, 0, 0, 0, 169, 170, 5, 34, 0, 0, 170, 23, 1, 0, 0, 0, 171, 186, 3, 26, 13, 0, 172, 186, 3, 40, 20, 0, 173, 186, 3, 22, 11, 0, 174, 186, 5, 3, 0, 0, 175, 186, 5, 2, 0, 0, 176, 186, 3, 32, 16, 0, 177, 186, 3, 34, 17, 0, 178, 186, 3, 36, 18, 0, 179, 186, 3, 38, 19, 0, 180, 186, 3, 44, 22, 0, 181, 182, 4, 12, 0, 0, 182, 186, 3, 30, 15, 0, 183, 184, 4, 12, 1, 0, 184, 186, 3, 12, 6, 0, 185, 171, 1, 0, 0, 0, 185, 172, 1, 0, 0, 0, 185, 173, 1, 0, 0, 0, 185, 174, 1, 0, 0, 0, 185, 175, 1, 0, 0, 0, 185, 176, 1, 0, 0, 0, 185, 177, 1, 0, 0, 0, 185, 178, 1, 0, 0, 0, 185, 179, 1, 0, 0, 0, 185, 180, 1, 0, 0, 0, 185, 181, 1, 0, 0, 0, 185, 183, 1, 0, 0, 0, 186, 25, 1, 0, 0, 0, 187, 188, 5, 11, 0, 0, 188, 192, 5, 42, 0, 0, 189, 191, 3, 42, 21, 0, 190, 189, 1, 0, 0, 0, 191, 194, 1, 0, 0, 0, 192, 190, 1, 0, 0, 0, 192, 193, 1, 0, 0, 0, 193, 211, 1, 0, 0, 0, 194, 192, 1, 0, 0, 0, 195, 212, 5, 35, 0, 0, 196, 209, 5, 33, 0, 0, 197, 198, 4, 13, 2, 1, 198, 210, 3, 28, 14, 0, 199, 201, 3, 24, 12, 0, 200, 199, 1, 0, 0, 0, 201, 204, 1, 0, 0, 0, 202, 200, 1, 0, 0, 0, 202, 203, 1, 0, 0, 0, 203, 205, 1, 0, 0, 0, 204, 202, 1, 0, 0, 0, 205, 206, 5, 11, 0, 0, 206, 207, 5, 39, 0, 0, 207, 208, 5, 42, 0, 0, 208, 210, 5, 33, 0, 0, 209, 197, 1, 0, 0, 0, 209, 202, 1, 0, 0, 0, 210, 212, 1, 0, 0, 0, 211, 195, 1, 0, 0, 0, 211, 196, 1, 0, 0, 0, 212, 27, 1, 0, 0, 0, 213, 214, 1, 0, 0, 0, 214, 29, 1, 0, 0, 0, 215, 216, 5, 11, 0, 0, 216, 217, 5, 37, 0, 0, 217, 221, 5, 42, 0, 0, 218, 220, 3, 42, 21, 0, 219, 218, 1, 0, 0, 0, 220, 223, 1, 0, 0, 0, 221, 219, 1, 0, 0, 0, 221, 222, 1, 0, 0, 0, 222, 224, 1, 0, 0, 0, 223, 221, 1, 0, 0, 0, 224, 225, 5, 38, 0, 0, 225, 226, 5, 33, 0, 0, 226, 31, 1, 0, 0, 0, 227, 228, 5, 17, 0, 0, 228, 33, 1, 0, 0, 0, 229, 230, 5, 16, 0, 0, 230, 35, 1, 0, 0, 0, 231, 232, 5, 15, 0, 0, 232, 37, 1, 0, 0, 0, 233, 234, 5, 14, 0, 0, 234, 39, 1, 0, 0, 0, 235, 236, 7, 1, 0, 0, 236, 41, 1, 0, 0, 0, 237, 238, 5, 42, 0, 0, 238, 239, 5, 40, 0, 0, 239, 240, 5, 41, 0, 0, 240, 43, 1, 0, 0, 0, 241, 242, 7, 2, 0, 0, 242, 45, 1, 0, 0, 0, 28, 47, 51, 55, 57, 63, 68, 75, 78, 83, 89, 96, 106, 115, 122, 128, 130, 137, 143, 149, 155, 160, 166, 185, 192, 202, 209, 211, 221]
+\ No newline at end of file
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.java
+index 24caab5..bdb3472 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParser.java
+@@ -41,17 +41,17 @@ public class XMLParser extends XMLParserBase {
+ 		SLASH_CLOSE=35, S=36, DIRECTIVE_OPEN=37, DIRECTIVE_CLOSE=38, SLASH=39,
+ 		EQUALS=40, STRING=41, Name=42;
+ 	public static final int
+-		RULE_document = 0, RULE_prolog = 1, RULE_xmldecl = 2, RULE_misc = 3, RULE_doctypedecl = 4,
+-		RULE_intsubset = 5, RULE_markupdecl = 6, RULE_declSep = 7, RULE_externalid = 8,
+-		RULE_processinginstruction = 9, RULE_content = 10, RULE_element = 11,
+-		RULE_voidClose = 12, RULE_jspdirective = 13, RULE_jspscriptlet = 14, RULE_jspexpression = 15,
+-		RULE_jspdeclaration = 16, RULE_jspcomment = 17, RULE_reference = 18, RULE_attribute = 19,
+-		RULE_chardata = 20;
++		RULE_document = 0, RULE_jspdocument = 1, RULE_jspcontent = 2, RULE_prolog = 3,
++		RULE_xmldecl = 4, RULE_misc = 5, RULE_doctypedecl = 6, RULE_intsubset = 7,
++		RULE_markupdecl = 8, RULE_declSep = 9, RULE_externalid = 10, RULE_processinginstruction = 11,
++		RULE_content = 12, RULE_element = 13, RULE_voidClose = 14, RULE_jspdirective = 15,
++		RULE_jspscriptlet = 16, RULE_jspexpression = 17, RULE_jspdeclaration = 18,
++		RULE_jspcomment = 19, RULE_reference = 20, RULE_attribute = 21, RULE_chardata = 22;
+ 	private static String[] makeRuleNames() {
+ 		return new String[] {
+-			"document", "prolog", "xmldecl", "misc", "doctypedecl", "intsubset",
+-			"markupdecl", "declSep", "externalid", "processinginstruction", "content",
+-			"element", "voidClose", "jspdirective", "jspscriptlet", "jspexpression",
++			"document", "jspdocument", "jspcontent", "prolog", "xmldecl", "misc",
++			"doctypedecl", "intsubset", "markupdecl", "declSep", "externalid", "processinginstruction",
++			"content", "element", "voidClose", "jspdirective", "jspscriptlet", "jspexpression",
+ 			"jspdeclaration", "jspcomment", "reference", "attribute", "chardata"
+ 		};
+ 	}
+@@ -134,10 +134,21 @@ public static class DocumentContext extends ParserRuleContext {
+ 		public PrologContext prolog() {
+ 			return getRuleContext(PrologContext.class,0);
+ 		}
++		public TerminalNode EOF() { return getToken(XMLParser.EOF, 0); }
+ 		public TerminalNode UTF_ENCODING_BOM() { return getToken(XMLParser.UTF_ENCODING_BOM, 0); }
+ 		public ElementContext element() {
+ 			return getRuleContext(ElementContext.class,0);
+ 		}
++		public List<TerminalNode> COMMENT() { return getTokens(XMLParser.COMMENT); }
++		public TerminalNode COMMENT(int i) {
++			return getToken(XMLParser.COMMENT, i);
++		}
++		public List<ProcessinginstructionContext> processinginstruction() {
++			return getRuleContexts(ProcessinginstructionContext.class);
++		}
++		public ProcessinginstructionContext processinginstruction(int i) {
++			return getRuleContext(ProcessinginstructionContext.class,i);
++		}
+ 		public DocumentContext(ParserRuleContext parent, int invokingState) {
+ 			super(parent, invokingState);
+ 		}
+@@ -164,28 +175,196 @@ public final DocumentContext document() throws RecognitionException {
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(43);
++			setState(47);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			if (_la==UTF_ENCODING_BOM) {
+ 				{
+-				setState(42);
++				setState(46);
+ 				match(UTF_ENCODING_BOM);
+ 				}
+ 			}
+ 
+-			setState(45);
++			setState(49);
+ 			prolog();
+-			setState(47);
++			setState(51);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			if (_la==OPEN) {
+ 				{
+-				setState(46);
++				setState(50);
+ 				element();
+ 				}
+ 			}
+ 
++			setState(57);
++			_errHandler.sync(this);
++			_la = _input.LA(1);
++			while (_la==COMMENT || _la==SPECIAL_OPEN) {
++				{
++				setState(55);
++				_errHandler.sync(this);
++				switch (_input.LA(1)) {
++				case COMMENT:
++					{
++					setState(53);
++					match(COMMENT);
++					}
++					break;
++				case SPECIAL_OPEN:
++					{
++					setState(54);
++					processinginstruction();
++					}
++					break;
++				default:
++					throw new NoViableAltException(this);
++				}
++				}
++				setState(59);
++				_errHandler.sync(this);
++				_la = _input.LA(1);
++			}
++			setState(60);
++			match(EOF);
++			}
++		}
++		catch (RecognitionException re) {
++			_localctx.exception = re;
++			_errHandler.reportError(this, re);
++			_errHandler.recover(this, re);
++		}
++		finally {
++			exitRule();
++		}
++		return _localctx;
++	}
++
++	@SuppressWarnings("CheckReturnValue")
++	public static class JspdocumentContext extends ParserRuleContext {
++		public TerminalNode EOF() { return getToken(XMLParser.EOF, 0); }
++		public TerminalNode UTF_ENCODING_BOM() { return getToken(XMLParser.UTF_ENCODING_BOM, 0); }
++		public List<JspcontentContext> jspcontent() {
++			return getRuleContexts(JspcontentContext.class);
++		}
++		public JspcontentContext jspcontent(int i) {
++			return getRuleContext(JspcontentContext.class,i);
++		}
++		public JspdocumentContext(ParserRuleContext parent, int invokingState) {
++			super(parent, invokingState);
++		}
++		@Override public int getRuleIndex() { return RULE_jspdocument; }
++		@Override
++		public void enterRule(ParseTreeListener listener) {
++			if ( listener instanceof XMLParserListener ) ((XMLParserListener)listener).enterJspdocument(this);
++		}
++		@Override
++		public void exitRule(ParseTreeListener listener) {
++			if ( listener instanceof XMLParserListener ) ((XMLParserListener)listener).exitJspdocument(this);
++		}
++		@Override
++		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
++			if ( visitor instanceof XMLParserVisitor ) return ((XMLParserVisitor<? extends T>)visitor).visitJspdocument(this);
++			else return visitor.visitChildren(this);
++		}
++	}
++
++	public final JspdocumentContext jspdocument() throws RecognitionException {
++		JspdocumentContext _localctx = new JspdocumentContext(_ctx, getState());
++		enterRule(_localctx, 2, RULE_jspdocument);
++		try {
++			int _alt;
++			enterOuterAlt(_localctx, 1);
++			{
++			setState(63);
++			_errHandler.sync(this);
++			switch ( getInterpreter().adaptivePredict(_input,4,_ctx) ) {
++			case 1:
++				{
++				setState(62);
++				match(UTF_ENCODING_BOM);
++				}
++				break;
++			}
++			setState(68);
++			_errHandler.sync(this);
++			_alt = getInterpreter().adaptivePredict(_input,5,_ctx);
++			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
++				if ( _alt==1 ) {
++					{
++					{
++					setState(65);
++					jspcontent();
++					}
++					}
++				}
++				setState(70);
++				_errHandler.sync(this);
++				_alt = getInterpreter().adaptivePredict(_input,5,_ctx);
++			}
++			setState(71);
++			match(EOF);
++			}
++		}
++		catch (RecognitionException re) {
++			_localctx.exception = re;
++			_errHandler.reportError(this, re);
++			_errHandler.recover(this, re);
++		}
++		finally {
++			exitRule();
++		}
++		return _localctx;
++	}
++
++	@SuppressWarnings("CheckReturnValue")
++	public static class JspcontentContext extends ParserRuleContext {
++		public XmldeclContext xmldecl() {
++			return getRuleContext(XmldeclContext.class,0);
++		}
++		public ContentContext content() {
++			return getRuleContext(ContentContext.class,0);
++		}
++		public JspcontentContext(ParserRuleContext parent, int invokingState) {
++			super(parent, invokingState);
++		}
++		@Override public int getRuleIndex() { return RULE_jspcontent; }
++		@Override
++		public void enterRule(ParseTreeListener listener) {
++			if ( listener instanceof XMLParserListener ) ((XMLParserListener)listener).enterJspcontent(this);
++		}
++		@Override
++		public void exitRule(ParseTreeListener listener) {
++			if ( listener instanceof XMLParserListener ) ((XMLParserListener)listener).exitJspcontent(this);
++		}
++		@Override
++		public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
++			if ( visitor instanceof XMLParserVisitor ) return ((XMLParserVisitor<? extends T>)visitor).visitJspcontent(this);
++			else return visitor.visitChildren(this);
++		}
++	}
++
++	public final JspcontentContext jspcontent() throws RecognitionException {
++		JspcontentContext _localctx = new JspcontentContext(_ctx, getState());
++		enterRule(_localctx, 4, RULE_jspcontent);
++		try {
++			setState(75);
++			_errHandler.sync(this);
++			switch ( getInterpreter().adaptivePredict(_input,6,_ctx) ) {
++			case 1:
++				enterOuterAlt(_localctx, 1);
++				{
++				setState(73);
++				xmldecl();
++				}
++				break;
++			case 2:
++				enterOuterAlt(_localctx, 2);
++				{
++				setState(74);
++				content();
++				}
++				break;
+ 			}
+ 		}
+ 		catch (RecognitionException re) {
+@@ -237,51 +416,53 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final PrologContext prolog() throws RecognitionException {
+ 		PrologContext _localctx = new PrologContext(_ctx, getState());
+-		enterRule(_localctx, 2, RULE_prolog);
++		enterRule(_localctx, 6, RULE_prolog);
+ 		int _la;
+ 		try {
+ 			int _alt;
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(50);
++			setState(78);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			if (_la==SPECIAL_OPEN_XML) {
+ 				{
+-				setState(49);
++				setState(77);
+ 				xmldecl();
+ 				}
+ 			}
+ 
+-			setState(55);
++			setState(83);
+ 			_errHandler.sync(this);
+-			_la = _input.LA(1);
+-			while ((((_la) & ~0x3f) == 0 && ((1L << _la) & 61444L) != 0)) {
+-				{
+-				{
+-				setState(52);
+-				misc();
+-				}
++			_alt = getInterpreter().adaptivePredict(_input,8,_ctx);
++			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
++				if ( _alt==1 ) {
++					{
++					{
++					setState(80);
++					misc();
++					}
++					}
+ 				}
+-				setState(57);
++				setState(85);
+ 				_errHandler.sync(this);
+-				_la = _input.LA(1);
++				_alt = getInterpreter().adaptivePredict(_input,8,_ctx);
+ 			}
+-			setState(61);
++			setState(89);
+ 			_errHandler.sync(this);
+-			_alt = getInterpreter().adaptivePredict(_input,4,_ctx);
++			_alt = getInterpreter().adaptivePredict(_input,9,_ctx);
+ 			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
+ 				if ( _alt==1 ) {
+ 					{
+ 					{
+-					setState(58);
++					setState(86);
+ 					jspdirective();
+ 					}
+ 					}
+ 				}
+-				setState(63);
++				setState(91);
+ 				_errHandler.sync(this);
+-				_alt = getInterpreter().adaptivePredict(_input,4,_ctx);
++				_alt = getInterpreter().adaptivePredict(_input,9,_ctx);
+ 			}
+ 			}
+ 		}
+@@ -327,28 +508,28 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final XmldeclContext xmldecl() throws RecognitionException {
+ 		XmldeclContext _localctx = new XmldeclContext(_ctx, getState());
+-		enterRule(_localctx, 4, RULE_xmldecl);
++		enterRule(_localctx, 8, RULE_xmldecl);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(64);
++			setState(92);
+ 			match(SPECIAL_OPEN_XML);
+-			setState(68);
++			setState(96);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			while (_la==Name) {
+ 				{
+ 				{
+-				setState(65);
++				setState(93);
+ 				attribute();
+ 				}
+ 				}
+-				setState(70);
++				setState(98);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 			}
+-			setState(71);
++			setState(99);
+ 			match(SPECIAL_CLOSE);
+ 			}
+ 		}
+@@ -399,40 +580,40 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final MiscContext misc() throws RecognitionException {
+ 		MiscContext _localctx = new MiscContext(_ctx, getState());
+-		enterRule(_localctx, 6, RULE_misc);
++		enterRule(_localctx, 10, RULE_misc);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(78);
++			setState(106);
+ 			_errHandler.sync(this);
+ 			switch (_input.LA(1)) {
+ 			case COMMENT:
+ 				{
+-				setState(73);
++				setState(101);
+ 				match(COMMENT);
+ 				}
+ 				break;
+ 			case DTD_OPEN:
+ 				{
+-				setState(74);
++				setState(102);
+ 				doctypedecl();
+ 				}
+ 				break;
+ 			case SPECIAL_OPEN:
+ 				{
+-				setState(75);
++				setState(103);
+ 				processinginstruction();
+ 				}
+ 				break;
+ 			case JSP_DECLARATION:
+ 				{
+-				setState(76);
++				setState(104);
+ 				jspdeclaration();
+ 				}
+ 				break;
+ 			case JSP_COMMENT:
+ 				{
+-				setState(77);
++				setState(105);
+ 				jspcomment();
+ 				}
+ 				break;
+@@ -491,48 +672,48 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final DoctypedeclContext doctypedecl() throws RecognitionException {
+ 		DoctypedeclContext _localctx = new DoctypedeclContext(_ctx, getState());
+-		enterRule(_localctx, 8, RULE_doctypedecl);
++		enterRule(_localctx, 12, RULE_doctypedecl);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(80);
++			setState(108);
+ 			match(DTD_OPEN);
+-			setState(81);
++			setState(109);
+ 			match(DOCTYPE);
+-			setState(82);
++			setState(110);
+ 			match(Name);
+-			setState(83);
++			setState(111);
+ 			externalid();
+-			setState(87);
++			setState(115);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			while (_la==STRING) {
+ 				{
+ 				{
+-				setState(84);
++				setState(112);
+ 				match(STRING);
+ 				}
+ 				}
+-				setState(89);
++				setState(117);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 			}
+-			setState(94);
++			setState(122);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			if (_la==DTD_SUBSET_OPEN) {
+ 				{
+-				setState(90);
++				setState(118);
+ 				match(DTD_SUBSET_OPEN);
+-				setState(91);
++				setState(119);
+ 				intsubset();
+-				setState(92);
++				setState(120);
+ 				match(DTD_SUBSET_CLOSE);
+ 				}
+ 			}
+ 
+-			setState(96);
++			setState(124);
+ 			match(DTD_CLOSE);
+ 			}
+ 		}
+@@ -582,30 +763,30 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final IntsubsetContext intsubset() throws RecognitionException {
+ 		IntsubsetContext _localctx = new IntsubsetContext(_ctx, getState());
+-		enterRule(_localctx, 10, RULE_intsubset);
++		enterRule(_localctx, 14, RULE_intsubset);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(102);
++			setState(130);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			while ((((_la) & ~0x3f) == 0 && ((1L << _la) & 16781332L) != 0)) {
+ 				{
+-				setState(100);
++				setState(128);
+ 				_errHandler.sync(this);
+ 				switch (_input.LA(1)) {
+ 				case COMMENT:
+ 				case SPECIAL_OPEN:
+ 				case MARKUP_OPEN:
+ 					{
+-					setState(98);
++					setState(126);
+ 					markupdecl();
+ 					}
+ 					break;
+ 				case ParamEntityRef:
+ 					{
+-					setState(99);
++					setState(127);
+ 					declSep();
+ 					}
+ 					break;
+@@ -613,7 +794,7 @@ public final IntsubsetContext intsubset() throws RecognitionException {
+ 					throw new NoViableAltException(this);
+ 				}
+ 				}
+-				setState(104);
++				setState(132);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 			}
+@@ -671,27 +852,27 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final MarkupdeclContext markupdecl() throws RecognitionException {
+ 		MarkupdeclContext _localctx = new MarkupdeclContext(_ctx, getState());
+-		enterRule(_localctx, 12, RULE_markupdecl);
++		enterRule(_localctx, 16, RULE_markupdecl);
+ 		int _la;
+ 		try {
+ 			int _alt;
+-			setState(127);
++			setState(155);
+ 			_errHandler.sync(this);
+ 			switch (_input.LA(1)) {
+ 			case MARKUP_OPEN:
+ 				enterOuterAlt(_localctx, 1);
+ 				{
+ 				{
+-				setState(105);
++				setState(133);
+ 				match(MARKUP_OPEN);
+-				setState(109);
++				setState(137);
+ 				_errHandler.sync(this);
+-				_alt = getInterpreter().adaptivePredict(_input,11,_ctx);
++				_alt = getInterpreter().adaptivePredict(_input,16,_ctx);
+ 				while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
+ 					if ( _alt==1 ) {
+ 						{
+ 						{
+-						setState(106);
++						setState(134);
+ 						_la = _input.LA(1);
+ 						if ( !(_la==MARKUP_STRING || _la==MARKUP_TEXT) ) {
+ 						_errHandler.recoverInline(this);
+@@ -704,31 +885,31 @@ public final MarkupdeclContext markupdecl() throws RecognitionException {
+ 						}
+ 						}
+ 					}
+-					setState(111);
++					setState(139);
+ 					_errHandler.sync(this);
+-					_alt = getInterpreter().adaptivePredict(_input,11,_ctx);
++					_alt = getInterpreter().adaptivePredict(_input,16,_ctx);
+ 				}
+-				setState(115);
++				setState(143);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 				while (_la==MARKUP_SUBSET) {
+ 					{
+ 					{
+-					setState(112);
++					setState(140);
+ 					match(MARKUP_SUBSET);
+ 					}
+ 					}
+-					setState(117);
++					setState(145);
+ 					_errHandler.sync(this);
+ 					_la = _input.LA(1);
+ 				}
+-				setState(121);
++				setState(149);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 				while (_la==MARKUP_STRING || _la==MARKUP_TEXT) {
+ 					{
+ 					{
+-					setState(118);
++					setState(146);
+ 					_la = _input.LA(1);
+ 					if ( !(_la==MARKUP_STRING || _la==MARKUP_TEXT) ) {
+ 					_errHandler.recoverInline(this);
+@@ -740,11 +921,11 @@ public final MarkupdeclContext markupdecl() throws RecognitionException {
+ 					}
+ 					}
+ 					}
+-					setState(123);
++					setState(151);
+ 					_errHandler.sync(this);
+ 					_la = _input.LA(1);
+ 				}
+-				setState(124);
++				setState(152);
+ 				match(MARK_UP_CLOSE);
+ 				}
+ 				}
+@@ -752,14 +933,14 @@ public final MarkupdeclContext markupdecl() throws RecognitionException {
+ 			case SPECIAL_OPEN:
+ 				enterOuterAlt(_localctx, 2);
+ 				{
+-				setState(125);
++				setState(153);
+ 				processinginstruction();
+ 				}
+ 				break;
+ 			case COMMENT:
+ 				enterOuterAlt(_localctx, 3);
+ 				{
+-				setState(126);
++				setState(154);
+ 				match(COMMENT);
+ 				}
+ 				break;
+@@ -802,11 +983,11 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final DeclSepContext declSep() throws RecognitionException {
+ 		DeclSepContext _localctx = new DeclSepContext(_ctx, getState());
+-		enterRule(_localctx, 14, RULE_declSep);
++		enterRule(_localctx, 18, RULE_declSep);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(129);
++			setState(157);
+ 			match(ParamEntityRef);
+ 			}
+ 		}
+@@ -845,17 +1026,17 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final ExternalidContext externalid() throws RecognitionException {
+ 		ExternalidContext _localctx = new ExternalidContext(_ctx, getState());
+-		enterRule(_localctx, 16, RULE_externalid);
++		enterRule(_localctx, 20, RULE_externalid);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(132);
++			setState(160);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			if (_la==Name) {
+ 				{
+-				setState(131);
++				setState(159);
+ 				match(Name);
+ 				}
+ 			}
+@@ -902,28 +1083,28 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final ProcessinginstructionContext processinginstruction() throws RecognitionException {
+ 		ProcessinginstructionContext _localctx = new ProcessinginstructionContext(_ctx, getState());
+-		enterRule(_localctx, 18, RULE_processinginstruction);
++		enterRule(_localctx, 22, RULE_processinginstruction);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(134);
++			setState(162);
+ 			match(SPECIAL_OPEN);
+-			setState(138);
++			setState(166);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			while (_la==PI_TEXT) {
+ 				{
+ 				{
+-				setState(135);
++				setState(163);
+ 				match(PI_TEXT);
+ 				}
+ 				}
+-				setState(140);
++				setState(168);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 			}
+-			setState(141);
++			setState(169);
+ 			match(SPECIAL_CLOSE);
+ 			}
+ 		}
+@@ -966,6 +1147,12 @@ public JspcommentContext jspcomment() {
+ 		public ChardataContext chardata() {
+ 			return getRuleContext(ChardataContext.class,0);
+ 		}
++		public JspdirectiveContext jspdirective() {
++			return getRuleContext(JspdirectiveContext.class,0);
++		}
++		public DoctypedeclContext doctypedecl() {
++			return getRuleContext(DoctypedeclContext.class,0);
++		}
+ 		public ContentContext(ParserRuleContext parent, int invokingState) {
+ 			super(parent, invokingState);
+ 		}
+@@ -987,78 +1174,89 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final ContentContext content() throws RecognitionException {
+ 		ContentContext _localctx = new ContentContext(_ctx, getState());
+-		enterRule(_localctx, 20, RULE_content);
++		enterRule(_localctx, 24, RULE_content);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(153);
++			setState(185);
+ 			_errHandler.sync(this);
+-			switch (_input.LA(1)) {
+-			case OPEN:
++			switch ( getInterpreter().adaptivePredict(_input,22,_ctx) ) {
++			case 1:
+ 				{
+-				setState(143);
++				setState(171);
+ 				element();
+ 				}
+ 				break;
+-			case EntityRef:
+-			case CharRef:
++			case 2:
+ 				{
+-				setState(144);
++				setState(172);
+ 				reference();
+ 				}
+ 				break;
+-			case SPECIAL_OPEN:
++			case 3:
+ 				{
+-				setState(145);
++				setState(173);
+ 				processinginstruction();
+ 				}
+ 				break;
+-			case CDATA:
++			case 4:
+ 				{
+-				setState(146);
++				setState(174);
+ 				match(CDATA);
+ 				}
+ 				break;
+-			case COMMENT:
++			case 5:
+ 				{
+-				setState(147);
++				setState(175);
+ 				match(COMMENT);
+ 				}
+ 				break;
+-			case JSP_SCRIPTLET:
++			case 6:
+ 				{
+-				setState(148);
++				setState(176);
+ 				jspscriptlet();
+ 				}
+ 				break;
+-			case JSP_EXPRESSION:
++			case 7:
+ 				{
+-				setState(149);
++				setState(177);
+ 				jspexpression();
+ 				}
+ 				break;
+-			case JSP_DECLARATION:
++			case 8:
+ 				{
+-				setState(150);
++				setState(178);
+ 				jspdeclaration();
+ 				}
+ 				break;
+-			case JSP_COMMENT:
++			case 9:
+ 				{
+-				setState(151);
++				setState(179);
+ 				jspcomment();
+ 				}
+ 				break;
+-			case SEA_WS:
+-			case QUESTION_MARK:
+-			case TEXT:
++			case 10:
+ 				{
+-				setState(152);
++				setState(180);
+ 				chardata();
+ 				}
+ 				break;
+-			default:
+-				throw new NoViableAltException(this);
++			case 11:
++				{
++				setState(181);
++				if (!(jspMode)) throw new FailedPredicateException(this, "jspMode");
++				setState(182);
++				jspdirective();
++				}
++				break;
++			case 12:
++				{
++				setState(183);
++				if (!(jspMode)) throw new FailedPredicateException(this, "jspMode");
++				setState(184);
++				doctypedecl();
++				}
++				break;
+ 			}
+ 			}
+ 		}
+@@ -1126,79 +1324,79 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final ElementContext element() throws RecognitionException {
+ 		ElementContext _localctx = new ElementContext(_ctx, getState());
+-		enterRule(_localctx, 22, RULE_element);
++		enterRule(_localctx, 26, RULE_element);
+ 		int _la;
+ 		try {
+ 			int _alt;
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(155);
++			setState(187);
+ 			match(OPEN);
+-			setState(156);
++			setState(188);
+ 			((ElementContext)_localctx).name = match(Name);
+-			setState(160);
++			setState(192);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			while (_la==Name) {
+ 				{
+ 				{
+-				setState(157);
++				setState(189);
+ 				attribute();
+ 				}
+ 				}
+-				setState(162);
++				setState(194);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 			}
+-			setState(179);
++			setState(211);
+ 			_errHandler.sync(this);
+ 			switch (_input.LA(1)) {
+ 			case SLASH_CLOSE:
+ 				{
+-				setState(163);
++				setState(195);
+ 				match(SLASH_CLOSE);
+ 				}
+ 				break;
+ 			case CLOSE:
+ 				{
+-				setState(164);
++				setState(196);
+ 				match(CLOSE);
+-				setState(177);
++				setState(209);
+ 				_errHandler.sync(this);
+-				switch ( getInterpreter().adaptivePredict(_input,20,_ctx) ) {
++				switch ( getInterpreter().adaptivePredict(_input,25,_ctx) ) {
+ 				case 1:
+ 					{
+-					setState(165);
++					setState(197);
+ 					if (!(isVoidElement((((ElementContext)_localctx).name!=null?((ElementContext)_localctx).name.getText():null)))) throw new FailedPredicateException(this, "isVoidElement($name.text)");
+-					setState(166);
++					setState(198);
+ 					voidClose();
+ 					}
+ 					break;
+ 				case 2:
+ 					{
+-					setState(170);
++					setState(202);
+ 					_errHandler.sync(this);
+-					_alt = getInterpreter().adaptivePredict(_input,19,_ctx);
++					_alt = getInterpreter().adaptivePredict(_input,24,_ctx);
+ 					while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
+ 						if ( _alt==1 ) {
+ 							{
+ 							{
+-							setState(167);
++							setState(199);
+ 							content();
+ 							}
+ 							}
+ 						}
+-						setState(172);
++						setState(204);
+ 						_errHandler.sync(this);
+-						_alt = getInterpreter().adaptivePredict(_input,19,_ctx);
++						_alt = getInterpreter().adaptivePredict(_input,24,_ctx);
+ 					}
+-					setState(173);
++					setState(205);
+ 					match(OPEN);
+-					setState(174);
++					setState(206);
+ 					match(SLASH);
+-					setState(175);
++					setState(207);
+ 					match(Name);
+-					setState(176);
++					setState(208);
+ 					match(CLOSE);
+ 					}
+ 					break;
+@@ -1244,7 +1442,7 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final VoidCloseContext voidClose() throws RecognitionException {
+ 		VoidCloseContext _localctx = new VoidCloseContext(_ctx, getState());
+-		enterRule(_localctx, 24, RULE_voidClose);
++		enterRule(_localctx, 28, RULE_voidClose);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+@@ -1295,34 +1493,34 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final JspdirectiveContext jspdirective() throws RecognitionException {
+ 		JspdirectiveContext _localctx = new JspdirectiveContext(_ctx, getState());
+-		enterRule(_localctx, 26, RULE_jspdirective);
++		enterRule(_localctx, 30, RULE_jspdirective);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(183);
++			setState(215);
+ 			match(OPEN);
+-			setState(184);
++			setState(216);
+ 			match(DIRECTIVE_OPEN);
+-			setState(185);
++			setState(217);
+ 			match(Name);
+-			setState(189);
++			setState(221);
+ 			_errHandler.sync(this);
+ 			_la = _input.LA(1);
+ 			while (_la==Name) {
+ 				{
+ 				{
+-				setState(186);
++				setState(218);
+ 				attribute();
+ 				}
+ 				}
+-				setState(191);
++				setState(223);
+ 				_errHandler.sync(this);
+ 				_la = _input.LA(1);
+ 			}
+-			setState(192);
++			setState(224);
+ 			match(DIRECTIVE_CLOSE);
+-			setState(193);
++			setState(225);
+ 			match(CLOSE);
+ 			}
+ 		}
+@@ -1361,11 +1559,11 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final JspscriptletContext jspscriptlet() throws RecognitionException {
+ 		JspscriptletContext _localctx = new JspscriptletContext(_ctx, getState());
+-		enterRule(_localctx, 28, RULE_jspscriptlet);
++		enterRule(_localctx, 32, RULE_jspscriptlet);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(195);
++			setState(227);
+ 			match(JSP_SCRIPTLET);
+ 			}
+ 		}
+@@ -1404,11 +1602,11 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final JspexpressionContext jspexpression() throws RecognitionException {
+ 		JspexpressionContext _localctx = new JspexpressionContext(_ctx, getState());
+-		enterRule(_localctx, 30, RULE_jspexpression);
++		enterRule(_localctx, 34, RULE_jspexpression);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(197);
++			setState(229);
+ 			match(JSP_EXPRESSION);
+ 			}
+ 		}
+@@ -1447,11 +1645,11 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final JspdeclarationContext jspdeclaration() throws RecognitionException {
+ 		JspdeclarationContext _localctx = new JspdeclarationContext(_ctx, getState());
+-		enterRule(_localctx, 32, RULE_jspdeclaration);
++		enterRule(_localctx, 36, RULE_jspdeclaration);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(199);
++			setState(231);
+ 			match(JSP_DECLARATION);
+ 			}
+ 		}
+@@ -1490,11 +1688,11 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final JspcommentContext jspcomment() throws RecognitionException {
+ 		JspcommentContext _localctx = new JspcommentContext(_ctx, getState());
+-		enterRule(_localctx, 34, RULE_jspcomment);
++		enterRule(_localctx, 38, RULE_jspcomment);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(201);
++			setState(233);
+ 			match(JSP_COMMENT);
+ 			}
+ 		}
+@@ -1534,12 +1732,12 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final ReferenceContext reference() throws RecognitionException {
+ 		ReferenceContext _localctx = new ReferenceContext(_ctx, getState());
+-		enterRule(_localctx, 36, RULE_reference);
++		enterRule(_localctx, 40, RULE_reference);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(203);
++			setState(235);
+ 			_la = _input.LA(1);
+ 			if ( !(_la==EntityRef || _la==CharRef) ) {
+ 			_errHandler.recoverInline(this);
+@@ -1588,15 +1786,15 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final AttributeContext attribute() throws RecognitionException {
+ 		AttributeContext _localctx = new AttributeContext(_ctx, getState());
+-		enterRule(_localctx, 38, RULE_attribute);
++		enterRule(_localctx, 42, RULE_attribute);
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(205);
++			setState(237);
+ 			match(Name);
+-			setState(206);
++			setState(238);
+ 			match(EQUALS);
+-			setState(207);
++			setState(239);
+ 			match(STRING);
+ 			}
+ 		}
+@@ -1637,12 +1835,12 @@ public <T> T accept(ParseTreeVisitor<? extends T> visitor) {
+ 
+ 	public final ChardataContext chardata() throws RecognitionException {
+ 		ChardataContext _localctx = new ChardataContext(_ctx, getState());
+-		enterRule(_localctx, 40, RULE_chardata);
++		enterRule(_localctx, 44, RULE_chardata);
+ 		int _la;
+ 		try {
+ 			enterOuterAlt(_localctx, 1);
+ 			{
+-			setState(209);
++			setState(241);
+ 			_la = _input.LA(1);
+ 			if ( !((((_la) & ~0x3f) == 0 && ((1L << _la) & 262784L) != 0)) ) {
+ 			_errHandler.recoverInline(this);
+@@ -1667,151 +1865,184 @@ public final ChardataContext chardata() throws RecognitionException {
+ 
+ 	public boolean sempred(RuleContext _localctx, int ruleIndex, int predIndex) {
+ 		switch (ruleIndex) {
+-		case 11:
++		case 12:
++			return content_sempred((ContentContext)_localctx, predIndex);
++		case 13:
+ 			return element_sempred((ElementContext)_localctx, predIndex);
+ 		}
+ 		return true;
+ 	}
+-	private boolean element_sempred(ElementContext _localctx, int predIndex) {
++	private boolean content_sempred(ContentContext _localctx, int predIndex) {
+ 		switch (predIndex) {
+ 		case 0:
++			return jspMode;
++		case 1:
++			return jspMode;
++		}
++		return true;
++	}
++	private boolean element_sempred(ElementContext _localctx, int predIndex) {
++		switch (predIndex) {
++		case 2:
+ 			return isVoidElement((((ElementContext)_localctx).name!=null?((ElementContext)_localctx).name.getText():null));
+ 		}
+ 		return true;
+ 	}
+ 
+ 	public static final String _serializedATN =
+-		"\u0004\u0001*\u00d4\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
++		"\u0004\u0001*\u00f4\u0002\u0000\u0007\u0000\u0002\u0001\u0007\u0001\u0002"+
+ 		"\u0002\u0007\u0002\u0002\u0003\u0007\u0003\u0002\u0004\u0007\u0004\u0002"+
+ 		"\u0005\u0007\u0005\u0002\u0006\u0007\u0006\u0002\u0007\u0007\u0007\u0002"+
+ 		"\b\u0007\b\u0002\t\u0007\t\u0002\n\u0007\n\u0002\u000b\u0007\u000b\u0002"+
+ 		"\f\u0007\f\u0002\r\u0007\r\u0002\u000e\u0007\u000e\u0002\u000f\u0007\u000f"+
+ 		"\u0002\u0010\u0007\u0010\u0002\u0011\u0007\u0011\u0002\u0012\u0007\u0012"+
+-		"\u0002\u0013\u0007\u0013\u0002\u0014\u0007\u0014\u0001\u0000\u0003\u0000"+
+-		",\b\u0000\u0001\u0000\u0001\u0000\u0003\u00000\b\u0000\u0001\u0001\u0003"+
+-		"\u00013\b\u0001\u0001\u0001\u0005\u00016\b\u0001\n\u0001\f\u00019\t\u0001"+
+-		"\u0001\u0001\u0005\u0001<\b\u0001\n\u0001\f\u0001?\t\u0001\u0001\u0002"+
+-		"\u0001\u0002\u0005\u0002C\b\u0002\n\u0002\f\u0002F\t\u0002\u0001\u0002"+
+-		"\u0001\u0002\u0001\u0003\u0001\u0003\u0001\u0003\u0001\u0003\u0001\u0003"+
+-		"\u0003\u0003O\b\u0003\u0001\u0004\u0001\u0004\u0001\u0004\u0001\u0004"+
+-		"\u0001\u0004\u0005\u0004V\b\u0004\n\u0004\f\u0004Y\t\u0004\u0001\u0004"+
+-		"\u0001\u0004\u0001\u0004\u0001\u0004\u0003\u0004_\b\u0004\u0001\u0004"+
+-		"\u0001\u0004\u0001\u0005\u0001\u0005\u0005\u0005e\b\u0005\n\u0005\f\u0005"+
+-		"h\t\u0005\u0001\u0006\u0001\u0006\u0005\u0006l\b\u0006\n\u0006\f\u0006"+
+-		"o\t\u0006\u0001\u0006\u0005\u0006r\b\u0006\n\u0006\f\u0006u\t\u0006\u0001"+
+-		"\u0006\u0005\u0006x\b\u0006\n\u0006\f\u0006{\t\u0006\u0001\u0006\u0001"+
+-		"\u0006\u0001\u0006\u0003\u0006\u0080\b\u0006\u0001\u0007\u0001\u0007\u0001"+
+-		"\b\u0003\b\u0085\b\b\u0001\t\u0001\t\u0005\t\u0089\b\t\n\t\f\t\u008c\t"+
+-		"\t\u0001\t\u0001\t\u0001\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001\n\u0001"+
+-		"\n\u0001\n\u0001\n\u0001\n\u0003\n\u009a\b\n\u0001\u000b\u0001\u000b\u0001"+
+-		"\u000b\u0005\u000b\u009f\b\u000b\n\u000b\f\u000b\u00a2\t\u000b\u0001\u000b"+
+-		"\u0001\u000b\u0001\u000b\u0001\u000b\u0001\u000b\u0005\u000b\u00a9\b\u000b"+
+-		"\n\u000b\f\u000b\u00ac\t\u000b\u0001\u000b\u0001\u000b\u0001\u000b\u0001"+
+-		"\u000b\u0003\u000b\u00b2\b\u000b\u0003\u000b\u00b4\b\u000b\u0001\f\u0001"+
+-		"\f\u0001\r\u0001\r\u0001\r\u0001\r\u0005\r\u00bc\b\r\n\r\f\r\u00bf\t\r"+
+-		"\u0001\r\u0001\r\u0001\r\u0001\u000e\u0001\u000e\u0001\u000f\u0001\u000f"+
+-		"\u0001\u0010\u0001\u0010\u0001\u0011\u0001\u0011\u0001\u0012\u0001\u0012"+
+-		"\u0001\u0013\u0001\u0013\u0001\u0013\u0001\u0013\u0001\u0014\u0001\u0014"+
+-		"\u0001\u0014\u0000\u0000\u0015\u0000\u0002\u0004\u0006\b\n\f\u000e\u0010"+
+-		"\u0012\u0014\u0016\u0018\u001a\u001c\u001e \"$&(\u0000\u0003\u0001\u0000"+
+-		"\u001c\u001d\u0001\u0000\u0005\u0006\u0003\u0000\u0007\u0007\t\t\u0012"+
+-		"\u0012\u00e1\u0000+\u0001\u0000\u0000\u0000\u00022\u0001\u0000\u0000\u0000"+
+-		"\u0004@\u0001\u0000\u0000\u0000\u0006N\u0001\u0000\u0000\u0000\bP\u0001"+
+-		"\u0000\u0000\u0000\nf\u0001\u0000\u0000\u0000\f\u007f\u0001\u0000\u0000"+
+-		"\u0000\u000e\u0081\u0001\u0000\u0000\u0000\u0010\u0084\u0001\u0000\u0000"+
+-		"\u0000\u0012\u0086\u0001\u0000\u0000\u0000\u0014\u0099\u0001\u0000\u0000"+
+-		"\u0000\u0016\u009b\u0001\u0000\u0000\u0000\u0018\u00b5\u0001\u0000\u0000"+
+-		"\u0000\u001a\u00b7\u0001\u0000\u0000\u0000\u001c\u00c3\u0001\u0000\u0000"+
+-		"\u0000\u001e\u00c5\u0001\u0000\u0000\u0000 \u00c7\u0001\u0000\u0000\u0000"+
+-		"\"\u00c9\u0001\u0000\u0000\u0000$\u00cb\u0001\u0000\u0000\u0000&\u00cd"+
+-		"\u0001\u0000\u0000\u0000(\u00d1\u0001\u0000\u0000\u0000*,\u0005\b\u0000"+
+-		"\u0000+*\u0001\u0000\u0000\u0000+,\u0001\u0000\u0000\u0000,-\u0001\u0000"+
+-		"\u0000\u0000-/\u0003\u0002\u0001\u0000.0\u0003\u0016\u000b\u0000/.\u0001"+
+-		"\u0000\u0000\u0000/0\u0001\u0000\u0000\u00000\u0001\u0001\u0000\u0000"+
+-		"\u000013\u0003\u0004\u0002\u000021\u0001\u0000\u0000\u000023\u0001\u0000"+
+-		"\u0000\u000037\u0001\u0000\u0000\u000046\u0003\u0006\u0003\u000054\u0001"+
+-		"\u0000\u0000\u000069\u0001\u0000\u0000\u000075\u0001\u0000\u0000\u0000"+
+-		"78\u0001\u0000\u0000\u00008=\u0001\u0000\u0000\u000097\u0001\u0000\u0000"+
+-		"\u0000:<\u0003\u001a\r\u0000;:\u0001\u0000\u0000\u0000<?\u0001\u0000\u0000"+
+-		"\u0000=;\u0001\u0000\u0000\u0000=>\u0001\u0000\u0000\u0000>\u0003\u0001"+
+-		"\u0000\u0000\u0000?=\u0001\u0000\u0000\u0000@D\u0005\n\u0000\u0000AC\u0003"+
+-		"&\u0013\u0000BA\u0001\u0000\u0000\u0000CF\u0001\u0000\u0000\u0000DB\u0001"+
+-		"\u0000\u0000\u0000DE\u0001\u0000\u0000\u0000EG\u0001\u0000\u0000\u0000"+
+-		"FD\u0001\u0000\u0000\u0000GH\u0005\"\u0000\u0000H\u0005\u0001\u0000\u0000"+
+-		"\u0000IO\u0005\u0002\u0000\u0000JO\u0003\b\u0004\u0000KO\u0003\u0012\t"+
+-		"\u0000LO\u0003 \u0010\u0000MO\u0003\"\u0011\u0000NI\u0001\u0000\u0000"+
+-		"\u0000NJ\u0001\u0000\u0000\u0000NK\u0001\u0000\u0000\u0000NL\u0001\u0000"+
+-		"\u0000\u0000NM\u0001\u0000\u0000\u0000O\u0007\u0001\u0000\u0000\u0000"+
+-		"PQ\u0005\r\u0000\u0000QR\u0005\u0016\u0000\u0000RS\u0005*\u0000\u0000"+
+-		"SW\u0003\u0010\b\u0000TV\u0005)\u0000\u0000UT\u0001\u0000\u0000\u0000"+
+-		"VY\u0001\u0000\u0000\u0000WU\u0001\u0000\u0000\u0000WX\u0001\u0000\u0000"+
+-		"\u0000X^\u0001\u0000\u0000\u0000YW\u0001\u0000\u0000\u0000Z[\u0005\u0014"+
+-		"\u0000\u0000[\\\u0003\n\u0005\u0000\\]\u0005\u0017\u0000\u0000]_\u0001"+
+-		"\u0000\u0000\u0000^Z\u0001\u0000\u0000\u0000^_\u0001\u0000\u0000\u0000"+
+-		"_`\u0001\u0000\u0000\u0000`a\u0005\u0013\u0000\u0000a\t\u0001\u0000\u0000"+
+-		"\u0000be\u0003\f\u0006\u0000ce\u0003\u000e\u0007\u0000db\u0001\u0000\u0000"+
+-		"\u0000dc\u0001\u0000\u0000\u0000eh\u0001\u0000\u0000\u0000fd\u0001\u0000"+
+-		"\u0000\u0000fg\u0001\u0000\u0000\u0000g\u000b\u0001\u0000\u0000\u0000"+
+-		"hf\u0001\u0000\u0000\u0000im\u0005\u0018\u0000\u0000jl\u0007\u0000\u0000"+
+-		"\u0000kj\u0001\u0000\u0000\u0000lo\u0001\u0000\u0000\u0000mk\u0001\u0000"+
+-		"\u0000\u0000mn\u0001\u0000\u0000\u0000ns\u0001\u0000\u0000\u0000om\u0001"+
+-		"\u0000\u0000\u0000pr\u0005\u001e\u0000\u0000qp\u0001\u0000\u0000\u0000"+
++		"\u0002\u0013\u0007\u0013\u0002\u0014\u0007\u0014\u0002\u0015\u0007\u0015"+
++		"\u0002\u0016\u0007\u0016\u0001\u0000\u0003\u00000\b\u0000\u0001\u0000"+
++		"\u0001\u0000\u0003\u00004\b\u0000\u0001\u0000\u0001\u0000\u0005\u0000"+
++		"8\b\u0000\n\u0000\f\u0000;\t\u0000\u0001\u0000\u0001\u0000\u0001\u0001"+
++		"\u0003\u0001@\b\u0001\u0001\u0001\u0005\u0001C\b\u0001\n\u0001\f\u0001"+
++		"F\t\u0001\u0001\u0001\u0001\u0001\u0001\u0002\u0001\u0002\u0003\u0002"+
++		"L\b\u0002\u0001\u0003\u0003\u0003O\b\u0003\u0001\u0003\u0005\u0003R\b"+
++		"\u0003\n\u0003\f\u0003U\t\u0003\u0001\u0003\u0005\u0003X\b\u0003\n\u0003"+
++		"\f\u0003[\t\u0003\u0001\u0004\u0001\u0004\u0005\u0004_\b\u0004\n\u0004"+
++		"\f\u0004b\t\u0004\u0001\u0004\u0001\u0004\u0001\u0005\u0001\u0005\u0001"+
++		"\u0005\u0001\u0005\u0001\u0005\u0003\u0005k\b\u0005\u0001\u0006\u0001"+
++		"\u0006\u0001\u0006\u0001\u0006\u0001\u0006\u0005\u0006r\b\u0006\n\u0006"+
++		"\f\u0006u\t\u0006\u0001\u0006\u0001\u0006\u0001\u0006\u0001\u0006\u0003"+
++		"\u0006{\b\u0006\u0001\u0006\u0001\u0006\u0001\u0007\u0001\u0007\u0005"+
++		"\u0007\u0081\b\u0007\n\u0007\f\u0007\u0084\t\u0007\u0001\b\u0001\b\u0005"+
++		"\b\u0088\b\b\n\b\f\b\u008b\t\b\u0001\b\u0005\b\u008e\b\b\n\b\f\b\u0091"+
++		"\t\b\u0001\b\u0005\b\u0094\b\b\n\b\f\b\u0097\t\b\u0001\b\u0001\b\u0001"+
++		"\b\u0003\b\u009c\b\b\u0001\t\u0001\t\u0001\n\u0003\n\u00a1\b\n\u0001\u000b"+
++		"\u0001\u000b\u0005\u000b\u00a5\b\u000b\n\u000b\f\u000b\u00a8\t\u000b\u0001"+
++		"\u000b\u0001\u000b\u0001\f\u0001\f\u0001\f\u0001\f\u0001\f\u0001\f\u0001"+
++		"\f\u0001\f\u0001\f\u0001\f\u0001\f\u0001\f\u0001\f\u0001\f\u0003\f\u00ba"+
++		"\b\f\u0001\r\u0001\r\u0001\r\u0005\r\u00bf\b\r\n\r\f\r\u00c2\t\r\u0001"+
++		"\r\u0001\r\u0001\r\u0001\r\u0001\r\u0005\r\u00c9\b\r\n\r\f\r\u00cc\t\r"+
++		"\u0001\r\u0001\r\u0001\r\u0001\r\u0003\r\u00d2\b\r\u0003\r\u00d4\b\r\u0001"+
++		"\u000e\u0001\u000e\u0001\u000f\u0001\u000f\u0001\u000f\u0001\u000f\u0005"+
++		"\u000f\u00dc\b\u000f\n\u000f\f\u000f\u00df\t\u000f\u0001\u000f\u0001\u000f"+
++		"\u0001\u000f\u0001\u0010\u0001\u0010\u0001\u0011\u0001\u0011\u0001\u0012"+
++		"\u0001\u0012\u0001\u0013\u0001\u0013\u0001\u0014\u0001\u0014\u0001\u0015"+
++		"\u0001\u0015\u0001\u0015\u0001\u0015\u0001\u0016\u0001\u0016\u0001\u0016"+
++		"\u0000\u0000\u0017\u0000\u0002\u0004\u0006\b\n\f\u000e\u0010\u0012\u0014"+
++		"\u0016\u0018\u001a\u001c\u001e \"$&(*,\u0000\u0003\u0001\u0000\u001c\u001d"+
++		"\u0001\u0000\u0005\u0006\u0003\u0000\u0007\u0007\t\t\u0012\u0012\u0106"+
++		"\u0000/\u0001\u0000\u0000\u0000\u0002?\u0001\u0000\u0000\u0000\u0004K"+
++		"\u0001\u0000\u0000\u0000\u0006N\u0001\u0000\u0000\u0000\b\\\u0001\u0000"+
++		"\u0000\u0000\nj\u0001\u0000\u0000\u0000\fl\u0001\u0000\u0000\u0000\u000e"+
++		"\u0082\u0001\u0000\u0000\u0000\u0010\u009b\u0001\u0000\u0000\u0000\u0012"+
++		"\u009d\u0001\u0000\u0000\u0000\u0014\u00a0\u0001\u0000\u0000\u0000\u0016"+
++		"\u00a2\u0001\u0000\u0000\u0000\u0018\u00b9\u0001\u0000\u0000\u0000\u001a"+
++		"\u00bb\u0001\u0000\u0000\u0000\u001c\u00d5\u0001\u0000\u0000\u0000\u001e"+
++		"\u00d7\u0001\u0000\u0000\u0000 \u00e3\u0001\u0000\u0000\u0000\"\u00e5"+
++		"\u0001\u0000\u0000\u0000$\u00e7\u0001\u0000\u0000\u0000&\u00e9\u0001\u0000"+
++		"\u0000\u0000(\u00eb\u0001\u0000\u0000\u0000*\u00ed\u0001\u0000\u0000\u0000"+
++		",\u00f1\u0001\u0000\u0000\u0000.0\u0005\b\u0000\u0000/.\u0001\u0000\u0000"+
++		"\u0000/0\u0001\u0000\u0000\u000001\u0001\u0000\u0000\u000013\u0003\u0006"+
++		"\u0003\u000024\u0003\u001a\r\u000032\u0001\u0000\u0000\u000034\u0001\u0000"+
++		"\u0000\u000049\u0001\u0000\u0000\u000058\u0005\u0002\u0000\u000068\u0003"+
++		"\u0016\u000b\u000075\u0001\u0000\u0000\u000076\u0001\u0000\u0000\u0000"+
++		"8;\u0001\u0000\u0000\u000097\u0001\u0000\u0000\u00009:\u0001\u0000\u0000"+
++		"\u0000:<\u0001\u0000\u0000\u0000;9\u0001\u0000\u0000\u0000<=\u0005\u0000"+
++		"\u0000\u0001=\u0001\u0001\u0000\u0000\u0000>@\u0005\b\u0000\u0000?>\u0001"+
++		"\u0000\u0000\u0000?@\u0001\u0000\u0000\u0000@D\u0001\u0000\u0000\u0000"+
++		"AC\u0003\u0004\u0002\u0000BA\u0001\u0000\u0000\u0000CF\u0001\u0000\u0000"+
++		"\u0000DB\u0001\u0000\u0000\u0000DE\u0001\u0000\u0000\u0000EG\u0001\u0000"+
++		"\u0000\u0000FD\u0001\u0000\u0000\u0000GH\u0005\u0000\u0000\u0001H\u0003"+
++		"\u0001\u0000\u0000\u0000IL\u0003\b\u0004\u0000JL\u0003\u0018\f\u0000K"+
++		"I\u0001\u0000\u0000\u0000KJ\u0001\u0000\u0000\u0000L\u0005\u0001\u0000"+
++		"\u0000\u0000MO\u0003\b\u0004\u0000NM\u0001\u0000\u0000\u0000NO\u0001\u0000"+
++		"\u0000\u0000OS\u0001\u0000\u0000\u0000PR\u0003\n\u0005\u0000QP\u0001\u0000"+
++		"\u0000\u0000RU\u0001\u0000\u0000\u0000SQ\u0001\u0000\u0000\u0000ST\u0001"+
++		"\u0000\u0000\u0000TY\u0001\u0000\u0000\u0000US\u0001\u0000\u0000\u0000"+
++		"VX\u0003\u001e\u000f\u0000WV\u0001\u0000\u0000\u0000X[\u0001\u0000\u0000"+
++		"\u0000YW\u0001\u0000\u0000\u0000YZ\u0001\u0000\u0000\u0000Z\u0007\u0001"+
++		"\u0000\u0000\u0000[Y\u0001\u0000\u0000\u0000\\`\u0005\n\u0000\u0000]_"+
++		"\u0003*\u0015\u0000^]\u0001\u0000\u0000\u0000_b\u0001\u0000\u0000\u0000"+
++		"`^\u0001\u0000\u0000\u0000`a\u0001\u0000\u0000\u0000ac\u0001\u0000\u0000"+
++		"\u0000b`\u0001\u0000\u0000\u0000cd\u0005\"\u0000\u0000d\t\u0001\u0000"+
++		"\u0000\u0000ek\u0005\u0002\u0000\u0000fk\u0003\f\u0006\u0000gk\u0003\u0016"+
++		"\u000b\u0000hk\u0003$\u0012\u0000ik\u0003&\u0013\u0000je\u0001\u0000\u0000"+
++		"\u0000jf\u0001\u0000\u0000\u0000jg\u0001\u0000\u0000\u0000jh\u0001\u0000"+
++		"\u0000\u0000ji\u0001\u0000\u0000\u0000k\u000b\u0001\u0000\u0000\u0000"+
++		"lm\u0005\r\u0000\u0000mn\u0005\u0016\u0000\u0000no\u0005*\u0000\u0000"+
++		"os\u0003\u0014\n\u0000pr\u0005)\u0000\u0000qp\u0001\u0000\u0000\u0000"+
+ 		"ru\u0001\u0000\u0000\u0000sq\u0001\u0000\u0000\u0000st\u0001\u0000\u0000"+
+-		"\u0000ty\u0001\u0000\u0000\u0000us\u0001\u0000\u0000\u0000vx\u0007\u0000"+
+-		"\u0000\u0000wv\u0001\u0000\u0000\u0000x{\u0001\u0000\u0000\u0000yw\u0001"+
+-		"\u0000\u0000\u0000yz\u0001\u0000\u0000\u0000z|\u0001\u0000\u0000\u0000"+
+-		"{y\u0001\u0000\u0000\u0000|\u0080\u0005\u001a\u0000\u0000}\u0080\u0003"+
+-		"\u0012\t\u0000~\u0080\u0005\u0002\u0000\u0000\u007fi\u0001\u0000\u0000"+
+-		"\u0000\u007f}\u0001\u0000\u0000\u0000\u007f~\u0001\u0000\u0000\u0000\u0080"+
+-		"\r\u0001\u0000\u0000\u0000\u0081\u0082\u0005\u0004\u0000\u0000\u0082\u000f"+
+-		"\u0001\u0000\u0000\u0000\u0083\u0085\u0005*\u0000\u0000\u0084\u0083\u0001"+
+-		"\u0000\u0000\u0000\u0084\u0085\u0001\u0000\u0000\u0000\u0085\u0011\u0001"+
+-		"\u0000\u0000\u0000\u0086\u008a\u0005\f\u0000\u0000\u0087\u0089\u0005 "+
+-		"\u0000\u0000\u0088\u0087\u0001\u0000\u0000\u0000\u0089\u008c\u0001\u0000"+
+-		"\u0000\u0000\u008a\u0088\u0001\u0000\u0000\u0000\u008a\u008b\u0001\u0000"+
+-		"\u0000\u0000\u008b\u008d\u0001\u0000\u0000\u0000\u008c\u008a\u0001\u0000"+
+-		"\u0000\u0000\u008d\u008e\u0005\"\u0000\u0000\u008e\u0013\u0001\u0000\u0000"+
+-		"\u0000\u008f\u009a\u0003\u0016\u000b\u0000\u0090\u009a\u0003$\u0012\u0000"+
+-		"\u0091\u009a\u0003\u0012\t\u0000\u0092\u009a\u0005\u0003\u0000\u0000\u0093"+
+-		"\u009a\u0005\u0002\u0000\u0000\u0094\u009a\u0003\u001c\u000e\u0000\u0095"+
+-		"\u009a\u0003\u001e\u000f\u0000\u0096\u009a\u0003 \u0010\u0000\u0097\u009a"+
+-		"\u0003\"\u0011\u0000\u0098\u009a\u0003(\u0014\u0000\u0099\u008f\u0001"+
+-		"\u0000\u0000\u0000\u0099\u0090\u0001\u0000\u0000\u0000\u0099\u0091\u0001"+
+-		"\u0000\u0000\u0000\u0099\u0092\u0001\u0000\u0000\u0000\u0099\u0093\u0001"+
+-		"\u0000\u0000\u0000\u0099\u0094\u0001\u0000\u0000\u0000\u0099\u0095\u0001"+
+-		"\u0000\u0000\u0000\u0099\u0096\u0001\u0000\u0000\u0000\u0099\u0097\u0001"+
+-		"\u0000\u0000\u0000\u0099\u0098\u0001\u0000\u0000\u0000\u009a\u0015\u0001"+
+-		"\u0000\u0000\u0000\u009b\u009c\u0005\u000b\u0000\u0000\u009c\u00a0\u0005"+
+-		"*\u0000\u0000\u009d\u009f\u0003&\u0013\u0000\u009e\u009d\u0001\u0000\u0000"+
+-		"\u0000\u009f\u00a2\u0001\u0000\u0000\u0000\u00a0\u009e\u0001\u0000\u0000"+
+-		"\u0000\u00a0\u00a1\u0001\u0000\u0000\u0000\u00a1\u00b3\u0001\u0000\u0000"+
+-		"\u0000\u00a2\u00a0\u0001\u0000\u0000\u0000\u00a3\u00b4\u0005#\u0000\u0000"+
+-		"\u00a4\u00b1\u0005!\u0000\u0000\u00a5\u00a6\u0004\u000b\u0000\u0001\u00a6"+
+-		"\u00b2\u0003\u0018\f\u0000\u00a7\u00a9\u0003\u0014\n\u0000\u00a8\u00a7"+
+-		"\u0001\u0000\u0000\u0000\u00a9\u00ac\u0001\u0000\u0000\u0000\u00aa\u00a8"+
+-		"\u0001\u0000\u0000\u0000\u00aa\u00ab\u0001\u0000\u0000\u0000\u00ab\u00ad"+
+-		"\u0001\u0000\u0000\u0000\u00ac\u00aa\u0001\u0000\u0000\u0000\u00ad\u00ae"+
+-		"\u0005\u000b\u0000\u0000\u00ae\u00af\u0005\'\u0000\u0000\u00af\u00b0\u0005"+
+-		"*\u0000\u0000\u00b0\u00b2\u0005!\u0000\u0000\u00b1\u00a5\u0001\u0000\u0000"+
+-		"\u0000\u00b1\u00aa\u0001\u0000\u0000\u0000\u00b2\u00b4\u0001\u0000\u0000"+
+-		"\u0000\u00b3\u00a3\u0001\u0000\u0000\u0000\u00b3\u00a4\u0001\u0000\u0000"+
+-		"\u0000\u00b4\u0017\u0001\u0000\u0000\u0000\u00b5\u00b6\u0001\u0000\u0000"+
+-		"\u0000\u00b6\u0019\u0001\u0000\u0000\u0000\u00b7\u00b8\u0005\u000b\u0000"+
+-		"\u0000\u00b8\u00b9\u0005%\u0000\u0000\u00b9\u00bd\u0005*\u0000\u0000\u00ba"+
+-		"\u00bc\u0003&\u0013\u0000\u00bb\u00ba\u0001\u0000\u0000\u0000\u00bc\u00bf"+
+-		"\u0001\u0000\u0000\u0000\u00bd\u00bb\u0001\u0000\u0000\u0000\u00bd\u00be"+
+-		"\u0001\u0000\u0000\u0000\u00be\u00c0\u0001\u0000\u0000\u0000\u00bf\u00bd"+
+-		"\u0001\u0000\u0000\u0000\u00c0\u00c1\u0005&\u0000\u0000\u00c1\u00c2\u0005"+
+-		"!\u0000\u0000\u00c2\u001b\u0001\u0000\u0000\u0000\u00c3\u00c4\u0005\u0011"+
+-		"\u0000\u0000\u00c4\u001d\u0001\u0000\u0000\u0000\u00c5\u00c6\u0005\u0010"+
+-		"\u0000\u0000\u00c6\u001f\u0001\u0000\u0000\u0000\u00c7\u00c8\u0005\u000f"+
+-		"\u0000\u0000\u00c8!\u0001\u0000\u0000\u0000\u00c9\u00ca\u0005\u000e\u0000"+
+-		"\u0000\u00ca#\u0001\u0000\u0000\u0000\u00cb\u00cc\u0007\u0001\u0000\u0000"+
+-		"\u00cc%\u0001\u0000\u0000\u0000\u00cd\u00ce\u0005*\u0000\u0000\u00ce\u00cf"+
+-		"\u0005(\u0000\u0000\u00cf\u00d0\u0005)\u0000\u0000\u00d0\'\u0001\u0000"+
+-		"\u0000\u0000\u00d1\u00d2\u0007\u0002\u0000\u0000\u00d2)\u0001\u0000\u0000"+
+-		"\u0000\u0017+/27=DNW^dfmsy\u007f\u0084\u008a\u0099\u00a0\u00aa\u00b1\u00b3"+
+-		"\u00bd";
++		"\u0000tz\u0001\u0000\u0000\u0000us\u0001\u0000\u0000\u0000vw\u0005\u0014"+
++		"\u0000\u0000wx\u0003\u000e\u0007\u0000xy\u0005\u0017\u0000\u0000y{\u0001"+
++		"\u0000\u0000\u0000zv\u0001\u0000\u0000\u0000z{\u0001\u0000\u0000\u0000"+
++		"{|\u0001\u0000\u0000\u0000|}\u0005\u0013\u0000\u0000}\r\u0001\u0000\u0000"+
++		"\u0000~\u0081\u0003\u0010\b\u0000\u007f\u0081\u0003\u0012\t\u0000\u0080"+
++		"~\u0001\u0000\u0000\u0000\u0080\u007f\u0001\u0000\u0000\u0000\u0081\u0084"+
++		"\u0001\u0000\u0000\u0000\u0082\u0080\u0001\u0000\u0000\u0000\u0082\u0083"+
++		"\u0001\u0000\u0000\u0000\u0083\u000f\u0001\u0000\u0000\u0000\u0084\u0082"+
++		"\u0001\u0000\u0000\u0000\u0085\u0089\u0005\u0018\u0000\u0000\u0086\u0088"+
++		"\u0007\u0000\u0000\u0000\u0087\u0086\u0001\u0000\u0000\u0000\u0088\u008b"+
++		"\u0001\u0000\u0000\u0000\u0089\u0087\u0001\u0000\u0000\u0000\u0089\u008a"+
++		"\u0001\u0000\u0000\u0000\u008a\u008f\u0001\u0000\u0000\u0000\u008b\u0089"+
++		"\u0001\u0000\u0000\u0000\u008c\u008e\u0005\u001e\u0000\u0000\u008d\u008c"+
++		"\u0001\u0000\u0000\u0000\u008e\u0091\u0001\u0000\u0000\u0000\u008f\u008d"+
++		"\u0001\u0000\u0000\u0000\u008f\u0090\u0001\u0000\u0000\u0000\u0090\u0095"+
++		"\u0001\u0000\u0000\u0000\u0091\u008f\u0001\u0000\u0000\u0000\u0092\u0094"+
++		"\u0007\u0000\u0000\u0000\u0093\u0092\u0001\u0000\u0000\u0000\u0094\u0097"+
++		"\u0001\u0000\u0000\u0000\u0095\u0093\u0001\u0000\u0000\u0000\u0095\u0096"+
++		"\u0001\u0000\u0000\u0000\u0096\u0098\u0001\u0000\u0000\u0000\u0097\u0095"+
++		"\u0001\u0000\u0000\u0000\u0098\u009c\u0005\u001a\u0000\u0000\u0099\u009c"+
++		"\u0003\u0016\u000b\u0000\u009a\u009c\u0005\u0002\u0000\u0000\u009b\u0085"+
++		"\u0001\u0000\u0000\u0000\u009b\u0099\u0001\u0000\u0000\u0000\u009b\u009a"+
++		"\u0001\u0000\u0000\u0000\u009c\u0011\u0001\u0000\u0000\u0000\u009d\u009e"+
++		"\u0005\u0004\u0000\u0000\u009e\u0013\u0001\u0000\u0000\u0000\u009f\u00a1"+
++		"\u0005*\u0000\u0000\u00a0\u009f\u0001\u0000\u0000\u0000\u00a0\u00a1\u0001"+
++		"\u0000\u0000\u0000\u00a1\u0015\u0001\u0000\u0000\u0000\u00a2\u00a6\u0005"+
++		"\f\u0000\u0000\u00a3\u00a5\u0005 \u0000\u0000\u00a4\u00a3\u0001\u0000"+
++		"\u0000\u0000\u00a5\u00a8\u0001\u0000\u0000\u0000\u00a6\u00a4\u0001\u0000"+
++		"\u0000\u0000\u00a6\u00a7\u0001\u0000\u0000\u0000\u00a7\u00a9\u0001\u0000"+
++		"\u0000\u0000\u00a8\u00a6\u0001\u0000\u0000\u0000\u00a9\u00aa\u0005\"\u0000"+
++		"\u0000\u00aa\u0017\u0001\u0000\u0000\u0000\u00ab\u00ba\u0003\u001a\r\u0000"+
++		"\u00ac\u00ba\u0003(\u0014\u0000\u00ad\u00ba\u0003\u0016\u000b\u0000\u00ae"+
++		"\u00ba\u0005\u0003\u0000\u0000\u00af\u00ba\u0005\u0002\u0000\u0000\u00b0"+
++		"\u00ba\u0003 \u0010\u0000\u00b1\u00ba\u0003\"\u0011\u0000\u00b2\u00ba"+
++		"\u0003$\u0012\u0000\u00b3\u00ba\u0003&\u0013\u0000\u00b4\u00ba\u0003,"+
++		"\u0016\u0000\u00b5\u00b6\u0004\f\u0000\u0000\u00b6\u00ba\u0003\u001e\u000f"+
++		"\u0000\u00b7\u00b8\u0004\f\u0001\u0000\u00b8\u00ba\u0003\f\u0006\u0000"+
++		"\u00b9\u00ab\u0001\u0000\u0000\u0000\u00b9\u00ac\u0001\u0000\u0000\u0000"+
++		"\u00b9\u00ad\u0001\u0000\u0000\u0000\u00b9\u00ae\u0001\u0000\u0000\u0000"+
++		"\u00b9\u00af\u0001\u0000\u0000\u0000\u00b9\u00b0\u0001\u0000\u0000\u0000"+
++		"\u00b9\u00b1\u0001\u0000\u0000\u0000\u00b9\u00b2\u0001\u0000\u0000\u0000"+
++		"\u00b9\u00b3\u0001\u0000\u0000\u0000\u00b9\u00b4\u0001\u0000\u0000\u0000"+
++		"\u00b9\u00b5\u0001\u0000\u0000\u0000\u00b9\u00b7\u0001\u0000\u0000\u0000"+
++		"\u00ba\u0019\u0001\u0000\u0000\u0000\u00bb\u00bc\u0005\u000b\u0000\u0000"+
++		"\u00bc\u00c0\u0005*\u0000\u0000\u00bd\u00bf\u0003*\u0015\u0000\u00be\u00bd"+
++		"\u0001\u0000\u0000\u0000\u00bf\u00c2\u0001\u0000\u0000\u0000\u00c0\u00be"+
++		"\u0001\u0000\u0000\u0000\u00c0\u00c1\u0001\u0000\u0000\u0000\u00c1\u00d3"+
++		"\u0001\u0000\u0000\u0000\u00c2\u00c0\u0001\u0000\u0000\u0000\u00c3\u00d4"+
++		"\u0005#\u0000\u0000\u00c4\u00d1\u0005!\u0000\u0000\u00c5\u00c6\u0004\r"+
++		"\u0002\u0001\u00c6\u00d2\u0003\u001c\u000e\u0000\u00c7\u00c9\u0003\u0018"+
++		"\f\u0000\u00c8\u00c7\u0001\u0000\u0000\u0000\u00c9\u00cc\u0001\u0000\u0000"+
++		"\u0000\u00ca\u00c8\u0001\u0000\u0000\u0000\u00ca\u00cb\u0001\u0000\u0000"+
++		"\u0000\u00cb\u00cd\u0001\u0000\u0000\u0000\u00cc\u00ca\u0001\u0000\u0000"+
++		"\u0000\u00cd\u00ce\u0005\u000b\u0000\u0000\u00ce\u00cf\u0005\'\u0000\u0000"+
++		"\u00cf\u00d0\u0005*\u0000\u0000\u00d0\u00d2\u0005!\u0000\u0000\u00d1\u00c5"+
++		"\u0001\u0000\u0000\u0000\u00d1\u00ca\u0001\u0000\u0000\u0000\u00d2\u00d4"+
++		"\u0001\u0000\u0000\u0000\u00d3\u00c3\u0001\u0000\u0000\u0000\u00d3\u00c4"+
++		"\u0001\u0000\u0000\u0000\u00d4\u001b\u0001\u0000\u0000\u0000\u00d5\u00d6"+
++		"\u0001\u0000\u0000\u0000\u00d6\u001d\u0001\u0000\u0000\u0000\u00d7\u00d8"+
++		"\u0005\u000b\u0000\u0000\u00d8\u00d9\u0005%\u0000\u0000\u00d9\u00dd\u0005"+
++		"*\u0000\u0000\u00da\u00dc\u0003*\u0015\u0000\u00db\u00da\u0001\u0000\u0000"+
++		"\u0000\u00dc\u00df\u0001\u0000\u0000\u0000\u00dd\u00db\u0001\u0000\u0000"+
++		"\u0000\u00dd\u00de\u0001\u0000\u0000\u0000\u00de\u00e0\u0001\u0000\u0000"+
++		"\u0000\u00df\u00dd\u0001\u0000\u0000\u0000\u00e0\u00e1\u0005&\u0000\u0000"+
++		"\u00e1\u00e2\u0005!\u0000\u0000\u00e2\u001f\u0001\u0000\u0000\u0000\u00e3"+
++		"\u00e4\u0005\u0011\u0000\u0000\u00e4!\u0001\u0000\u0000\u0000\u00e5\u00e6"+
++		"\u0005\u0010\u0000\u0000\u00e6#\u0001\u0000\u0000\u0000\u00e7\u00e8\u0005"+
++		"\u000f\u0000\u0000\u00e8%\u0001\u0000\u0000\u0000\u00e9\u00ea\u0005\u000e"+
++		"\u0000\u0000\u00ea\'\u0001\u0000\u0000\u0000\u00eb\u00ec\u0007\u0001\u0000"+
++		"\u0000\u00ec)\u0001\u0000\u0000\u0000\u00ed\u00ee\u0005*\u0000\u0000\u00ee"+
++		"\u00ef\u0005(\u0000\u0000\u00ef\u00f0\u0005)\u0000\u0000\u00f0+\u0001"+
++		"\u0000\u0000\u0000\u00f1\u00f2\u0007\u0002\u0000\u0000\u00f2-\u0001\u0000"+
++		"\u0000\u0000\u001c/379?DKNSY`jsz\u0080\u0082\u0089\u008f\u0095\u009b\u00a0"+
++		"\u00a6\u00b9\u00c0\u00ca\u00d1\u00d3\u00dd";
+ 	public static final ATN _ATN =
+ 		new ATNDeserializer().deserialize(_serializedATN.toCharArray());
+ 	static {
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBase.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBase.java
+index 21eca74..05eaaae 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBase.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBase.java
+@@ -38,6 +38,9 @@ public abstract class XMLParserBase extends Parser {
+      */
+     public boolean htmlMode = false;
+ 
++    /** JSP allows directives and output DOCTYPEs inside template content. */
++    public boolean jspMode = false;
++
+     private static final Set<String> VOID_ELEMENTS = new HashSet<>(Arrays.asList(
+             "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"));
+ 
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseListener.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseListener.java
+index d4b82c4..db7a013 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseListener.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseListener.java
+@@ -39,6 +39,30 @@ public class XMLParserBaseListener implements XMLParserListener {
+ 	 * <p>The default implementation does nothing.</p>
+ 	 */
+ 	@Override public void exitDocument(XMLParser.DocumentContext ctx) { }
++	/**
++	 * {@inheritDoc}
++	 *
++	 * <p>The default implementation does nothing.</p>
++	 */
++	@Override public void enterJspdocument(XMLParser.JspdocumentContext ctx) { }
++	/**
++	 * {@inheritDoc}
++	 *
++	 * <p>The default implementation does nothing.</p>
++	 */
++	@Override public void exitJspdocument(XMLParser.JspdocumentContext ctx) { }
++	/**
++	 * {@inheritDoc}
++	 *
++	 * <p>The default implementation does nothing.</p>
++	 */
++	@Override public void enterJspcontent(XMLParser.JspcontentContext ctx) { }
++	/**
++	 * {@inheritDoc}
++	 *
++	 * <p>The default implementation does nothing.</p>
++	 */
++	@Override public void exitJspcontent(XMLParser.JspcontentContext ctx) { }
+ 	/**
+ 	 * {@inheritDoc}
+ 	 *
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseVisitor.java
+index 8509c7e..8d81287 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserBaseVisitor.java
+@@ -34,6 +34,20 @@ public class XMLParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> impleme
+ 	 * {@link #visitChildren} on {@code ctx}.</p>
+ 	 */
+ 	@Override public T visitDocument(XMLParser.DocumentContext ctx) { return visitChildren(ctx); }
++	/**
++	 * {@inheritDoc}
++	 *
++	 * <p>The default implementation returns the result of calling
++	 * {@link #visitChildren} on {@code ctx}.</p>
++	 */
++	@Override public T visitJspdocument(XMLParser.JspdocumentContext ctx) { return visitChildren(ctx); }
++	/**
++	 * {@inheritDoc}
++	 *
++	 * <p>The default implementation returns the result of calling
++	 * {@link #visitChildren} on {@code ctx}.</p>
++	 */
++	@Override public T visitJspcontent(XMLParser.JspcontentContext ctx) { return visitChildren(ctx); }
+ 	/**
+ 	 * {@inheritDoc}
+ 	 *
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserListener.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserListener.java
+index 7e0db47..fbca8ad 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserListener.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserListener.java
+@@ -32,6 +32,26 @@ public interface XMLParserListener extends ParseTreeListener {
+ 	 * @param ctx the parse tree
+ 	 */
+ 	void exitDocument(XMLParser.DocumentContext ctx);
++	/**
++	 * Enter a parse tree produced by {@link XMLParser#jspdocument}.
++	 * @param ctx the parse tree
++	 */
++	void enterJspdocument(XMLParser.JspdocumentContext ctx);
++	/**
++	 * Exit a parse tree produced by {@link XMLParser#jspdocument}.
++	 * @param ctx the parse tree
++	 */
++	void exitJspdocument(XMLParser.JspdocumentContext ctx);
++	/**
++	 * Enter a parse tree produced by {@link XMLParser#jspcontent}.
++	 * @param ctx the parse tree
++	 */
++	void enterJspcontent(XMLParser.JspcontentContext ctx);
++	/**
++	 * Exit a parse tree produced by {@link XMLParser#jspcontent}.
++	 * @param ctx the parse tree
++	 */
++	void exitJspcontent(XMLParser.JspcontentContext ctx);
+ 	/**
+ 	 * Enter a parse tree produced by {@link XMLParser#prolog}.
+ 	 * @param ctx the parse tree
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserVisitor.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserVisitor.java
+index 1f5714a..6b2179d 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserVisitor.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/grammar/XMLParserVisitor.java
+@@ -31,6 +31,18 @@ public interface XMLParserVisitor<T> extends ParseTreeVisitor<T> {
+ 	 * @return the visitor result
+ 	 */
+ 	T visitDocument(XMLParser.DocumentContext ctx);
++	/**
++	 * Visit a parse tree produced by {@link XMLParser#jspdocument}.
++	 * @param ctx the parse tree
++	 * @return the visitor result
++	 */
++	T visitJspdocument(XMLParser.JspdocumentContext ctx);
++	/**
++	 * Visit a parse tree produced by {@link XMLParser#jspcontent}.
++	 * @param ctx the parse tree
++	 * @return the visitor result
++	 */
++	T visitJspcontent(XMLParser.JspcontentContext ctx);
+ 	/**
+ 	 * Visit a parse tree produced by {@link XMLParser#prolog}.
+ 	 * @param ctx the parse tree
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/JspRpcCodec.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/JspRpcCodec.java
+new file mode 100644
+index 0000000..833e1f7
+--- /dev/null
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/JspRpcCodec.java
+@@ -0,0 +1,25 @@
++/*
++ * Copyright 2026 the original author or authors.
++ * <p>
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * <p>
++ * https://www.apache.org/licenses/LICENSE-2.0
++ * <p>
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.openrewrite.xml.internal.rpc;
++
++import org.openrewrite.xml.tree.Xml;
++
++public class JspRpcCodec extends XmlRpcCodec {
++    @Override
++    public String getSourceFileType() {
++        return Xml.JspDocument.class.getName();
++    }
++}
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlReceiver.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlReceiver.java
+index 5eb224b..00fb2cd 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlReceiver.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlReceiver.java
+@@ -64,6 +64,17 @@ public Xml visitDocument(Xml.Document document, RpcReceiveQueue q) {
+         return d;
+     }
+ 
++    @Override
++    public Xml visitJspDocument(Xml.JspDocument document, RpcReceiveQueue q) {
++        Xml.JspDocument d = document.withSourcePath(q.<Path, String>receiveAndGet(document.getSourcePath(), Paths::get));
++        d = d.withCharset(q.<Charset, String>receiveAndGet(d.getCharset(), Charset::forName));
++        d = d.withCharsetBomMarked(q.receive(d.isCharsetBomMarked()));
++        d = d.withChecksum(q.receive(d.getChecksum()));
++        d = d.withFileAttributes(q.receive(d.getFileAttributes()));
++        d = d.withContent(q.receiveList(d.getContent(), node -> visitNonNull(node, q)));
++        return d.withEof(q.receive(d.getEof()));
++    }
++
+     @Override
+     public Xml visitProlog(Xml.Prolog prolog, RpcReceiveQueue q) {
+         return prolog
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlSender.java b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlSender.java
+index 42326fc..3c33fb1 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlSender.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/internal/rpc/XmlSender.java
+@@ -47,6 +47,18 @@ public Xml visitDocument(Xml.Document document, RpcSendQueue q) {
+         return document;
+     }
+ 
++    @Override
++    public Xml visitJspDocument(Xml.JspDocument document, RpcSendQueue q) {
++        q.getAndSend(document, d -> d.getSourcePath().toString());
++        q.getAndSend(document, d -> d.getCharset().name());
++        q.getAndSend(document, Xml.JspDocument::isCharsetBomMarked);
++        q.getAndSend(document, Xml.JspDocument::getChecksum);
++        q.getAndSend(document, Xml.JspDocument::getFileAttributes);
++        q.getAndSendList(document, Xml.JspDocument::getContent, Tree::getId, node -> visit(node, q));
++        q.getAndSend(document, Xml.JspDocument::getEof);
++        return document;
++    }
++
+     @Override
+     public Xml visitProlog(Xml.Prolog prolog, RpcSendQueue q) {
+         q.getAndSend(prolog, Xml.Prolog::getXmlDecl, d -> visit(d, q));
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/style/Autodetect.java b/rewrite-xml/src/main/java/org/openrewrite/xml/style/Autodetect.java
+index 421a62e..07a247c 100644
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/style/Autodetect.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/style/Autodetect.java
+@@ -55,7 +55,7 @@ public static class Detector {
+         private final FindLineFormatXmlVisitor findLineFormatXmlVisitor = new FindLineFormatXmlVisitor();
+ 
+         public Detector sample(SourceFile xml) {
+-            if(xml instanceof Xml.Document) {
++            if(xml instanceof Xml.Document || xml instanceof Xml.JspDocument) {
+                 findIndentXmlVisitor.visit(xml, indentStatistics);
+                 findLineFormatXmlVisitor.visit(xml, generalFormatStatistics);
+             }
+diff --git a/rewrite-xml/src/main/java/org/openrewrite/xml/tree/Xml.java b/rewrite-xml/src/main/java/org/openrewrite/xml/tree/Xml.java
+index 00c5f28..0daea33 100755
+--- a/rewrite-xml/src/main/java/org/openrewrite/xml/tree/Xml.java
++++ b/rewrite-xml/src/main/java/org/openrewrite/xml/tree/Xml.java
+@@ -184,6 +184,58 @@ public References getReferences() {
+         }
+     }
+ 
++    /**
++     * A JSP page or include fragment. Top-level nodes retain their original order;
++     * unlike XML, a JSP translation unit need not have exactly one root element.
++     */
++    @Value
++    @With
++    @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
++    class JspDocument implements Xml, SourceFile {
++        @EqualsAndHashCode.Include
++        UUID id;
++        Path sourcePath;
++        String prefixUnsafe;
++        Markers markers;
++        String charsetName;
++        boolean charsetBomMarked;
++        @Nullable Checksum checksum;
++        @Nullable FileAttributes fileAttributes;
++        List<Xml> content;
++        String eof;
++
++        @Override
++        public String getPrefix() {
++            return prefixUnsafe;
++        }
++
++        @Override
++        public JspDocument withPrefix(String prefix) {
++            return WithPrefix.onlyIfNotEqual(this, prefix);
++        }
++
++        @Override
++        public Charset getCharset() {
++            return charsetName == null ? StandardCharsets.UTF_8 : Charset.forName(charsetName);
++        }
++
++        @SuppressWarnings("unchecked")
++        @Override
++        public JspDocument withCharset(Charset charset) {
++            return withCharsetName(charset.name());
++        }
++
++        @Override
++        public <P> Xml acceptXml(XmlVisitor<P> v, P p) {
++            return v.visitJspDocument(this, p);
++        }
++
++        @Override
++        public <P> TreeVisitor<?, PrintOutputCapture<P>> printer(Cursor cursor) {
++            return new XmlPrinter<>();
++        }
++    }
++
+     @Value
+     @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
+     @With
+@@ -682,7 +734,7 @@ public String toString() {
+     @EqualsAndHashCode(callSuper = false, onlyExplicitlyIncluded = true)
+     @AllArgsConstructor(onConstructor_ = {@JsonCreator})
+     @With
+-    class DocTypeDecl implements Xml, Misc {
++    class DocTypeDecl implements Xml, Misc, Content {
+         @EqualsAndHashCode.Include
+         UUID id;
+ 
+diff --git a/rewrite-xml/src/main/resources/META-INF/services/org.openrewrite.rpc.DynamicDispatchRpcCodec b/rewrite-xml/src/main/resources/META-INF/services/org.openrewrite.rpc.DynamicDispatchRpcCodec
+index a0822c2..9dc0974 100644
+--- a/rewrite-xml/src/main/resources/META-INF/services/org.openrewrite.rpc.DynamicDispatchRpcCodec
++++ b/rewrite-xml/src/main/resources/META-INF/services/org.openrewrite.rpc.DynamicDispatchRpcCodec
+@@ -1 +1,2 @@
+ org.openrewrite.xml.internal.rpc.XmlRpcCodec
++org.openrewrite.xml.internal.rpc.JspRpcCodec
+diff --git a/rewrite-xml/src/test/java/org/openrewrite/xml/JspDocumentTest.java b/rewrite-xml/src/test/java/org/openrewrite/xml/JspDocumentTest.java
+new file mode 100644
+index 0000000..bb8969f
+--- /dev/null
++++ b/rewrite-xml/src/test/java/org/openrewrite/xml/JspDocumentTest.java
+@@ -0,0 +1,184 @@
++/*
++ * Copyright 2026 the original author or authors.
++ * <p>
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * <p>
++ * https://www.apache.org/licenses/LICENSE-2.0
++ * <p>
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.openrewrite.xml;
++
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.params.ParameterizedTest;
++import org.junit.jupiter.params.provider.ValueSource;
++import org.openrewrite.InMemoryExecutionContext;
++import org.openrewrite.Parser;
++import org.openrewrite.SourceFile;
++import org.openrewrite.tree.ParseError;
++import org.openrewrite.xml.tree.Xml;
++import org.openrewrite.xml.format.AutoFormatVisitor;
++
++import java.nio.charset.StandardCharsets;
++import java.nio.file.Path;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.stream.Stream;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++class JspDocumentTest {
++    @Test
++    void retainsOrderedTopLevelNodesWithoutSyntheticWrapper() {
++        String source = "<%@ taglib prefix=\"h\" uri=\"http://java.sun.com/jsf/html\" %>\r\n" +
++                        "<!-- license -->\r\n<!DOCTYPE html>\r\n" +
++                        "<h:form id=\"friendlyName\"/><h:panelGroup/>\r\n<!-- tail -->\r\n";
++        Xml.JspDocument document = jsp(source);
++        assertThat(document.getContent()).extracting(node -> node.getClass().getSimpleName())
++          .containsExactly("JspDirective", "Comment", "DocTypeDecl", "Tag", "Tag", "Comment");
++        assertThat(document.getEof()).isEqualTo("\r\n");
++        assertThat(document.printAll()).isEqualTo(source);
++    }
++
++    @Test
++    void recipesReachEveryTopLevelElementAndPreserveFriendlyIds() {
++        Xml.JspDocument document = jsp("<h:form id=\"authorIndexForm\"/><h:form id=\"questionForm\"/>");
++        List<String> ids = new ArrayList<>();
++        Xml.JspDocument changed = (Xml.JspDocument) new XmlIsoVisitor<List<String>>() {
++            @Override
++            public Xml.Tag visitTag(Xml.Tag tag, List<String> names) {
++                names.add(tag.getAttributes().get(0).getValueAsString());
++                return super.visitTag(tag, names).withName("h:panelGroup");
++            }
++        }.visitNonNull(document, ids);
++        assertThat(ids).containsExactly("authorIndexForm", "questionForm");
++        assertThat(changed.printAll())
++          .isEqualTo("<h:panelGroup id=\"authorIndexForm\"/><h:panelGroup id=\"questionForm\"/>");
++    }
++
++    @Test
++    void equalityChecksAllRootsAndJspCode() {
++        Xml.JspDocument document = jsp("<h:form/><h:panelGroup/><% before(); %>");
++        assertThat(SemanticallyEqual.areEqual(document, jsp(document.printAll()))).isTrue();
++        assertThat(SemanticallyEqual.areEqual(document, jsp("<h:form/><h:panelGroup/><% after(); %>"))).isFalse();
++        assertThat(SemanticallyEqual.areEqual(document, jsp("<h:form/><h:outputText/><% before(); %>"))).isFalse();
++    }
++
++    @Test
++    void absoluteXPathMatchesEachTopLevelElement() {
++        Xml.JspDocument document = jsp("<h:form id=\"authorIndexForm\"/><h:form id=\"questionForm\"/>");
++        List<String> ids = new ArrayList<>();
++        XPathMatcher matcher = new XPathMatcher("/h:form");
++        new XmlVisitor<List<String>>() {
++            @Override
++            public Xml visitTag(Xml.Tag tag, List<String> names) {
++                if (matcher.matches(getCursor())) {
++                    names.add(tag.getAttributes().get(0).getValueAsString());
++                }
++                return super.visitTag(tag, names);
++            }
++        }.visit(document, ids);
++        assertThat(ids).containsExactly("authorIndexForm", "questionForm");
++    }
++
++    @Test
++    void formattingSupportsTheJspRootAndRemainsIdempotent() {
++        String source = "<h:form id=\"authorIndexForm\"><h:outputText value=\"#{author.title}\"/></h:form>" +
++                        "<h:form id=\"questionForm\"/>";
++        Xml.JspDocument document = jsp(source);
++        Xml.JspDocument formatted = (Xml.JspDocument) new AutoFormatVisitor<>().visitNonNull(document, 0);
++        assertThat(formatted.printAll()).isNotEqualTo(source)
++          .contains("id=\"authorIndexForm\"", "id=\"questionForm\"", "#{author.title}");
++        Xml.JspDocument twice = (Xml.JspDocument) new AutoFormatVisitor<>().visitNonNull(formatted, 0);
++        assertThat(twice.printAll()).isEqualTo(formatted.printAll());
++    }
++
++    @Test
++    void parsesDirectiveInsideElementAsARealNode() {
++        Xml.JspDocument document = jsp("<div><%@ include file=\"permissionsNav.jsp\" %></div>");
++        Xml.Tag div = (Xml.Tag) document.getContent().get(0);
++        assertThat(div.getContent()).hasSize(1);
++        assertThat(div.getContent().get(0)).isInstanceOf(Xml.JspDirective.class);
++        assertThat(((Xml.JspDirective) div.getContent().get(0)).getType()).isEqualTo("include");
++    }
++
++    @Test
++    void scriptletsAndExpressionsRemainOrderedBeforeAndAfterMarkup() {
++        Xml.JspDocument document = jsp("<% String name = \"test\"; %><div/><%= name %><% done(); %>");
++        assertThat(document.getContent()).extracting(node -> node.getClass().getSimpleName())
++          .containsExactly("JspScriptlet", "Tag", "JspExpression", "JspScriptlet");
++    }
++
++    @Test
++    void doctypeCanBeOutputByVerbatimContent() {
++        Xml.JspDocument document = jsp("<f:view><f:verbatim><!DOCTYPE html></f:verbatim><html/></f:view>");
++        Xml.Tag view = (Xml.Tag) document.getContent().get(0);
++        Xml.Tag verbatim = (Xml.Tag) view.getContent().get(0);
++        assertThat(verbatim.getContent().get(0)).isInstanceOf(Xml.DocTypeDecl.class);
++    }
++
++    @ParameterizedTest
++    @ValueSource(strings = {"fragment.jsp", "fragment.jspf", "header.inc"})
++    void explicitJspParserAcceptsIncludeFragments(String name) {
++        assertThat(parse(JspParser.builder().build(), name, "<h:form/><h:panelGroup/>"))
++          .isInstanceOf(Xml.JspDocument.class);
++    }
++
++    @Test
++    void genericXmlParserDoesNotClaimArbitraryIncFiles() {
++        assertThat(XmlParser.builder().build().accept(Path.of("fortran.inc"))).isFalse();
++    }
++
++    @ParameterizedTest
++    @ValueSource(strings = {"<div/><broken", "<div/></stray>", "<div><p></div>"})
++    void neverHidesMalformedTrailingMarkup(String source) {
++        SourceFile parsed = parse(JspParser.builder().build(), "page.jsp", source);
++        assertThat(parsed).isInstanceOf(ParseError.class);
++        assertThat(parsed.printAll()).isEqualTo(source);
++    }
++
++    @Test
++    void bomAndNonAsciiTextRoundTripAsBytes() {
++        String source = "\uFEFF<%@ page language=\"java\" %>\r\n<p>Été 😀</p><br>\r\n";
++        SourceFile parsed = parse(JspParser.builder().build(), "page.jsp", source);
++        assertThat(parsed).isInstanceOf(Xml.JspDocument.class);
++        assertThat(parsed.printAllAsBytes()).isEqualTo(source.getBytes(StandardCharsets.UTF_8));
++    }
++
++    @Test
++    void strictXmlStillHasOneRootAndAllowsLegalTrailingMisc() {
++        String source = "<?xml version=\"1.0\"?><root/><!-- tail --><?tail x?>\n";
++        SourceFile valid = parse(XmlParser.builder().build(), "page.xml", source);
++        assertThat(valid).isInstanceOf(Xml.Document.class);
++        assertThat(valid.printAll()).isEqualTo(source);
++        assertThat(parse(XmlParser.builder().build(), "page.xml", "<root/><other/>"))
++          .isInstanceOf(ParseError.class);
++        assertThat(parse(XmlParser.builder().build(), "page.xml", "<root><%@ include file=\"x\" %></root>"))
++          .isInstanceOf(ParseError.class);
++    }
++
++    private Xml.JspDocument jsp(String source) {
++        List<Throwable> errors = new ArrayList<>();
++        SourceFile result;
++        try (Stream<SourceFile> parsed = JspParser.builder().build().parse(new InMemoryExecutionContext(errors::add), source)) {
++            result = parsed.findFirst().orElseThrow();
++        }
++        assertThat(errors).isEmpty();
++        assertThat(result).isInstanceOf(Xml.JspDocument.class);
++        assertThat(result.printAll()).isEqualTo(source);
++        return (Xml.JspDocument) result;
++    }
++
++    private SourceFile parse(Parser parser, String name, String source) {
++        Parser.Input input = Parser.Input.fromString(Path.of(name), source);
++        try (Stream<SourceFile> parsed = parser.parseInputs(List.of(input), null, new InMemoryExecutionContext(t -> { }))) {
++            return parsed.findFirst().orElseThrow();
++        }
++    }
++}
+diff --git a/rewrite-xml/src/test/java/org/openrewrite/xml/XmlParserTest.java b/rewrite-xml/src/test/java/org/openrewrite/xml/XmlParserTest.java
+index 1372784..2409238 100755
+--- a/rewrite-xml/src/test/java/org/openrewrite/xml/XmlParserTest.java
++++ b/rewrite-xml/src/test/java/org/openrewrite/xml/XmlParserTest.java
+@@ -42,6 +42,7 @@
+ import static org.junit.jupiter.api.Assertions.assertNotNull;
+ import static org.openrewrite.test.RewriteTest.toRecipe;
+ import static org.openrewrite.xml.Assertions.xml;
++import static org.openrewrite.xml.Assertions.jsp;
+ 
+ @SuppressWarnings({"CheckDtdRefs", "CheckTagEmptyBody"})
+ class XmlParserTest implements RewriteTest {
+@@ -116,9 +117,9 @@ void websphereTableMapping() {
+     }
+ 
+     @Test
+-    void jsp() {
++    void jspPage() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+@@ -142,7 +143,7 @@ void jsp() {
+     @Test
+     void jspScriptlet() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+@@ -166,7 +167,7 @@ void jspScriptlet() {
+     @Test
+     void jspExpression() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+@@ -185,7 +186,7 @@ void jspExpression() {
+     @Test
+     void jspDeclaration() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+@@ -210,7 +211,7 @@ public int incrementCounter() {
+     @Test
+     void jspComment() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+@@ -233,7 +234,7 @@ void jspComment() {
+     @Test
+     void jspEmptyFile() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               """,
+@@ -245,7 +246,7 @@ void jspEmptyFile() {
+     @Test
+     void jspNoHtmlContent() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <%-- This is a JSP comment that won't appear in the HTML output --%>
+@@ -258,7 +259,7 @@ void jspNoHtmlContent() {
+     @Test
+     void jspScriptletBeforeHtml() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <%-- This is a JSP comment that won't appear in the HTML output --%>
+@@ -273,7 +274,7 @@ void jspScriptletBeforeHtml() {
+     @Test
+     void mixedJspElements() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+@@ -301,7 +302,7 @@ void mixedJspElements() {
+     @Test
+     void lowerCaseDocType() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!doctype html>
+@@ -318,7 +319,7 @@ void lowerCaseDocType() {
+     @Test
+     void htmlVoidElementInJsp() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <html lang="en">
+@@ -337,7 +338,7 @@ void htmlVoidElementInJsp() {
+     @Test
+     void htmlVoidElementsWithAttributesInJsp() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <html>
+@@ -360,7 +361,7 @@ void htmlVoidElementsWithAttributesInJsp() {
+     @Test
+     void springBootWelcomeJsp() {
+         rewriteRun(
+-          xml(
++          jsp(
+             //language=html
+             """
+               <!DOCTYPE html>
+diff --git a/rewrite-xml/src/test/java/org/openrewrite/xml/internal/rpc/XmlSendReceiveTest.java b/rewrite-xml/src/test/java/org/openrewrite/xml/internal/rpc/XmlSendReceiveTest.java
+index 1931318..c8298c2 100644
+--- a/rewrite-xml/src/test/java/org/openrewrite/xml/internal/rpc/XmlSendReceiveTest.java
++++ b/rewrite-xml/src/test/java/org/openrewrite/xml/internal/rpc/XmlSendReceiveTest.java
+@@ -40,6 +40,7 @@
+ import static org.openrewrite.marketplace.RecipeBundle.runtimeClasspath;
+ import static org.openrewrite.test.RewriteTest.toRecipe;
+ import static org.openrewrite.xml.Assertions.xml;
++import static org.openrewrite.xml.Assertions.jsp;
+ 
+ class XmlSendReceiveTest implements RewriteTest {
+     RewriteRpc server;
+@@ -82,6 +83,18 @@ public void defaults(RecipeSpec spec) {
+         }));
+     }
+ 
++    @Test
++    void sendReceiveJspWithMultipleRootsAndDirectives() {
++        rewriteRun(
++          jsp(
++            "<%@ taglib prefix=\"h\" uri=\"http://java.sun.com/jsf/html\" %>\n" +
++            "<child>original</child>\n<child>original</child>",
++            "<%@ taglib prefix=\"h\" uri=\"http://java.sun.com/jsf/html\" %>\n" +
++            "<child>changed</child>\n<child>changed</child>"
++          )
++        );
++    }
++
+     @DocumentExample
+     @Test
+     void sendReceiveSimpleTag() {
+-- 
+2.54.0 (Apple Git-157)
+
