@@ -1,0 +1,2 @@
+# Literal JSP output in these fixtures intentionally retains source whitespace.
+src/test/resources/examples/*.jspx -whitespace
