@@ -122,6 +122,41 @@ For fragments use `true` and append a JSON file containing the inherited taglib
 mappings. The pilot generates its complete runtime classpath and a Samigo taglib
 map under `target/jspx-verification/` for reproducible examples.
 
+## Full Samigo conversion census
+
+After building the module and application classpath as above, run:
+
+```sh
+python3 build-tools/samigo-jspx/census.py --workers 4
+```
+
+The census takes a complete Git snapshot of the original webapp at `a2f52bae02d`
+and runs the actual recipe independently on all **245 JSPs**. Application sources
+are unchanged. Previews, compiler logs, and results go under `target/jspx-census/`.
+The [recorded full-corpus results](results/full-corpus.json) contain each source
+hash, conversion mode, include parents, outcome, and failure diagnostic.
+
+| Conversion mode | Passed | Total |
+| --- | ---: | ---: |
+| Full pages | 115 | 128 |
+| Include fragments | 117 | 117 |
+| All JSPs | **232** | **245** |
+
+Passing requires namespace-aware XML validation, original and converted Jasper
+Java compilation, and an OpenRewrite XML round-trip. Include-only files are
+tested as fragments with the corpus's nonconflicting taglib mappings; parent
+Java variables are not synthesized. Unreferenced files remain full pages.
+
+The **13 failures** comprise six unsupported whitespace-trimming cases, five
+pages requiring explicit response-charset normalization, and two pre-existing
+source failures: malformed EL in `author/previewAssessment.jsp` and a missing
+include in `delivery/reviewAssessment.jsp`.
+
+This is per-file validity coverage. Includes still target original JSPs; the
+census does not test an application in which every include has been renamed,
+compare generated Java across the full corpus, or validate literal HTML.
+The four JSPF files and `header.inc` are dependencies, not conversion targets.
+
 ## Current boundaries
 
 This is a tested syntax-normalization recipe and preview workflow, not a
@@ -140,5 +175,5 @@ step rather than an accidental effect of this recipe.
 
 The prototype uses Jasper internals through one adapter pinned to 10.1.60.
 Compiler comparisons cover the listed five pages and fixtures, not every Sakai
-flow or arbitrary container. No live deployment or full Samigo conversion is
-claimed by this pilot.
+flow or arbitrary container. The separate census measures per-file conversion
+validity. No live deployment or complete application migration is claimed.
