@@ -17,56 +17,7 @@
         <h:outputText value="Quiz: #{pdfAssessment.title}" />
       </title>
 
-      <script>
-        // Only resizes the frame. Never touches src: reassigning it navigates the frame,
-        // which tears down the pdf.js viewer and refetches the PDF on every resize event.
-        function sizePrintPdfPreview() {
-          const iframe = document.getElementById('print-pdf-preview');
-          if (iframe) {
-            iframe.style.height = Math.max(600, iframe.offsetWidth * 0.75) + 'px';
-          }
-        }
-
-        function loadPrintPdfPreview() {
-          const iframe = document.getElementById('print-pdf-preview');
-          const urlEl = document.getElementById('pdf-preview-url');
-          const titleEl = document.getElementById('pdf-preview-title');
-          if (iframe && urlEl) {
-            iframe.src = urlEl.textContent.trim();
-          }
-          if (iframe && titleEl) {
-            iframe.title = titleEl.textContent.trim();
-          }
-          sizePrintPdfPreview();
-        }
-
-        function applyPrintSettingsFromControl(control) {
-          const form = control.closest('form');
-          const applyBtn = form && form.querySelector('.auto-apply-settings');
-          if (!form || !applyBtn) {
-            return;
-          }
-          if (typeof form.requestSubmit === 'function') {
-            form.requestSubmit(applyBtn);
-          } else {
-            applyBtn.click();
-          }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-          loadPrintPdfPreview();
-          window.addEventListener('resize', sizePrintPdfPreview);
-
-          document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('change', function(event) {
-              const control = event.target;
-              if (control.matches('.form-check-input, .form-select, input[type="radio"]')) {
-                applyPrintSettingsFromControl(control);
-              }
-            });
-          });
-        });
-      </script>
+      <script src="/samigo-app/js/assessment-print-preview.js"></script>
     </head>
 
     <body id="qb_print" class="view_student">

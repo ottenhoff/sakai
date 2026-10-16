@@ -31,41 +31,7 @@
     </h:panelGroup>
     <div class="col-xs-12 col-sm-12 col-md-12 instruction"><h:outputText value="#{authorMessages.preview_tip}" /></div>
 
-    <script>
-        $(function() {
-            $('a.uimodal').on('click', function() {
-                var href = $(this).attr('href');
-                var title = $(this).attr('title');
-                var loading = $(this).attr('loading');
-                $('<div id=QuestionPreview>').html(loading).dialog({
-                    modal: true,
-                    open: function () {
-                        $.get(href).done(function(data, status, XHR){
-                            handleData(data);
-                        });
-                    },
-
-                    close: function (e) {
-                        $(this).empty();
-                        $(this).dialog('destroy');
-                    },
-                    height: 350,
-                    width: 540,
-                    title: title
-
-                });
-                return false;
-            });
-        });
-
-
-        function handleData( responseData ) {
-            $("#QuestionPreview").html(responseData);
-        }
-
-
-
-    </script>
+    <script src="/samigo-app/js/question-search-results.js"></script>
 
     <t:dataTable value="#{searchQuestionBean.results.entrySet().toArray()}" var="item_search_result" styleClass="table table-striped" id="searchquestions-questions" rowIndexVar="row">
 

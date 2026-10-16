@@ -1,0 +1,90 @@
+{
+  "sourceBase": "a2f52bae02d",
+  "parserPatch": "8d77476afc1a9f50f044ba0cf744f6a0c91b073e",
+  "parserRuntimeCore": "8.90.4",
+  "beforeJspSummary": {
+    "TOTAL": 245,
+    "PASS": 82,
+    "PARSE_ERROR": 163
+  },
+  "afterJspSummary": {
+    "TOTAL": 245,
+    "PASS": 84,
+    "PARSE_ERROR": 161
+  },
+  "beforeAllTemplatesSummary": {
+    "TOTAL": 250,
+    "PASS": 86,
+    "PARSE_ERROR": 164
+  },
+  "afterAllTemplatesSummary": {
+    "TOTAL": 250,
+    "PASS": 88,
+    "PARSE_ERROR": 162
+  },
+  "unchangedTemplatesWithIdenticalHashAndStatus": 245,
+  "browserFixtureTests": 3,
+  "liveSakaiFlows": "Unavailable: https://sakai.example returned HTTP 502; no server started",
+  "results": [
+    {
+      "view": "jsf/print/printAssessment.jsp",
+      "script": "js/assessment-print-preview.js",
+      "beforeSha256": "dbf171dfa7b72410562edd976d9f043d2aeb05a18af0e559b8c8fd29417f0ef1",
+      "afterSha256": "3b69cbec26a810fe42edea47f7758fc49e7ef80623ac236ceeffa6a5d69eb46b",
+      "before": "PARSE_ERROR",
+      "after": "PASS",
+      "firstDiagnostic": "",
+      "javascriptAstIdentical": true,
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatchesWithDocumentedNormalization": true
+    },
+    {
+      "view": "jsf/evaluation/gradeStudentResultAttachment.jsp",
+      "script": "js/evaluation-attachments.js",
+      "beforeSha256": "ac872dff279a1c6c2641d52104558346e754c815788da8a0cf8d0d241cb41ea4",
+      "afterSha256": "c753fda47b1ac1d9ffb312571770ef94fb732e948fffee855542768d606fa5aa",
+      "before": "PARSE_ERROR",
+      "after": "PASS",
+      "firstDiagnostic": "",
+      "javascriptAstIdentical": true,
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatchesWithDocumentedNormalization": true
+    },
+    {
+      "view": "jsf/author/searchResults.jsp",
+      "script": "js/question-search-results.js",
+      "beforeSha256": "638b6face5ddd92d5ea34a85bb5f58836f606372048c5274743ab0c2b786692f",
+      "afterSha256": "8404dc322d6b102bae7519ed96304a91cb9e0b96fd962f14eda328638c7ab713",
+      "before": "PARSE_ERROR",
+      "after": "PARSE_ERROR",
+      "firstDiagnostic": "org.openrewrite.xml.XmlParsingException: Syntax error in samigo/samigo-app/src/webapp/jsf/author/searchResults.jsp at line 46:30 token recognition error at: '\"/portal/tool/<'.",
+      "javascriptAstIdentical": true,
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatchesWithDocumentedNormalization": true
+    },
+    {
+      "view": "jsf/delivery/submitted.jsp",
+      "script": "js/assessment-submission.js",
+      "beforeSha256": "265c8ad3a9ad1ad6fffc147f84b4fccd2755664d5f2794f0cdfd2273989395d3",
+      "afterSha256": "37c98b47a43b52cf46d28796e7763e5e29b303f11d3fb8550814603cb90d06b0",
+      "before": "PARSE_ERROR",
+      "after": "PARSE_ERROR",
+      "firstDiagnostic": "org.openrewrite.xml.XmlParsingException: Syntax error in samigo/samigo-app/src/webapp/jsf/delivery/submitted.jsp at line 39:13 token recognition error at: '\"<'.",
+      "javascriptAstIdentical": true,
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatchesWithDocumentedNormalization": true
+    },
+    {
+      "view": "jsf/evaluation/item/displayImageMapQuestion.jsp",
+      "script": "js/image-map-evaluation.js",
+      "beforeSha256": "238fe54fb0833ed85ed947977c5121e4769f30f89510a1db8babc5218dfd3e50",
+      "afterSha256": "5bb91c4e9be169bc06ea67e246275948f3c8567dddeb0d09f6dcb4c7e1f229bf",
+      "before": "PARSE_ERROR",
+      "after": "PARSE_ERROR",
+      "firstDiagnostic": "org.openrewrite.xml.XmlParsingException: Syntax error in samigo/samigo-app/src/webapp/jsf/evaluation/item/displayImageMapQuestion.jsp at line 43:39 token recognition error at: '\"<'.",
+      "javascriptAstIdentical": true,
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatchesWithDocumentedNormalization": true
+    }
+  ]
+}

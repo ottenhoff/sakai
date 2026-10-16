@@ -34,23 +34,7 @@
       <title><h:outputText value="#{deliveryMessages.submission}" /></title>
       </head>
 
-<script>
-function reviewAssessment(field){
-var insertlinkid= field.id.replace("reviewAssessment", "hiddenlink");
-var newindex = 0;
-for (i=0; i<document.links.length; i++) {
-  if(document.links[i].id == insertlinkid)
-  {
-    newindex = i;
-    break;
-  }
-}
-
-document.links[newindex].onclick();
-}
-
-function closeWindow() {alert("1"); self.opener=this; self.close(); }
-</script>
+<script src="/samigo-app/js/assessment-submission.js"></script>
 
 <body onload="<%= request.getAttribute("html.body.onload") %>">
       

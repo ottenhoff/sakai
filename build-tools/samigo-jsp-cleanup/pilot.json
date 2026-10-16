@@ -1,0 +1,10 @@
+{
+  "baseCommit": "a2f52bae02d",
+  "cases": [
+    {"view": "jsf/print/printAssessment.jsp", "script": "js/assessment-print-preview.js"},
+    {"view": "jsf/evaluation/gradeStudentResultAttachment.jsp", "script": "js/evaluation-attachments.js"},
+    {"view": "jsf/author/searchResults.jsp", "script": "js/question-search-results.js"},
+    {"view": "jsf/delivery/submitted.jsp", "script": "js/assessment-submission.js"},
+    {"view": "jsf/evaluation/item/displayImageMapQuestion.jsp", "script": "js/image-map-evaluation.js"}
+  ]
+}

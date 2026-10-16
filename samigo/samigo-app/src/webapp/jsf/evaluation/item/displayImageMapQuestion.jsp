@@ -30,50 +30,7 @@ include file for displaying fill in the numeric questions
 <link rel="stylesheet" type="text/css" href="/samigo-app/css/imageQuestion.student.css">
 
 <f:verbatim>
-<script>	
-	jQuery(window).load(function(){
-			
-		$('input:hidden[id^=hiddenSerializedCoords_]').each(function(){
-			var myregexp = /hiddenSerializedCoords_(\d+)_(\d+)/
-			var matches = myregexp.exec(this.id);
-			var sequence = matches[1];
-			var label = matches[2];
-			
-			var serializedImageCoords = this.id.replace('hiddenSequence', 'hiddenSerializedCoords').replace(/:/g, '\\:');
-			
-			var sel = new selectionAuthor({selectionClass: 'selectiondiv', textClass: 'textContainer'}, 'imageMapContainer');
-			try {
-				sel.setCoords(jQuery.parseJSON(this.value));
-				sel.setText(label);
-			}catch(err){}
-			
-		});	
-	});
-	
-	var selectionList = [];
-	function loadAnswer(answerString) {
-		for(var i=0; i<selectionList.length; i++)
-		{
-			selectionList[i].remove();
-			delete selectionList[i];
-		}
-		selectionList = [];
-		
-		var tokens = answerString.split('<br/>');
-		for(var i=0; i<tokens.length; i++)
-		{
-			try
-			{
-				var label = tokens[i].substring(0, tokens[i].indexOf(':'));
-				var coords = tokens[i].substring(tokens[i].indexOf(':')+1);
-				var newSelection = new selectionStudent('pointerClass', 'imageMapContainer');
-				newSelection.setCoords(jQuery.parseJSON(coords));
-				newSelection.setText(label);
-				selectionList.push(newSelection);
-			}catch(err){}
-		}
-	}
-</script>
+<script src="/samigo-app/js/image-map-evaluation.js"></script>
 </f:verbatim>
 
 <h:outputText value="#{question.text}"  escape="false"/>

@@ -20,38 +20,7 @@
 --%>
 -->
 
-<script>
-function addAttachments(event, field){
-event.preventDefault();
-var insertlinkid= field.id.replace("addAttachments", "hiddenlink");
-var newindex = 0;
-for (i=0; i<document.links.length; i++) {
-  if(document.links[i].id == insertlinkid)
-  {
-    newindex = i;
-    break;
-  }
-}
-
-document.links[newindex].click();
-}
-
-function addRemoveAttachments(event, field){
-event.preventDefault();
-var insertlinkid= field.id.replace("addRemoveAttachments", "hiddenlink");
-var newindex = 0;
-for (i=0; i<document.links.length; i++) {
-  if(document.links[i].id == insertlinkid)
-  {
-    newindex = i;
-    break;
-  }
-}
-
-document.links[newindex].click();
-}
-
-</script>
+<script src="/samigo-app/js/evaluation-attachments.js"></script>
 
 <!-- ASSESSMENT ATTACHMENTS -->
  <h:panelGrid border="0">
