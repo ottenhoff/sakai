@@ -61,6 +61,12 @@ includes because Samigo's `*.jsp` configuration does not match `*.jspx`.
 Fragments leave that responsibility with their parent. A target that also
 matches automatic prelude/coda configuration is rejected to prevent duplication.
 
+Whitespace trimming uses Jasper's own `TextOptimizer` pass on the fresh source
+AST before emitting `jsp:text`. The effective `trimDirectiveWhitespaces` setting
+is retained. Mixed text keeps its whitespace; only nodes Jasper would trim are
+removed. Trimmed pages use escaped XML text rather than split CDATA sections to
+keep carriage returns and retained trailing whitespace in the same text node.
+
 Tomcat's XML JSP parser enumerates attributes in reverse order. This adapter
 reverses their XML spelling so the generated setter calls retain the original
 order on the pinned compiler. Changing compiler version or XML formatting needs
@@ -77,7 +83,7 @@ mvn -B -ntp -f samigo/samigo-app/pom.xml -DskipTests compile dependency:build-cl
 mvn -B -ntp -f build-tools/samigo-jspx/pom.xml -P samigo-pilot verify
 ```
 
-The Maven profile runs unit tests and `verify.py`. It takes the five **original**
+The Maven profile runs unit tests and `verify.py`. It takes 16 **original**
 JSPs from commit `a2f52bae02d`, including their inline scripts, and writes previews
 under `target/jspx-verification/converted/`. It does not edit application sources
 or start Tomcat/Sakai. A copy of the application's webapp is used for compilation.
@@ -93,7 +99,16 @@ Java must match after normalizing only:
 IDs, bindings, listeners, types, calls, **setter order**, scriptlets, and output
 strings remain significant. Changed-binding and changed-ID controls verify that
 normalization does not erase those differences. Separate fixtures exercise
-escaped EL in template text and attributes, entities, CRLF, Unicode, and `]]>`.
+escaped EL in template text and attributes, entities, CRLF, Unicode, `]]>`, and
+whitespace-only versus mixed-text trimming.
+
+The six whitespace-trimming pages must match without any additional allowed
+changes. Five pages explicitly opt into response-charset normalization: their
+only permitted generated-Java change is the exact call from
+`response.setContentType("text/html")` to
+`response.setContentType("text/html;charset=UTF-8")`. The report records this
+intentional change separately from strict equality; all other generated code
+must still match.
 
 Logs, generated Java, diffs, and machine-readable results are under
 `target/jspx-verification/`. The checked-in [pilot results](results/pilot.json)
@@ -103,12 +118,14 @@ is included for inspection and XML validation during unit tests.
 
 ## Recipe inputs and preview CLI
 
-The recipe accepts source files with webapp-relative paths and four options:
+The recipe accepts source files with webapp-relative paths and five options:
 
 - `webappDirectory`: source webapp directory, for includes and configuration.
 - `classpath`: platform-separated dependency JARs and app class directories.
 - `taglibs`: inherited prefix-to-URI mappings for fragments; empty for self-contained pages.
 - `fragment`: whether the source is an include fragment rather than a translation unit.
+- `defaultResponseCharset`: optional charset, such as `UTF-8`, for full pages
+  lacking a response charset. Existing response charsets remain unchanged.
 
 The CLI invokes the actual OpenRewrite recipe, not a separate conversion script:
 
@@ -122,12 +139,19 @@ For fragments use `true` and append a JSON file containing the inherited taglib
 mappings. The pilot generates its complete runtime classpath and a Samigo taglib
 map under `target/jspx-verification/` for reproducible examples.
 
+To normalize missing response charsets, append a taglib JSON file (use `{}` for
+a self-contained page) and `UTF-8` to the CLI arguments. This explicitly changes
+the response header and encoding for affected pages. It does not reinterpret
+their source-file bytes or override an existing response charset. Without the
+option, full pages without a response charset still fail rather than silently
+changing behavior.
+
 ## Full Samigo conversion census
 
 After building the module and application classpath as above, run:
 
 ```sh
-python3 build-tools/samigo-jspx/census.py --workers 4
+python3 build-tools/samigo-jspx/census.py --workers 4 --default-response-charset UTF-8
 ```
 
 The census takes a complete Git snapshot of the original webapp at `a2f52bae02d`
@@ -138,19 +162,18 @@ hash, conversion mode, include parents, outcome, and failure diagnostic.
 
 | Conversion mode | Passed | Total |
 | --- | ---: | ---: |
-| Full pages | 115 | 128 |
+| Full pages | 126 | 128 |
 | Include fragments | 117 | 117 |
-| All JSPs | **232** | **245** |
+| All JSPs | **243** | **245** |
 
 Passing requires namespace-aware XML validation, original and converted Jasper
 Java compilation, and an OpenRewrite XML round-trip. Include-only files are
 tested as fragments with the corpus's nonconflicting taglib mappings; parent
 Java variables are not synthesized. Unreferenced files remain full pages.
 
-The **13 failures** comprise six unsupported whitespace-trimming cases, five
-pages requiring explicit response-charset normalization, and two pre-existing
-source failures: malformed EL in `author/previewAssessment.jsp` and a missing
-include in `delivery/reviewAssessment.jsp`.
+With explicit UTF-8 response-charset normalization, the only **two failures** are
+pre-existing source failures: malformed EL in `author/previewAssessment.jsp` and
+a missing include in `delivery/reviewAssessment.jsp`.
 
 This is per-file validity coverage. Includes still target original JSPs; the
 census does not test an application in which every include has been renamed,
@@ -167,13 +190,11 @@ view mappings, security constraints, and matching JSP configuration. The CLI
 leaves running application files unchanged while those changes are prepared.
 
 Unsupported source constructs fail explicitly. These currently include
-tag-dependent bodies, whitespace trimming, unsupported JSP action node kinds,
-and conflicting taglib prefixes. A full page without an explicit response
-charset is rejected: JSPX otherwise adds a charset and changes the generated
-response-header behavior. Encoding normalization must be an explicit preceding
-step rather than an accidental effect of this recipe.
+tag-dependent bodies, unsupported JSP action node kinds, and conflicting taglib
+prefixes. Missing response charsets require the explicit normalization option
+described above.
 
 The prototype uses Jasper internals through one adapter pinned to 10.1.60.
-Compiler comparisons cover the listed five pages and fixtures, not every Sakai
+Compiler comparisons cover the listed 16 pages and five fixtures, not every Sakai
 flow or arbitrary container. The separate census measures per-file conversion
 validity. No live deployment or complete application migration is claimed.

@@ -1,24 +1,16 @@
 {
-  "recipe": "org.sakaiproject.buildtools.jspx.JspToJspx",
-  "openrewriteVersion": "8.90.4",
-  "jasperVersion": "10.1.60",
-  "sourceBase": "a2f52bae02d",
-  "normalization": [
-    "Jasper source coordinates",
-    "Dependency metadata",
-    "Adjacent literal out.write chunks"
-  ],
-  "setterOrderCompared": true,
-  "runtimeStarted": false,
+  "baseCommit": "a2f52bae02d",
   "results": [
     {
       "view": "jsf/print/printAssessment.jsp",
       "fragment": false,
       "xmlAndOpenRewriteParse": true,
       "sourceSha256": "dbf171dfa7b72410562edd976d9f043d2aeb05a18af0e559b8c8fd29417f0ef1",
-      "jspxSha256": "ab343f15e16e1ffa2bda8dc2e984de4771983320b8959b0fff062a7b8f2e8a10",
+      "jspxSha256": "edfefd33a9416678aeb3125644938919898ea37538d7ed5ab8172763df259109",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "jsf/evaluation/gradeStudentResultAttachment.jsp",
@@ -27,7 +19,9 @@
       "sourceSha256": "ac872dff279a1c6c2641d52104558346e754c815788da8a0cf8d0d241cb41ea4",
       "jspxSha256": "f54cc0bc0963c6ab5a3cfd01808929b0197b681acc4a813e28e90022aeb7c93b",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "jsf/author/searchResults.jsp",
@@ -36,16 +30,20 @@
       "sourceSha256": "638b6face5ddd92d5ea34a85bb5f58836f606372048c5274743ab0c2b786692f",
       "jspxSha256": "0ef0c8c53f89acef1c40243e6412c6750f21ec8e7e826c1f6c2fa36ec38da36d",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "jsf/delivery/submitted.jsp",
       "fragment": false,
       "xmlAndOpenRewriteParse": true,
       "sourceSha256": "265c8ad3a9ad1ad6fffc147f84b4fccd2755664d5f2794f0cdfd2273989395d3",
-      "jspxSha256": "0674ce796af4aaca44f85d2f0c1de3cff4be7f5ec7150b4cfbac00d96c1d8acd",
+      "jspxSha256": "f998c68a6308f2ae0aa328af5fd47e8af77e023f8007a4a7ca58ec465ca465fd",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "jsf/evaluation/item/displayImageMapQuestion.jsp",
@@ -54,34 +52,202 @@
       "sourceSha256": "238fe54fb0833ed85ed947977c5121e4769f30f89510a1db8babc5218dfd3e50",
       "jspxSha256": "2c6401f6b75f59bccefa885492fb848a0a270e75940b2e185a055609e9c69f05",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/delivery/getSubmissionStatus.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "9e21a4bdec40f85d45f075da3c9122ecb2cc89c920afdb6f46e5d8493c748bf0",
+      "jspxSha256": "14a54e7e8243286ae0b3b866fa82837dc26fa32efee419e373479176b727fdb7",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/delivery/getTimerProgress.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "1ad10e735744229578053094820e50b2e62e4a8995811a06efd9919f73a61021",
+      "jspxSha256": "1c39a95bc47e3dd4b5d2257fd9460898e47b4506f98bdcbc4b49399cf30c0f13",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/delivery/getTimerStrings.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "19c6a35b3433d535076278ef2d55622c2ae4b39048947434bf26aef47718443b",
+      "jspxSha256": "8053ad51ef7a09a0bc4498bd867ce82a0f828e70f506d43f5bedba0d4ccd5c83",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/delivery/stopTimerProgress.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "2c73dbf31fe61e12f49fbf0c070c23689fe5142fe8f123283c513d92003e6aca",
+      "jspxSha256": "565ea5d921b898a3eed5526573f8f8362c8a5ba2792161cd1323b7d09b8afb5c",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/qti/xmlDisplay.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "b204b0b03e983edf348b3f30b737601609fc7e3716402a453be1f9d786d59727",
+      "jspxSha256": "5d0c841126c88bd1fb2080caecc771db7e8cc4742a4dc15ec0c8bd38a7456468",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/qti/xmlPoolDisplay.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "7cfd4f15830f985b4a4adaacb50de161ea5a0d1ffb495ef8b1160675b6ccf01b",
+      "jspxSha256": "a6999c4827aa6bd907493bf9ddd3442e8b93ba383693b546e586e6ac0bc7ea0e",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/author/createAssessment_title.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "0ab4a3dc5e45e240760dbb99f082622d827ae9dd40ccf4a8f72dedc8e5eedca1",
+      "jspxSha256": "bce7bda22af1e4b653bf5293d354e3af3f5a466c8d546e59b936609c5ccf8587",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": false,
+      "intentionalResponseCharsetChange": {
+        "from": "text/html",
+        "to": "text/html;charset=UTF-8"
+      },
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/author/editLink.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "831161584012363c3500233d813c754f90714041fb6145456b13ec01f381cc73",
+      "jspxSha256": "b4f090ba118f3a025789c6bf747a7c19dcf4510b2bd098e3b55582af57f3b0b8",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": false,
+      "intentionalResponseCharsetChange": {
+        "from": "text/html",
+        "to": "text/html;charset=UTF-8"
+      },
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/security/roleCheckStaticInclude.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "92f85fab9f31062837e70ca85bc5d92bd33fd26e3304e03e46083be2f67d63b5",
+      "jspxSha256": "1e7384249645df1272274173079308bb80dc707d975437ce58d40e3a87fd9773",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": false,
+      "intentionalResponseCharsetChange": {
+        "from": "text/html",
+        "to": "text/html;charset=UTF-8"
+      },
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/upload/closeWindow.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "3d9491dad15331eceeb5188e698846461f7018c68609ae4c3b50aea2cd5f5424",
+      "jspxSha256": "0aab43a6e53478da8d9ef0db7f013952b77ec806666469cdf47bb6de033312c1",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": false,
+      "intentionalResponseCharsetChange": {
+        "from": "text/html",
+        "to": "text/html;charset=UTF-8"
+      },
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "jsf/upload/uploadFile.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "77baba1c9d03199edbee99aa549c6e21ab26e7afcbaaf5952fc047644fe9a9e4",
+      "jspxSha256": "994ec2b14ba509033065a59014ffd515f1a97c2ff9da6a2351ff1be77835096a",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": false,
+      "intentionalResponseCharsetChange": {
+        "from": "text/html",
+        "to": "text/html;charset=UTF-8"
+      },
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "controls/escaped-el.jsp",
       "fragment": false,
       "xmlAndOpenRewriteParse": true,
       "sourceSha256": "2ebc470392bad126908478b411ed82c6e1715b08e63e2a39b959d33665105708",
-      "jspxSha256": "07dad739fbecec72b0f7fe5c5104942bf7cf96174ee236a24107b46db7d2bfb1",
+      "jspxSha256": "797d184601c0fce9014fb738da3aebfbba3ab38f0c9a63e4d739d49fbee1343c",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "controls/attribute-escaping.jsp",
       "fragment": false,
       "xmlAndOpenRewriteParse": true,
       "sourceSha256": "69859dcf553dee2b338b960bf405a06bdbe3311db5f1195b83cb6df7736d87b9",
-      "jspxSha256": "10dae674143201028c0a2f9c3c7c26a98eac1594522ab07649aa34dbfc6e087c",
+      "jspxSha256": "ff2ae2cbd4b2511c487b1ffe747865ddb953b8e6c449646873993b9edfd09ad2",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     },
     {
       "view": "controls/cdata-and-whitespace.jsp",
       "fragment": false,
       "xmlAndOpenRewriteParse": true,
       "sourceSha256": "19cef8a5896db1dde38ca345297d46a20b15b303cf8c63fa8a8680162f3cabbc",
-      "jspxSha256": "e57aff825033978969b3f26963ed1b5a567b6b4334b1047ed45d02d98c1850e3",
+      "jspxSha256": "2e10e81d53beaa54c979e8e5fa5bba9912ab1fd3932da648caf3043fea41be2b",
       "jasperCompiledBeforeAndAfter": true,
-      "generatedJavaMatches": true
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "controls/trimmed-whitespace.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "df361844a9cce0e0f1ebce1ff24a4f679de9a6eab0372a05bf1a18c139dc0a62",
+      "jspxSha256": "1e4801658533892a181066f79be5925a264fad47ab7fea96183122899798e47c",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
+    },
+    {
+      "view": "controls/trimmed-mixed-text.jsp",
+      "fragment": false,
+      "xmlAndOpenRewriteParse": true,
+      "sourceSha256": "6a5748b6595f5ace5ce7830b0d960fbc429a760b4477c7c7363b671b5560e9d7",
+      "jspxSha256": "3c5477080eba6d0482da06ac58a1db70fb6215ec418393c85f2bc97189c2feee",
+      "jasperCompiledBeforeAndAfter": true,
+      "generatedJavaMatches": true,
+      "intentionalResponseCharsetChange": null,
+      "generatedJavaMatchesExpectedChanges": true
     }
-  ]
+  ],
+  "jasperVersion": "10.1.60",
+  "openRewriteVersion": "8.90.4"
 }

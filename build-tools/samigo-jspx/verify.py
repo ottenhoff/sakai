@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert five ORIGINAL Samigo JSPs, compile JSP/JSPX, and compare generated Java."""
+"""Convert original Samigo JSPs, compile JSP/JSPX, and compare generated Java."""
 import ast
 import difflib
 import hashlib
@@ -22,11 +22,29 @@ CASES = [
     ('jsf/author/searchResults.jsp', True),
     ('jsf/delivery/submitted.jsp', False),
     ('jsf/evaluation/item/displayImageMapQuestion.jsp', True),
+    ('jsf/delivery/getSubmissionStatus.jsp', False),
+    ('jsf/delivery/getTimerProgress.jsp', False),
+    ('jsf/delivery/getTimerStrings.jsp', False),
+    ('jsf/delivery/stopTimerProgress.jsp', False),
+    ('jsf/qti/xmlDisplay.jsp', False),
+    ('jsf/qti/xmlPoolDisplay.jsp', False),
+    ('jsf/author/createAssessment_title.jsp', False),
+    ('jsf/author/editLink.jsp', False),
+    ('jsf/security/roleCheckStaticInclude.jsp', False),
+    ('jsf/upload/closeWindow.jsp', False),
+    ('jsf/upload/uploadFile.jsp', False),
 ]
+UTF8_NORMALIZED = {
+    'jsf/author/createAssessment_title.jsp', 'jsf/author/editLink.jsp',
+    'jsf/security/roleCheckStaticInclude.jsp', 'jsf/upload/closeWindow.jsp',
+    'jsf/upload/uploadFile.jsp',
+}
 CONTROLS = {
     'controls/escaped-el.jsp': r'<%@ page deferredSyntaxAllowedAsLiteral="true" %>\${name} / \\${name} / ${name} / #{literal}',
     'controls/attribute-escaping.jsp': r'<h:outputText id="friendly" escape="false" value="literal \${name} &lt;span&gt; &amp; &#10;"/>',
     'controls/cdata-and-whitespace.jsp': '<%@ page contentType="text/html;charset=UTF-8" %>\r\n<script>if (1 < 2 && true) { console.log("]]>é"); }</script>\r\n',
+    'controls/trimmed-whitespace.jsp': '<%@ page trimDirectiveWhitespaces="true" %>\r\n \t<%-- comment --%>\r\n<% String value = "ok"; %>\n<%= value %>\r\n',
+    'controls/trimmed-mixed-text.jsp': '<%@ page trimDirectiveWhitespaces="true" %>\r\n<% String value = "ok"; %> \t {"message":"<%= value %>"} \r\n',
 }
 TAGLIBS = {
     'h': 'http://java.sun.com/jsf/html', 'f': 'http://java.sun.com/jsf/core',
@@ -88,7 +106,7 @@ def main():
     for index, (view, fragment) in enumerate(CASES + [(name, False) for name in CONTROLS]):
         converted = WORK / 'converted' / Path(view).with_suffix('.jspx')
         run([JAVA, '-cp', cp, 'org.sakaiproject.buildtools.jspx.ConvertJsp', str(app), view,
-             str(converted), str(cpfile), str(fragment).lower(), str(taglibs)], WORK / f'convert-{index}.log')
+             str(converted), str(cpfile), str(fragment).lower(), str(taglibs), 'UTF-8'], WORK / f'convert-{index}.log')
         target = app / Path(view).with_suffix('.jspx')
         shutil.copyfile(converted, target)
         generated = WORK / 'generated'
@@ -111,21 +129,33 @@ def main():
             (WORK / f'java-{index}-{version}.java').write_text(java)
             outputs.append(canonical(java))
         same = outputs[0] == outputs[1]
+        expected = outputs[0]
+        charset_change = None
+        if view in UTF8_NORMALIZED:
+            before_header = 'response.setContentType("text/html");'
+            after_header = 'response.setContentType("text/html;charset=UTF-8");'
+            assert expected.count(before_header) == 1, view
+            expected = expected.replace(before_header, after_header, 1)
+            charset_change = {'from': 'text/html', 'to': 'text/html;charset=UTF-8'}
+        expected_match = expected == outputs[1]
         original_java = (WORK / f'java-{index}-before.java').read_text()
         if 'getELContext(),"#{' in original_java:
             changed_binding = original_java.replace('getELContext(),"#{', 'getELContext(),"#{changed.', 1)
             assert canonical(changed_binding) != outputs[0]
         if '.setId("' in original_java:
             assert canonical(original_java.replace('.setId("', '.setId("changed-', 1)) != outputs[0]
-        if not same:
+        if not expected_match:
             (WORK / f'comparison-{index}.diff').write_text(''.join(difflib.unified_diff(
-                outputs[0].splitlines(True), outputs[1].splitlines(True), fromfile='JSP', tofile='JSPX')))
+                expected.splitlines(True), outputs[1].splitlines(True), fromfile='expected JSP', tofile='JSPX')))
             failures.append(view)
         results.append({'view': view, 'fragment': fragment, 'xmlAndOpenRewriteParse': True,
                         'sourceSha256': hashlib.sha256((app / view).read_bytes()).hexdigest(),
                         'jspxSha256': hashlib.sha256(converted.read_bytes()).hexdigest(),
-                        'jasperCompiledBeforeAndAfter': True, 'generatedJavaMatches': same})
-        print(view, 'MATCH' if same else 'DIFFERENCE', flush=True)
+                        'jasperCompiledBeforeAndAfter': True, 'generatedJavaMatches': same,
+                        'intentionalResponseCharsetChange': charset_change,
+                        'generatedJavaMatchesExpectedChanges': expected_match})
+        print(view, ('MATCH' if same else 'MATCH WITH EXPLICIT UTF-8 HEADER CHANGE')
+              if expected_match else 'DIFFERENCE', flush=True)
     (WORK / 'results.json').write_text(json.dumps({'baseCommit': BASE, 'results': results}, indent=2) + '\n')
     if failures:
         raise AssertionError(f'Inspect generated Java differences for {failures}')
