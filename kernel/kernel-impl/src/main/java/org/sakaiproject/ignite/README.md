@@ -32,10 +32,8 @@ the old adapter JAR from Tomcat's shared libraries and deploy the matching
 new providers must not share populated cache regions during a rolling upgrade;
 their cache keys and values are not a compatible wire format.
 
-The normal entity/query regions retain their existing settings. Invalidation
-timestamps use an eternal, replicated, synchronous cache in a separate data
-region with page eviction disabled. Expiring or evicting those timestamps can
-make cached query results stale; do not apply entity-cache TTL/eviction to them.
+Existing synchronization, expiry, eviction and data-region settings are preserved.
+Any cache-policy changes require separate review and validation.
 
 ### Validation
 
@@ -134,12 +132,10 @@ properties that can be used to configure ignite.
   _512_ or (half of ignite.tcpMessageQueueLimit)
 
 ## Cache Data Regions
-Sakai configures three data regions for Spring, Hibernate second-level data and
-query-invalidation timestamps.
+Sakai configures two data regions for Spring and Hibernate second-level data.
 
 * Spring Region - this is the default region and caches will be added to this region.
 * Hibernate L2 Region - this is hibernates second level cache
-* Hibernate Timestamps Region - eternal query-invalidation metadata without page eviction
 
 ```xml
 <bean class="org.apache.ignite.configuration.DataRegionConfiguration">

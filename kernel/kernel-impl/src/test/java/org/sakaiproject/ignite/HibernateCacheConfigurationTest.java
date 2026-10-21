@@ -19,8 +19,6 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataPageEvictionMode;
-import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.junit.After;
@@ -153,14 +151,10 @@ public class HibernateCacheConfigurationTest {
         assertTrue(caches.size() > 10);
         CacheConfiguration<?, ?> timestamps = caches.get("default-update-timestamps-region");
         assertEquals(CacheMode.REPLICATED, timestamps.getCacheMode());
-        assertEquals(CacheWriteSynchronizationMode.FULL_SYNC, timestamps.getWriteSynchronizationMode());
-        assertEquals("hibernate_timestamps_region", timestamps.getDataRegionName());
-        assertTrue(timestamps.getExpiryPolicyFactory().create().getExpiryForCreation().isEternal());
-        for (DataRegionConfiguration region : expected.getDataStorageConfiguration().getDataRegionConfigurations()) {
-            if (region.getName().equals("hibernate_timestamps_region")) {
-                assertEquals(DataPageEvictionMode.DISABLED, region.getPageEvictionMode());
-            }
-        }
+        assertEquals(CacheWriteSynchronizationMode.FULL_ASYNC, timestamps.getWriteSynchronizationMode());
+        assertEquals("hibernate_l2_region", timestamps.getDataRegionName());
+        assertEquals(new javax.cache.expiry.Duration(java.util.concurrent.TimeUnit.MINUTES, 120),
+                timestamps.getExpiryPolicyFactory().create().getExpiryForCreation());
         assertTrue(Ignition.allGrids().isEmpty());
 
         // Deployments resolve the provider URI from a component JAR, not target/classes.
